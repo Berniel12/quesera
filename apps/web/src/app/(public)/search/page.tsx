@@ -1,5 +1,7 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+
 import { useState, useEffect, useCallback } from "react";
 import { TopicCard } from "@/components/topic-card";
 import { Input } from "@/components/ui/input";

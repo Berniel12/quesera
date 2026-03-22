@@ -153,28 +153,72 @@ export default async function LandingPage() {
         </section>
       )}
 
-      {/* What people want to know — real human questions */}
-      <section className="pb-8">
-        <h2 className="text-sm font-bold text-navy uppercase tracking-wide mb-4">
-          What people want to know
+      {/* Popular now — the issues people are actively searching */}
+      <section className="pb-6">
+        <h2 className="text-sm font-bold text-navy uppercase tracking-wide mb-3">
+          Popular now
         </h2>
         <div className="flex flex-wrap gap-2">
           {[
+            { q: "Is the Middle East conflict escalating further?", slug: "iran-us-tensions" },
             { q: "Will the Fed cut rates this summer?", slug: "us-federal-reserve-interest-rates" },
-            { q: "Is Iran headed for war with the US?", slug: "iran-us-tensions" },
-            { q: "Where is Bitcoin going next?", slug: "bitcoin-price" },
-            { q: "Will there be a recession in 2026?", slug: "global-recession-risk" },
-            { q: "What is happening in Lebanon?", slug: "lebanon-war-2026" },
-            { q: "Is the housing market crashing?", slug: "us-housing-market" },
-            { q: "Who will win the World Cup?", slug: "fifa-world-cup-2026" },
-            { q: "Will TikTok get banned?", slug: "tiktok-ban" },
-            { q: "Is inflation coming down?", slug: "us-inflation-rate" },
-            { q: "What are gas prices doing?", slug: "us-gas-prices" },
-            { q: "Should I worry about AI?", slug: "ai-industry" },
-            { q: "Is Trump running again?", slug: "2026-us-midterm-elections" },
+            { q: "Where is Bitcoin heading next?", slug: "bitcoin-price" },
+            { q: "Who is becoming the World Cup favorite?", slug: "fifa-world-cup-2026" },
+            { q: "Will Trump and Xi meet before April?", slug: "us-china-relations" },
+            { q: "Is a US-Iran ceasefire happening?", slug: "iran-us-tensions" },
           ].map((item) => (
             <Link
-              key={item.slug}
+              key={item.q}
+              href={`/topics/${item.slug}`}
+              className="rounded-2xl border border-border/60 bg-card px-4 py-2.5 text-sm text-navy font-medium transition-all hover:border-navy/30 hover:shadow-sm hover:bg-navy/5"
+            >
+              {item.q}
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      {/* What's worrying people — anxieties and risks */}
+      <section className="pb-6">
+        <h2 className="text-sm font-bold text-navy uppercase tracking-wide mb-3">
+          What's worrying people
+        </h2>
+        <div className="flex flex-wrap gap-2">
+          {[
+            { q: "Is a recession becoming more likely?", slug: "global-recession-risk" },
+            { q: "Are grocery prices still rising?", slug: "us-inflation-rate" },
+            { q: "Will gas prices hit a new all-time high?", slug: "us-gas-prices" },
+            { q: "Is housing getting easier or harder?", slug: "us-housing-market" },
+            { q: "Is a broader regional war becoming likely?", slug: "iran-us-tensions" },
+            { q: "Will shipping through the Strait of Hormuz normalize?", slug: "global-shipping-disruptions" },
+          ].map((item) => (
+            <Link
+              key={item.q}
+              href={`/topics/${item.slug}`}
+              className="rounded-2xl border border-border/60 bg-card px-4 py-2.5 text-sm text-navy font-medium transition-all hover:border-navy/30 hover:shadow-sm hover:bg-navy/5"
+            >
+              {item.q}
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      {/* What's changing fast — momentum shifts people are watching */}
+      <section className="pb-8">
+        <h2 className="text-sm font-bold text-navy uppercase tracking-wide mb-3">
+          What's changing fast
+        </h2>
+        <div className="flex flex-wrap gap-2">
+          {[
+            { q: "Will Israel invade Iran on the ground?", slug: "iran-us-tensions" },
+            { q: "Will Netanyahu be out by end of March?", slug: "israel-politics" },
+            { q: "Will Zelenskyy and Putin actually meet?", slug: "ukraine-russia-war" },
+            { q: "Will the US attack Cuba?", slug: "us-cuba-relations" },
+            { q: "Is Israel staying in Eurovision 2026?", slug: "israel-politics" },
+            { q: "Who's winning March Madness?", slug: "ncaa-basketball" },
+          ].map((item) => (
+            <Link
+              key={item.q}
               href={`/topics/${item.slug}`}
               className="rounded-2xl border border-border/60 bg-card px-4 py-2.5 text-sm text-navy font-medium transition-all hover:border-navy/30 hover:shadow-sm hover:bg-navy/5"
             >

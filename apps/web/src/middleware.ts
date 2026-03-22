@@ -33,6 +33,24 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  // Geo extraction — lightweight, non-blocking
+  // Reads CDN/proxy geo headers and forwards as x-quesera-* headers
+  const country =
+    request.headers.get("cf-ipcountry") ??
+    request.headers.get("x-vercel-ip-country") ??
+    null;
+  const region =
+    request.headers.get("cf-region") ??
+    request.headers.get("x-vercel-ip-country-region") ??
+    null;
+
+  if (country && country !== "XX" && country !== "T1") {
+    supabaseResponse.headers.set("x-quesera-country", country.toUpperCase());
+    if (region) {
+      supabaseResponse.headers.set("x-quesera-region", region);
+    }
+  }
+
   return supabaseResponse;
 }
 

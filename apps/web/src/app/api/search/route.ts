@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { getInferredLocation, getTopicSuggestionsForLocation } from "@/lib/geo";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -89,7 +90,28 @@ export async function GET(request: Request) {
     }
   }
 
-  // Sort: score DESC, canonical_name ASC
+  // Location relevance bias — additive, deterministic, not a separate ranking system
+  const reqHeaders = new Headers(request.headers);
+  const inferred = getInferredLocation(reqHeaders);
+  const locationSlugs = new Set(
+    getTopicSuggestionsForLocation({
+      country: inferred.country,
+      region: inferred.region,
+      city: null,
+      source: inferred.country ? "inferred" : "none",
+      isConfirmed: false,
+    }),
+  );
+
+  if (locationSlugs.size > 0) {
+    for (const [id, entry] of topicScores) {
+      if (locationSlugs.has(entry.slug)) {
+        topicScores.set(id, { ...entry, score: entry.score + 0.15 });
+      }
+    }
+  }
+
+  // Sort: score DESC, canonical_name ASC (tiebreaker)
   const sorted = Array.from(topicScores.values())
     .sort((a, b) => b.score - a.score || a.canonical_name.localeCompare(b.canonical_name))
     .slice(0, 50);

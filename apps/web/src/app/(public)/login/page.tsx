@@ -6,7 +6,7 @@ const Client = lazy(() => import("./login-client"));
 
 export default function Page() {
   return (
-    <Suspense fallback={<div className="p-8 text-muted-foreground">Loading...</div>}>
+    <Suspense fallback={<div className="p-8">Loading...</div>}>
       <Client />
     </Suspense>
   );

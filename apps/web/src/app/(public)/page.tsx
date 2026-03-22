@@ -1,8 +1,19 @@
+import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { DirectionBadge } from "@/components/direction-badge";
 import { FreshnessBadge } from "@/components/freshness-badge";
+import { AnimateOnScroll } from "@/components/animate-on-scroll";
+import { LocationStrip } from "@/components/location-strip";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  getInferredLocation,
+  getLocationDisplayText,
+  getTopicSuggestionsForLocation,
+  reorderLanes,
+  type EffectiveLocation,
+} from "@/lib/geo";
+import { getCountryDisplayName } from "@/lib/countries";
 
 // Category lanes with display labels
 const CATEGORY_LANES = [
@@ -18,6 +29,27 @@ const CATEGORY_LANES = [
 
 export default async function LandingPage() {
   const supabase = await createClient();
+
+  // Location inference — soft relevance hint
+  const reqHeaders = await headers();
+  const inferred = getInferredLocation(reqHeaders);
+  const effectiveLocation: EffectiveLocation = {
+    country: inferred.country,
+    region: inferred.region,
+    city: null,
+    source: inferred.country ? "inferred" : "none",
+    isConfirmed: false,
+  };
+  const locationDisplay = getLocationDisplayText(effectiveLocation);
+  const suggestedSlugs = getTopicSuggestionsForLocation(effectiveLocation);
+  const orderedLanes = reorderLanes(CATEGORY_LANES, inferred.country);
+
+  // Section label for regional suggestions
+  const regionSectionLabel = effectiveLocation.region && effectiveLocation.region.length > 2
+    ? `Relevant to ${effectiveLocation.region}`
+    : effectiveLocation.country
+      ? `Relevant to ${getCountryDisplayName(effectiveLocation.country) ?? effectiveLocation.country}`
+      : null;
 
   // Load ALL published topic cards
   const { data: allCards } = await supabase
@@ -89,16 +121,19 @@ export default async function LandingPage() {
   return (
     <div className="mx-auto max-w-5xl px-6">
       {/* Compact hero — headline + search, not dominating */}
-      <section className="pt-8 pb-6 sm:pt-12 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+      <section className="pt-8 pb-6 sm:pt-12 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 animate-slide-up">
         <div>
           <div className="flex items-center gap-2 mb-3">
-            <span className="h-2 w-2 rounded-full bg-positive" />
+            <span className="relative h-2 w-2">
+              <span className="absolute inset-0 rounded-full bg-positive animate-pulse-live" />
+              <span className="relative block h-2 w-2 rounded-full bg-positive" />
+            </span>
             <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest">
               Live Intelligence
             </span>
           </div>
           <h1 className="text-3xl font-bold tracking-tight text-navy sm:text-4xl">
-            Know What's Coming
+            Know What&apos;s Coming
           </h1>
         </div>
         <Link
@@ -111,9 +146,9 @@ export default async function LandingPage() {
 
       {/* Hero subject card */}
       {heroCard && (
-        <section className="pb-8">
+        <section className="pb-8 animate-slide-up delay-75">
           <Link href={`/topics/${heroCard.slug}`}>
-            <Card className="rounded-3xl border-0 bg-card shadow-sm hover:shadow-md transition-all duration-300">
+            <Card className="rounded-3xl border-0 bg-card shadow-sm hover:shadow-md hover:-translate-y-px transition-all duration-300">
               <CardContent className="p-6 sm:p-8">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-3">
@@ -153,8 +188,11 @@ export default async function LandingPage() {
         </section>
       )}
 
+      {/* Location strip — subtle, non-intrusive */}
+      <LocationStrip displayText={locationDisplay} isConfirmed={effectiveLocation.isConfirmed} />
+
       {/* Popular now — the issues people are actively searching */}
-      <section className="pb-6">
+      <section className="pb-6 animate-fade-in delay-150">
         <h2 className="text-sm font-bold text-navy uppercase tracking-wide mb-3">
           Popular now
         </h2>
@@ -164,13 +202,13 @@ export default async function LandingPage() {
             { q: "Will the Fed cut rates this summer?", slug: "us-federal-reserve-interest-rates" },
             { q: "Where is Bitcoin heading next?", slug: "bitcoin-price" },
             { q: "Who is becoming the World Cup favorite?", slug: "fifa-world-cup-2026" },
-            { q: "Will Trump and Xi meet before April?", slug: "us-china-relations" },
+            { q: "Is the China-Taiwan standoff intensifying?", slug: "china-taiwan-relations" },
             { q: "Is a US-Iran ceasefire happening?", slug: "iran-us-tensions" },
-          ].map((item) => (
+          ].map((item, i) => (
             <Link
               key={item.q}
               href={`/topics/${item.slug}`}
-              className="rounded-2xl border border-border/60 bg-card px-4 py-2.5 text-sm text-navy font-medium transition-all hover:border-navy/30 hover:shadow-sm hover:bg-navy/5"
+              className={`rounded-2xl border border-border/60 bg-card px-4 py-2.5 text-sm text-navy font-medium transition-all hover:border-navy/30 hover:shadow-sm hover:bg-navy/5 hover:-translate-y-px active:scale-[0.98] animate-fade-in ${i === 0 ? "" : i === 1 ? "delay-75" : i === 2 ? "delay-150" : i === 3 ? "delay-225" : i === 4 ? "delay-300" : "delay-375"}`}
             >
               {item.q}
             </Link>
@@ -179,57 +217,116 @@ export default async function LandingPage() {
       </section>
 
       {/* What's worrying people — anxieties and risks */}
-      <section className="pb-6">
-        <h2 className="text-sm font-bold text-navy uppercase tracking-wide mb-3">
-          What's worrying people
-        </h2>
-        <div className="flex flex-wrap gap-2">
-          {[
-            { q: "Is a recession becoming more likely?", slug: "global-recession-risk" },
-            { q: "Are grocery prices still rising?", slug: "us-inflation-rate" },
-            { q: "Will gas prices hit a new all-time high?", slug: "us-gas-prices" },
-            { q: "Is housing getting easier or harder?", slug: "us-housing-market" },
-            { q: "Is a broader regional war becoming likely?", slug: "iran-us-tensions" },
-            { q: "Will shipping through the Strait of Hormuz normalize?", slug: "global-shipping-disruptions" },
-          ].map((item) => (
-            <Link
-              key={item.q}
-              href={`/topics/${item.slug}`}
-              className="rounded-2xl border border-border/60 bg-card px-4 py-2.5 text-sm text-navy font-medium transition-all hover:border-navy/30 hover:shadow-sm hover:bg-navy/5"
-            >
-              {item.q}
-            </Link>
-          ))}
-        </div>
-      </section>
+      <AnimateOnScroll>
+        <section className="pb-6">
+          <h2 className="text-sm font-bold text-navy uppercase tracking-wide mb-3">
+            What&apos;s worrying people
+          </h2>
+          <div className="flex flex-wrap gap-2">
+            {[
+              { q: "Is a recession becoming more likely?", slug: "global-recession-risk" },
+              { q: "Are grocery prices still rising?", slug: "us-inflation-rate" },
+              { q: "Will gas prices hit a new all-time high?", slug: "us-gas-prices" },
+              { q: "Is housing getting easier or harder?", slug: "us-housing-market" },
+              { q: "Is a broader regional war becoming likely?", slug: "iran-us-tensions" },
+              { q: "Are oil prices headed higher?", slug: "global-oil-prices" },
+            ].map((item) => (
+              <Link
+                key={item.q}
+                href={`/topics/${item.slug}`}
+                className="rounded-2xl border border-border/60 bg-card px-4 py-2.5 text-sm text-navy font-medium transition-all hover:border-navy/30 hover:shadow-sm hover:bg-navy/5 hover:-translate-y-px active:scale-[0.98]"
+              >
+                {item.q}
+              </Link>
+            ))}
+          </div>
+        </section>
+      </AnimateOnScroll>
 
       {/* What's changing fast — momentum shifts people are watching */}
-      <section className="pb-8">
-        <h2 className="text-sm font-bold text-navy uppercase tracking-wide mb-3">
-          What's changing fast
-        </h2>
-        <div className="flex flex-wrap gap-2">
-          {[
-            { q: "Will Israel invade Iran on the ground?", slug: "iran-us-tensions" },
-            { q: "Will Netanyahu be out by end of March?", slug: "israel-politics" },
-            { q: "Will Zelenskyy and Putin actually meet?", slug: "ukraine-russia-war" },
-            { q: "Will the US attack Cuba?", slug: "us-cuba-relations" },
-            { q: "Is Israel staying in Eurovision 2026?", slug: "israel-politics" },
-            { q: "Who's winning March Madness?", slug: "ncaa-basketball" },
-          ].map((item) => (
-            <Link
-              key={item.q}
-              href={`/topics/${item.slug}`}
-              className="rounded-2xl border border-border/60 bg-card px-4 py-2.5 text-sm text-navy font-medium transition-all hover:border-navy/30 hover:shadow-sm hover:bg-navy/5"
-            >
-              {item.q}
-            </Link>
-          ))}
-        </div>
-      </section>
+      <AnimateOnScroll>
+        <section className="pb-8">
+          <h2 className="text-sm font-bold text-navy uppercase tracking-wide mb-3">
+            What&apos;s changing fast
+          </h2>
+          <div className="flex flex-wrap gap-2">
+            {[
+              { q: "Will Israel invade Iran on the ground?", slug: "iran-us-tensions" },
+              { q: "Is the Israel-Palestine conflict escalating?", slug: "israel-palestine-conflict" },
+              { q: "Will Zelenskyy and Putin actually meet?", slug: "russia-ukraine-war" },
+              { q: "Will the US attack Cuba?", slug: "us-cuba-relations" },
+              { q: "What is changing in the Israel-Palestine conflict?", slug: "israel-palestine-conflict" },
+              { q: "Who's winning the NBA playoffs?", slug: "nba-season-2025-26" },
+            ].map((item) => (
+              <Link
+                key={item.q}
+                href={`/topics/${item.slug}`}
+                className="rounded-2xl border border-border/60 bg-card px-4 py-2.5 text-sm text-navy font-medium transition-all hover:border-navy/30 hover:shadow-sm hover:bg-navy/5 hover:-translate-y-px active:scale-[0.98]"
+              >
+                {item.q}
+              </Link>
+            ))}
+          </div>
+        </section>
+      </AnimateOnScroll>
+
+      {/* Regional suggestions — shown only when location is available */}
+      {regionSectionLabel && suggestedSlugs.length > 0 && (() => {
+        const suggestedCards = cards.filter((c) => suggestedSlugs.includes(c.slug));
+        const suggestedTopics = topics.filter((t) => suggestedSlugs.includes(t.slug) && !suggestedCards.some((c) => c.slug === t.slug));
+        if (suggestedCards.length === 0 && suggestedTopics.length === 0) return null;
+        return (
+          <AnimateOnScroll>
+            <section className="pb-8">
+              <h2 className="text-sm font-bold text-navy uppercase tracking-wide mb-4">
+                {regionSectionLabel}
+              </h2>
+              {suggestedCards.length > 0 && (
+                <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 mb-3">
+                  {suggestedCards.slice(0, 3).map((card) => (
+                    <Link key={card.topic_id} href={`/topics/${card.slug}`}>
+                      <Card className="rounded-2xl border-0 bg-card shadow-sm hover:shadow-md hover:-translate-y-px active:scale-[0.98] transition-all duration-200 h-full">
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between mb-2">
+                            {card.direction && <DirectionBadge direction={card.direction} size="sm" />}
+                            {card.snapshot_published_at && (
+                              <span className="text-[10px] text-muted-foreground font-mono">
+                                {timeAgo(card.snapshot_published_at)}
+                              </span>
+                            )}
+                          </div>
+                          <p className="font-bold text-sm text-navy">{card.canonical_name}</p>
+                          {card.one_liner && (
+                            <p className="text-xs text-muted-foreground mt-1 line-clamp-2 leading-relaxed">
+                              {card.one_liner}
+                            </p>
+                          )}
+                        </CardContent>
+                      </Card>
+                    </Link>
+                  ))}
+                </div>
+              )}
+              {suggestedTopics.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {suggestedTopics.slice(0, 6).map((t) => (
+                    <Link
+                      key={t.slug}
+                      href={`/topics/${t.slug}`}
+                      className="rounded-full border border-border/60 bg-card px-3 py-1 text-xs text-foreground transition-all hover:border-navy/30 hover:shadow-sm hover:-translate-y-px active:scale-[0.98]"
+                    >
+                      {t.canonical_name}
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </section>
+          </AnimateOnScroll>
+        );
+      })()}
 
       {/* Category lanes — the live subject newspaper */}
-      {CATEGORY_LANES.map((lane) => {
+      {orderedLanes.map((lane) => {
         const laneCards = cardsByCategory.get(lane.key) ?? [];
         const laneTopics = topicsByCategory.get(lane.key) ?? [];
 
@@ -237,82 +334,86 @@ export default async function LandingPage() {
         if (laneCards.length === 0 && laneTopics.length === 0) return null;
 
         return (
-          <section key={lane.key} className="pb-8">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-bold text-navy uppercase tracking-wide">
-                {lane.label}
-              </h2>
-              <Link
-                href={`/categories/${lane.key}`}
-                className="text-[11px] text-muted-foreground hover:text-navy transition-colors"
-              >
-                View all
-              </Link>
-            </div>
-
-            {/* Cards with snapshot data */}
-            {laneCards.length > 0 && (
-              <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 mb-3">
-                {laneCards.slice(0, 3).map((card) => (
-                  <Link key={card.topic_id} href={`/topics/${card.slug}`}>
-                    <Card className="rounded-2xl border-0 bg-card shadow-sm hover:shadow-md transition-all duration-200 h-full">
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between mb-2">
-                          {card.direction && <DirectionBadge direction={card.direction} size="sm" />}
-                          {card.snapshot_published_at && (
-                            <span className="text-[10px] text-muted-foreground font-mono">
-                              {timeAgo(card.snapshot_published_at)}
-                            </span>
-                          )}
-                        </div>
-                        <p className="font-bold text-sm text-navy">{card.canonical_name}</p>
-                        {card.one_liner && (
-                          <p className="text-xs text-muted-foreground mt-1 line-clamp-2 leading-relaxed">
-                            {card.one_liner}
-                          </p>
-                        )}
-                      </CardContent>
-                    </Card>
-                  </Link>
-                ))}
+          <AnimateOnScroll key={lane.key}>
+            <section className="pb-8">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-sm font-bold text-navy uppercase tracking-wide">
+                  {lane.label}
+                </h2>
+                <Link
+                  href={`/categories/${lane.key}`}
+                  className="text-[11px] text-muted-foreground hover:text-navy transition-colors"
+                >
+                  View all
+                </Link>
               </div>
-            )}
 
-            {/* Topics without snapshots — shown as chips */}
-            {laneTopics.length > laneCards.length && (
-              <div className="flex flex-wrap gap-1.5">
-                {laneTopics
-                  .filter((t) => !laneCards.some((c) => c.slug === t.slug))
-                  .slice(0, 8)
-                  .map((t) => (
-                    <Link
-                      key={t.slug}
-                      href={`/topics/${t.slug}`}
-                      className="rounded-full border border-border/60 bg-card px-3 py-1 text-xs text-foreground transition-all hover:border-navy/30 hover:shadow-sm"
-                    >
-                      {t.canonical_name}
+              {/* Cards with snapshot data */}
+              {laneCards.length > 0 && (
+                <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 mb-3">
+                  {laneCards.slice(0, 3).map((card) => (
+                    <Link key={card.topic_id} href={`/topics/${card.slug}`}>
+                      <Card className="rounded-2xl border-0 bg-card shadow-sm hover:shadow-md hover:-translate-y-px active:scale-[0.98] transition-all duration-200 h-full">
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between mb-2">
+                            {card.direction && <DirectionBadge direction={card.direction} size="sm" />}
+                            {card.snapshot_published_at && (
+                              <span className="text-[10px] text-muted-foreground font-mono">
+                                {timeAgo(card.snapshot_published_at)}
+                              </span>
+                            )}
+                          </div>
+                          <p className="font-bold text-sm text-navy">{card.canonical_name}</p>
+                          {card.one_liner && (
+                            <p className="text-xs text-muted-foreground mt-1 line-clamp-2 leading-relaxed">
+                              {card.one_liner}
+                            </p>
+                          )}
+                        </CardContent>
+                      </Card>
                     </Link>
                   ))}
-              </div>
-            )}
-          </section>
+                </div>
+              )}
+
+              {/* Topics without snapshots — shown as chips */}
+              {laneTopics.length > laneCards.length && (
+                <div className="flex flex-wrap gap-1.5">
+                  {laneTopics
+                    .filter((t) => !laneCards.some((c) => c.slug === t.slug))
+                    .slice(0, 8)
+                    .map((t) => (
+                      <Link
+                        key={t.slug}
+                        href={`/topics/${t.slug}`}
+                        className="rounded-full border border-border/60 bg-card px-3 py-1 text-xs text-foreground transition-all hover:border-navy/30 hover:shadow-sm hover:-translate-y-px active:scale-[0.98]"
+                      >
+                        {t.canonical_name}
+                      </Link>
+                    ))}
+                </div>
+              )}
+            </section>
+          </AnimateOnScroll>
         );
       })}
 
       {/* CTA — after showing all the content */}
-      <section className="py-10 text-center border-t border-border/40">
-        <p className="text-sm text-muted-foreground mb-4">
-          Follow subjects, not sources. Build your personal signal feed.
-        </p>
-        <div className="flex gap-3 justify-center">
-          <Link href="/onboarding" className="inline-flex h-11 items-center rounded-full bg-navy px-8 text-sm font-medium text-white transition-colors hover:bg-navy/90">
-            Build Your Feed
-          </Link>
-          <Link href="/login" className="inline-flex h-11 items-center rounded-full border border-navy/20 px-8 text-sm font-medium text-navy transition-colors hover:bg-navy/5">
-            Sign In
-          </Link>
-        </div>
-      </section>
+      <AnimateOnScroll animation="animate-fade-in">
+        <section className="py-10 text-center border-t border-border/40">
+          <p className="text-sm text-muted-foreground mb-4">
+            Follow subjects, not sources. Build your personal signal feed.
+          </p>
+          <div className="flex gap-3 justify-center">
+            <Link href="/onboarding" className="inline-flex h-11 items-center rounded-full bg-navy px-8 text-sm font-medium text-white transition-all hover:bg-navy/90 active:scale-[0.98]">
+              Build Your Feed
+            </Link>
+            <Link href="/login" className="inline-flex h-11 items-center rounded-full border border-navy/20 px-8 text-sm font-medium text-navy transition-all hover:bg-navy/5 active:scale-[0.98]">
+              Sign In
+            </Link>
+          </div>
+        </section>
+      </AnimateOnScroll>
     </div>
   );
 }

@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export function PublicNav() {
   return (
-    <nav className="sticky top-0 z-50 border-b border-border/40 backdrop-blur-xl backdrop-saturate-[180%] bg-background/70">
+    <nav className="sticky top-0 z-50 border-b border-border/40 backdrop-blur-xl backdrop-saturate-[180%] bg-background/70 animate-slide-down">
       <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-6">
         <Link href="/" className="flex items-center gap-0.5">
           <span className="text-base font-extrabold tracking-tight text-navy">

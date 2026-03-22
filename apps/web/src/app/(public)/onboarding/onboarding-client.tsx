@@ -1,11 +1,15 @@
 "use client";
 
-
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { createClient } from "@/lib/supabase/client";
+import { savePendingOnboarding, clearPendingOnboarding, applyPendingOnboarding } from "@/lib/onboarding";
+import { COUNTRY_LANE_BOOSTS, COUNTRY_TOPIC_SUGGESTIONS } from "@/lib/geo";
+import { getCountryDisplayName } from "@/lib/countries";
 
 const STORAGE_KEY = "quesera_onboarding_selections";
 
@@ -93,12 +97,70 @@ const LIFE_AREAS = [
   { key: "safety", label: "Weather & Safety", desc: "Earthquakes, storms, wildfires" },
 ];
 
+// Cap hot subject pulse dots to avoid a blinking field
+const MAX_HOT_PULSE = 4;
+
+// Map category keys used in COUNTRY_LANE_BOOSTS to LIFE_AREAS keys
+const CATEGORY_TO_AREA: Record<string, string> = {
+  geopolitics: "world",
+  macro: "money",
+  politics: "politics",
+  sports: "sports",
+  crypto: "crypto",
+  tech: "tech",
+  entertainment: "entertainment",
+  disasters: "safety",
+};
+
 export default function OnboardingPage() {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [selectedAreas, setSelectedAreas] = useState<string[]>([]);
   const [selectedSlugs, setSelectedSlugs] = useState<Set<string>>(new Set());
   const [city, setCity] = useState("");
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "redirecting">("idle");
+  const prevStep = useRef(1);
+  const [inferredCountry, setInferredCountry] = useState<string | null>(null);
+  const [inferredCountryName, setInferredCountryName] = useState<string | null>(null);
+  const locationFetched = useRef(false);
+
+  // Fetch inferred location on mount (best-effort, non-blocking)
+  useEffect(() => {
+    if (locationFetched.current) return;
+    locationFetched.current = true;
+
+    fetch("/api/geo")
+      .then((res) => res.json())
+      .then((data: { country: string | null; region: string | null }) => {
+        if (data.country) {
+          setInferredCountry(data.country);
+          setInferredCountryName(getCountryDisplayName(data.country));
+        }
+      })
+      .catch(() => { /* fail silently to global mode */ });
+  }, []);
+
+  // Get country-suggested topic slugs for sorting
+  const countrySuggestedSlugs = new Set(
+    inferredCountry ? (COUNTRY_TOPIC_SUGGESTIONS[inferredCountry] ?? []) : [],
+  );
+
+  // Get boosted life area keys from country
+  const boostedAreaKeys = new Set(
+    inferredCountry
+      ? (COUNTRY_LANE_BOOSTS[inferredCountry] ?? [])
+          .map((cat) => CATEGORY_TO_AREA[cat])
+          .filter(Boolean)
+      : [],
+  );
+
+  // Determine transition direction
+  const direction = step >= prevStep.current ? "forward" : "back";
+
+  function goToStep(next: number) {
+    prevStep.current = step;
+    setStep(next);
+  }
 
   function toggleArea(key: string) {
     setSelectedAreas((prev) =>
@@ -119,152 +181,238 @@ export default function OnboardingPage() {
   const subjects = selectedAreas
     .flatMap((area) => (SUBJECT_CATALOG[area] ?? []).map((s) => ({ ...s, area })))
     .filter((s) => { if (seen.has(s.slug)) return false; seen.add(s.slug); return true; })
-    .sort((a, b) => (b.hot ? 1 : 0) - (a.hot ? 1 : 0));
+    .sort((a, b) => {
+      // Country-relevant first, then hot, then rest
+      const aRelevant = countrySuggestedSlugs.has(a.slug) ? 1 : 0;
+      const bRelevant = countrySuggestedSlugs.has(b.slug) ? 1 : 0;
+      if (bRelevant !== aRelevant) return bRelevant - aRelevant;
+      return (b.hot ? 1 : 0) - (a.hot ? 1 : 0);
+    });
 
   function saveAndContinue() {
     const sels = subjects.filter((s) => selectedSlugs.has(s.slug)).map((s) => ({ slug: s.slug, name: s.name }));
     localStorage.setItem(STORAGE_KEY, JSON.stringify(sels));
-    setStep(step + 1);
+    goToStep(step + 1);
   }
 
   async function finish() {
-    const sels = subjects.filter((s) => selectedSlugs.has(s.slug)).map((s) => ({ slug: s.slug }));
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(sels));
-    try {
-      for (const s of sels) {
-        await fetch(`/api/topics/${s.slug}/follow`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "follow" }) });
+    const slugs = subjects.filter((s) => selectedSlugs.has(s.slug)).map((s) => s.slug);
+
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (user) {
+      setSaveStatus("saving");
+      savePendingOnboarding(slugs);
+      const result = await applyPendingOnboarding();
+      if (result.ok) {
+        localStorage.removeItem(STORAGE_KEY);
+        clearPendingOnboarding();
       }
-      localStorage.removeItem(STORAGE_KEY);
-    } catch { /* preserve if fails */ }
-    router.push("/dashboard");
+      router.push("/dashboard");
+    } else {
+      setSaveStatus("redirecting");
+      savePendingOnboarding(slugs);
+      router.push("/login?redirect=/dashboard&onboarding=pending");
+    }
   }
+
+  // Track how many hot dots we have shown
+  let hotPulseCount = 0;
 
   return (
     <div className="mx-auto max-w-2xl px-6 py-10">
-      {/* Progress */}
-      <div className="flex justify-center gap-2 mb-8">
-        {[1, 2, 3, 4].map((s) => (
-          <div key={s} className={`h-1.5 rounded-full transition-all ${step === s ? "w-8 bg-navy" : step > s ? "w-2 bg-navy/40" : "w-2 bg-border"}`} />
-        ))}
+      {/* Progress bar — stable shell, does not transition */}
+      <div className="relative mb-8">
+        {/* Track */}
+        <div className="h-1 rounded-full bg-border mx-8" />
+        {/* Fill */}
+        <div
+          className="absolute top-0 left-8 h-1 rounded-full bg-navy transition-all duration-500 ease-out"
+          style={{ width: `${((step - 1) / 3) * 100}%`, maxWidth: "calc(100% - 4rem)" }}
+        />
+        {/* Step dots */}
+        <div className="absolute top-1/2 left-0 right-0 flex justify-between px-6 -translate-y-1/2">
+          {[1, 2, 3, 4].map((s) => (
+            <div
+              key={s}
+              className={`h-3 w-3 rounded-full border-2 transition-all duration-300 ${
+                step >= s ? "border-navy bg-navy" : "border-border bg-background"
+              }`}
+            />
+          ))}
+        </div>
       </div>
 
-      {step === 1 && (
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-navy text-center mb-1">
-            What do you want to stay ahead of?
-          </h1>
-          <p className="text-muted-foreground text-center mb-8">
-            Pick the areas that matter to you
-          </p>
-          <div className="grid grid-cols-2 gap-3 mb-8">
-            {LIFE_AREAS.map((area) => (
-              <button
-                key={area.key}
-                onClick={() => toggleArea(area.key)}
-                className={`rounded-2xl border-2 p-5 text-left transition-all duration-200 ${
-                  selectedAreas.includes(area.key)
-                    ? "border-navy bg-navy/5 shadow-sm"
-                    : "border-border hover:border-navy/30"
-                }`}
-              >
-                <p className="text-sm font-semibold">{area.label}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">{area.desc}</p>
-              </button>
-            ))}
-          </div>
-          <div className="text-center">
-            <Button onClick={() => setStep(2)} disabled={selectedAreas.length === 0} className="rounded-full px-10 h-12 text-base">
-              Show me subjects
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {step === 2 && (
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-navy text-center mb-1">
-            Tap to follow
-          </h1>
-          <p className="text-muted-foreground text-center mb-6">
-            {selectedSlugs.size} selected
-          </p>
-          <div className="flex flex-wrap gap-2 justify-center mb-8">
-            {subjects.map((s) => (
-              <button
-                key={s.slug}
-                onClick={() => toggleSubject(s.slug)}
-                className={`rounded-full px-4 py-2.5 text-sm font-medium transition-all duration-200 ${
-                  selectedSlugs.has(s.slug)
-                    ? "bg-navy text-white shadow-md"
-                    : "bg-card border border-border text-foreground hover:border-navy/30"
-                }`}
-              >
-                {s.name}
-              </button>
-            ))}
-          </div>
-          <div className="flex gap-3 justify-center">
-            <Button variant="outline" className="rounded-full" onClick={() => setStep(1)}>Back</Button>
-            <Button className="rounded-full px-8 h-11" disabled={selectedSlugs.size === 0} onClick={() => setStep(3)}>
-              Next ({selectedSlugs.size})
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {step === 3 && (
-        <div className="text-center py-8">
-          <h1 className="text-2xl font-bold tracking-tight text-navy mb-2">
-            Add your city
-          </h1>
-          <p className="text-muted-foreground mb-6">
-            Get weather alerts, earthquake signals, and local events.
-          </p>
-          <div className="max-w-sm mx-auto mb-8">
-            <Input value={city} onChange={(e) => setCity(e.target.value)} placeholder="Tel Aviv, New York, London..." className="rounded-full h-12 text-center text-base" />
-          </div>
-          <div className="flex gap-3 justify-center">
-            <Button variant="outline" className="rounded-full" onClick={saveAndContinue}>Skip</Button>
-            <Button className="rounded-full px-8" onClick={saveAndContinue}>Continue</Button>
-          </div>
-        </div>
-      )}
-
-      {step === 4 && (
-        <div>
-          <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold tracking-tight text-navy mb-1">
-              Your feed is ready
+      {/* Content pane — transitions on step change */}
+      <div
+        key={step}
+        className={direction === "forward" ? "animate-slide-up" : "animate-fade-in"}
+      >
+        {step === 1 && (
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-navy text-center mb-1">
+              What do you want to stay ahead of?
             </h1>
-            <p className="text-muted-foreground">
-              {selectedSlugs.size} subjects being tracked
+            <p className="text-muted-foreground text-center mb-8">
+              Pick the areas that matter to you
             </p>
+            <div className="grid grid-cols-2 gap-3 mb-8">
+              {LIFE_AREAS.map((area) => {
+                const isSelected = selectedAreas.includes(area.key);
+                return (
+                  <button
+                    key={area.key}
+                    onClick={() => toggleArea(area.key)}
+                    className={`relative rounded-2xl border-2 p-5 text-left transition-all duration-200 active:scale-[0.98] ${
+                      isSelected
+                        ? "border-navy bg-navy/5 ring-1 ring-navy/20"
+                        : "border-border hover:border-navy/30"
+                    }`}
+                  >
+                    <p className="text-sm font-semibold">{area.label}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{area.desc}</p>
+                    {isSelected && (
+                      <span className="absolute top-3 right-3 animate-scale-in">
+                        <Check className="h-4 w-4 text-navy" />
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="text-center">
+              <Button onClick={() => goToStep(2)} disabled={selectedAreas.length === 0} className="rounded-full px-10 h-12 text-base active:scale-[0.98]">
+                Show me subjects
+              </Button>
+            </div>
           </div>
-          <div className="space-y-2 mb-8">
-            {subjects.filter((s) => selectedSlugs.has(s.slug)).map((s) => (
-              <Card key={s.slug} className="rounded-2xl border-border/40">
-                <CardContent className="p-4 flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-sm">{s.name}</p>
-                    <p className="text-xs text-muted-foreground capitalize">{s.area}</p>
-                  </div>
-                  <span className="text-xs text-positive font-mono">live</span>
-                </CardContent>
-              </Card>
-            ))}
+        )}
+
+        {step === 2 && (
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-navy text-center mb-1">
+              Tap to follow
+            </h1>
+            <p className="text-muted-foreground text-center mb-6">
+              <span className="font-mono tabular-nums">{selectedSlugs.size}</span> selected
+            </p>
+            <div className="flex flex-wrap gap-2 justify-center mb-8">
+              {subjects.map((s) => {
+                const isSelected = selectedSlugs.has(s.slug);
+                const showPulse = s.hot && !isSelected && hotPulseCount < MAX_HOT_PULSE;
+                if (showPulse) hotPulseCount++;
+
+                return (
+                  <button
+                    key={s.slug}
+                    onClick={() => toggleSubject(s.slug)}
+                    className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2.5 text-sm font-medium transition-all duration-200 active:scale-[0.97] ${
+                      isSelected
+                        ? "bg-navy text-white shadow-sm"
+                        : "bg-card border border-border text-foreground hover:border-navy/30"
+                    }`}
+                  >
+                    {showPulse && (
+                      <span className="relative h-1.5 w-1.5">
+                        <span className="absolute inset-0 rounded-full bg-positive animate-pulse-live" />
+                        <span className="relative block h-1.5 w-1.5 rounded-full bg-positive" />
+                      </span>
+                    )}
+                    {s.name}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="flex gap-3 justify-center">
+              <Button variant="outline" className="rounded-full active:scale-[0.98]" onClick={() => goToStep(1)}>Back</Button>
+              <Button className="rounded-full px-8 h-11 active:scale-[0.98]" disabled={selectedSlugs.size === 0} onClick={() => goToStep(3)}>
+                Next (<span className="font-mono tabular-nums">{selectedSlugs.size}</span>)
+              </Button>
+            </div>
           </div>
-          <Card className="rounded-3xl border-navy/20 bg-navy/[0.03]">
-            <CardContent className="p-8 text-center">
-              <p className="text-xl font-semibold text-navy mb-2">You are all set.</p>
-              <p className="text-sm text-muted-foreground mb-6">Sign in to save your feed and get notified when signals shift.</p>
-              <div className="flex flex-col gap-3 max-w-xs mx-auto">
-                <Button className="rounded-full h-12 text-base" onClick={finish}>Save My Feed</Button>
-                <Button variant="ghost" className="rounded-full h-10 text-muted-foreground" onClick={() => router.push("/")}>Just browsing for now</Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+        )}
+
+        {step === 3 && (
+          <div className="text-center py-8">
+            {inferredCountryName ? (
+              <>
+                <p className="text-xs text-muted-foreground mb-3 animate-fade-in">
+                  Showing subjects relevant to {inferredCountryName}
+                </p>
+                <h1 className="text-2xl font-bold tracking-tight text-navy mb-2">
+                  Add your city for more local signals (optional)
+                </h1>
+              </>
+            ) : (
+              <h1 className="text-2xl font-bold tracking-tight text-navy mb-2">
+                Where are you? (optional)
+              </h1>
+            )}
+            <p className="text-muted-foreground mb-6">
+              Helps us surface relevant local subjects where available.
+            </p>
+            <div className="max-w-sm mx-auto mb-8">
+              <Input value={city} onChange={(e) => setCity(e.target.value)} placeholder="Tel Aviv, New York, London..." className="rounded-full h-12 text-center text-base" />
+            </div>
+            <div className="flex gap-3 justify-center">
+              <Button variant="outline" className="rounded-full active:scale-[0.98]" onClick={saveAndContinue}>Skip</Button>
+              <Button className="rounded-full px-8 active:scale-[0.98]" onClick={saveAndContinue}>Continue</Button>
+            </div>
+          </div>
+        )}
+
+        {step === 4 && (
+          <div>
+            <div className="text-center mb-8">
+              <h1 className="text-2xl font-bold tracking-tight text-navy mb-1">
+                Your feed is ready
+              </h1>
+              <p className="text-muted-foreground">
+                <span className="font-mono tabular-nums">{selectedSlugs.size}</span> subjects being tracked
+              </p>
+            </div>
+            <div className="space-y-2 mb-8">
+              {subjects.filter((s) => selectedSlugs.has(s.slug)).map((s, i) => {
+                const delayClass = i === 0 ? "" : i === 1 ? "delay-75" : i === 2 ? "delay-150" : i === 3 ? "delay-225" : i === 4 ? "delay-300" : i === 5 ? "delay-375" : "delay-450";
+                return (
+                  <Card key={s.slug} className={`rounded-2xl border-border/40 animate-slide-up ${delayClass}`}>
+                    <CardContent className="p-4 flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-sm">{s.name}</p>
+                        <p className="text-xs text-muted-foreground capitalize">{s.area}</p>
+                      </div>
+                      <span className="inline-flex items-center gap-1.5 text-xs text-positive font-mono">
+                        <span className="relative h-1.5 w-1.5">
+                          <span className="absolute inset-0 rounded-full bg-positive animate-pulse-live" />
+                          <span className="relative block h-1.5 w-1.5 rounded-full bg-positive" />
+                        </span>
+                        live
+                      </span>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+            <Card className="rounded-3xl border-navy/20 bg-navy/[0.03] animate-scale-in delay-150">
+              <CardContent className="p-8 text-center">
+                <p className="text-xl font-semibold text-navy mb-2">You are all set.</p>
+                <p className="text-sm text-muted-foreground mb-6">Sign in to save your feed and get notified when signals shift.</p>
+                <div className="flex flex-col gap-3 max-w-xs mx-auto">
+                  <Button
+                    className="rounded-full h-12 text-base shadow-md hover:shadow-lg hover:scale-[1.02] transition-all active:scale-[0.98]"
+                    onClick={finish}
+                    disabled={saveStatus !== "idle"}
+                  >
+                    {saveStatus === "saving" ? "Saving..." : saveStatus === "redirecting" ? "Redirecting to sign in..." : "Save My Feed"}
+                  </Button>
+                  <Button variant="ghost" className="rounded-full h-10 text-muted-foreground" onClick={() => router.push("/")}>Just browsing for now</Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -25,7 +25,7 @@ export function TopicCard({
 }: TopicCardProps) {
   return (
     <Link href={`/topics/${slug}`}>
-      <Card className="group h-full rounded-3xl border-border/40 bg-card p-0 transition-all duration-300 ease-[cubic-bezier(0.25,0.1,0.25,1)] hover:border-border hover:shadow-sm">
+      <Card className="group h-full rounded-3xl border-border/40 bg-card p-0 transition-all duration-300 ease-[cubic-bezier(0.25,0.1,0.25,1)] hover:border-border hover:shadow-md hover:-translate-y-px active:scale-[0.98]">
         <CardContent className="p-6 flex flex-col gap-3">
           <div className="flex items-start justify-between gap-2">
             <h3 className="text-base font-semibold leading-tight tracking-tight group-hover:text-navy transition-colors">

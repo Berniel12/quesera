@@ -1,7 +1,9 @@
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { TopicCard } from "@/components/topic-card";
 import { DashboardTopicCard } from "@/components/dashboard-topic-card";
+import { PendingOnboardingReplay } from "@/components/pending-onboarding-replay";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -89,6 +91,10 @@ export default async function DashboardPage() {
 
   return (
     <div className="max-w-5xl">
+      <Suspense fallback={null}>
+        <PendingOnboardingReplay />
+      </Suspense>
+
       <h1 className="text-2xl font-bold tracking-tight text-navy mb-6">
         Your Topics
       </h1>

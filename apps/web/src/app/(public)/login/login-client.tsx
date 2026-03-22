@@ -18,6 +18,17 @@ export default function LoginPage() {
 
   const supabase = createClient();
 
+  // Derive redirect target from URL params
+  function getRedirectTarget(): string {
+    if (typeof window === "undefined") return "/dashboard";
+    const params = new URLSearchParams(window.location.search);
+    const redirect = params.get("redirect") ?? "/dashboard";
+    const onboarding = params.get("onboarding");
+    // Only allow internal redirects (starting with /)
+    const safePath = redirect.startsWith("/") ? redirect : "/dashboard";
+    return onboarding ? `${safePath}?onboarding=${encodeURIComponent(onboarding)}` : safePath;
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
@@ -47,7 +58,7 @@ export default function LoginPage() {
       if (signInError) {
         setError(signInError.message);
       } else {
-        window.location.href = "/dashboard";
+        window.location.href = getRedirectTarget();
       }
     }
 

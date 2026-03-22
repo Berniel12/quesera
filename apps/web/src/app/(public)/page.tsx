@@ -153,6 +153,37 @@ export default async function LandingPage() {
         </section>
       )}
 
+      {/* What people want to know — real human questions */}
+      <section className="pb-8">
+        <h2 className="text-sm font-bold text-navy uppercase tracking-wide mb-4">
+          What people want to know
+        </h2>
+        <div className="flex flex-wrap gap-2">
+          {[
+            { q: "Will the Fed cut rates this summer?", slug: "us-federal-reserve-interest-rates" },
+            { q: "Is Iran headed for war with the US?", slug: "iran-us-tensions" },
+            { q: "Where is Bitcoin going next?", slug: "bitcoin-price" },
+            { q: "Will there be a recession in 2026?", slug: "global-recession-risk" },
+            { q: "What is happening in Lebanon?", slug: "lebanon-war-2026" },
+            { q: "Is the housing market crashing?", slug: "us-housing-market" },
+            { q: "Who will win the World Cup?", slug: "fifa-world-cup-2026" },
+            { q: "Will TikTok get banned?", slug: "tiktok-ban" },
+            { q: "Is inflation coming down?", slug: "us-inflation-rate" },
+            { q: "What are gas prices doing?", slug: "us-gas-prices" },
+            { q: "Should I worry about AI?", slug: "ai-industry" },
+            { q: "Is Trump running again?", slug: "2026-us-midterm-elections" },
+          ].map((item) => (
+            <Link
+              key={item.slug}
+              href={`/topics/${item.slug}`}
+              className="rounded-2xl border border-border/60 bg-card px-4 py-2.5 text-sm text-navy font-medium transition-all hover:border-navy/30 hover:shadow-sm hover:bg-navy/5"
+            >
+              {item.q}
+            </Link>
+          ))}
+        </div>
+      </section>
+
       {/* Category lanes — the live subject newspaper */}
       {CATEGORY_LANES.map((lane) => {
         const laneCards = cardsByCategory.get(lane.key) ?? [];

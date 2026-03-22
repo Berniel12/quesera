@@ -19,6 +19,12 @@ import { GdeltAdapter } from "./gdelt.js";
 import { BlsAdapter } from "./bls.js";
 import { EiaAdapter } from "./eia.js";
 import { WorldBankAdapter } from "./world-bank.js";
+import { CoinGeckoAdapter } from "./coingecko.js";
+import { DiseaseShAdapter } from "./disease-sh.js";
+import { ExchangeRatesAdapter } from "./exchange-rates.js";
+import { TheSportsDbAdapter } from "./thesportsdb.js";
+import { EurostatAdapter } from "./eurostat.js";
+import { ImfAdapter } from "./imf.js";
 
 type AdapterConstructor = new (
   sourceDefinition: SourceDefinitionRow,
@@ -49,6 +55,13 @@ const adapters: Record<string, AdapterConstructor> = {
   bls: BlsAdapter,
   eia: EiaAdapter,
   world_bank: WorldBankAdapter,
+  // Quick-win expansion
+  coingecko: CoinGeckoAdapter,
+  disease_sh: DiseaseShAdapter,
+  exchange_rates: ExchangeRatesAdapter,
+  thesportsdb: TheSportsDbAdapter,
+  eurostat: EurostatAdapter,
+  imf: ImfAdapter,
 };
 
 export function getAdapter(

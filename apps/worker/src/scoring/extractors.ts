@@ -1,0 +1,168 @@
+import {
+  SOURCE_FAMILY_WEIGHTS,
+  POLITICAL_STATUS_ORDINALS,
+  SEVERITY_ORDINALS,
+} from "./types.js";
+
+export interface ExtractedSignal {
+  currentValue: number | null;
+  signalTimestamp: Date;
+  signalType: string;
+  sourceName: string;
+  externalId: string | null;
+  metadata: Record<string, unknown>;
+}
+
+/**
+ * Source-family-specific numeric extraction from normalized_payload.
+ * Deterministic, code-owned. No prose inference.
+ */
+export function extractNumericSignal(
+  sourceFamily: string,
+  sourceKey: string,
+  normalizedPayload: Record<string, unknown>,
+  externalId: string,
+  occurredAt: string | null,
+  lastSeenAt: string,
+): ExtractedSignal | null {
+  const timestamp = occurredAt
+    ? new Date(occurredAt)
+    : new Date(lastSeenAt);
+
+  switch (sourceFamily) {
+    case "macro_official":
+      return extractMacro(sourceKey, normalizedPayload, externalId, timestamp);
+    case "political_official":
+      return extractPolitical(sourceKey, normalizedPayload, externalId, timestamp);
+    case "hazard_weather":
+      return extractHazard(sourceKey, normalizedPayload, externalId, timestamp);
+    default:
+      return null;
+  }
+}
+
+export function getSignalWeight(sourceFamily: string): number {
+  return SOURCE_FAMILY_WEIGHTS[sourceFamily] ?? 0.5;
+}
+
+function extractMacro(
+  sourceKey: string,
+  payload: Record<string, unknown>,
+  externalId: string,
+  timestamp: Date,
+): ExtractedSignal | null {
+  const rawValue = payload.value;
+  if (rawValue === null || rawValue === undefined) return null;
+
+  const value = typeof rawValue === "number"
+    ? rawValue
+    : parseFloat(String(rawValue));
+
+  if (isNaN(value)) return null;
+
+  return {
+    currentValue: value,
+    signalTimestamp: timestamp,
+    signalType: "macro_observation",
+    sourceName: sourceKey,
+    externalId,
+    metadata: { series_id: payload.series_id, date: payload.date },
+  };
+}
+
+function extractPolitical(
+  sourceKey: string,
+  payload: Record<string, unknown>,
+  externalId: string,
+  timestamp: Date,
+): ExtractedSignal | null {
+  // For bills: use action status ordinal
+  const actionText = String(payload.latest_action_text ?? "").toLowerCase();
+
+  let ordinal: number | null = null;
+  for (const [keyword, value] of Object.entries(POLITICAL_STATUS_ORDINALS)) {
+    if (actionText.includes(keyword)) {
+      ordinal = value;
+      break;
+    }
+  }
+
+  if (ordinal === null) {
+    // Default: count as 1 (activity indicator)
+    ordinal = 1;
+  }
+
+  return {
+    currentValue: ordinal,
+    signalTimestamp: timestamp,
+    signalType: "political_event",
+    sourceName: sourceKey,
+    externalId,
+    metadata: {
+      title: payload.title,
+      latest_action: payload.latest_action_text,
+    },
+  };
+}
+
+function extractHazard(
+  sourceKey: string,
+  payload: Record<string, unknown>,
+  externalId: string,
+  timestamp: Date,
+): ExtractedSignal | null {
+  if (sourceKey === "usgs_earthquakes") {
+    const magnitude = payload.magnitude;
+    if (magnitude === null || magnitude === undefined) return null;
+    const value = typeof magnitude === "number" ? magnitude : parseFloat(String(magnitude));
+    if (isNaN(value)) return null;
+
+    return {
+      currentValue: value,
+      signalTimestamp: timestamp,
+      signalType: "earthquake_magnitude",
+      sourceName: sourceKey,
+      externalId,
+      metadata: { place: payload.place, significance: payload.significance },
+    };
+  }
+
+  if (sourceKey === "noaa_nws") {
+    const severity = String(payload.severity ?? "");
+    const ordinal = SEVERITY_ORDINALS[severity] ?? 0;
+    if (ordinal === 0) return null;
+
+    return {
+      currentValue: ordinal,
+      signalTimestamp: timestamp,
+      signalType: "weather_severity",
+      sourceName: sourceKey,
+      externalId,
+      metadata: {
+        event_type: payload.event_type,
+        headline: payload.headline,
+      },
+    };
+  }
+
+  if (sourceKey === "open_meteo") {
+    const precip = payload.precip;
+    if (precip === null || precip === undefined) return null;
+    const value = typeof precip === "number" ? precip : parseFloat(String(precip));
+    if (isNaN(value)) return null;
+
+    return {
+      currentValue: value,
+      signalTimestamp: timestamp,
+      signalType: "weather_precipitation",
+      sourceName: sourceKey,
+      externalId,
+      metadata: {
+        location_key: payload.location_key,
+        temp_max: payload.temp_max,
+      },
+    };
+  }
+
+  return null;
+}

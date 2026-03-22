@@ -1,0 +1,25 @@
+{
+  "name": "@signal-map/worker",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "@sentry/node": "^9.0.0",
+    "@signal-map/db": "workspace:*",
+    "@signal-map/logger": "workspace:*",
+    "@signal-map/queue": "workspace:*",
+    "@signal-map/shared": "workspace:*",
+    "@supabase/supabase-js": "^2.49.0",
+    "resend": "^6.9.4"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0"
+  }
+}

@@ -1,0 +1,991 @@
+Product Requirements Document (PRD)
+Product Name: Signal Map
+Working Tagline: A live map of what signals currently point to next.
+
+## 1. Executive Summary
+
+Signal Map is a public-first, personalized signal intelligence web application that helps users quickly understand where a story is heading on subjects they care about.
+
+It combines:
+- prediction markets
+- forecasting platforms
+- official political and macro datasets
+- hazard/disaster feeds
+- news/event evidence
+- structured reference sources
+
+into one normalized topic page that explains:
+- the current picture
+- what changed
+- what signals currently point to
+- what to watch next
+
+Topic pages are public and reachable without authentication.
+Authentication is required only for personalization features such as:
+- following topics
+- building a personal dashboard
+- setting alerts
+- “since your last visit”
+- saving and publishing collections
+
+Signal Map launches with strongest quality in:
+- politics
+- geopolitics
+- war/conflict
+- disasters/weather
+- macro/cost of living
+
+Other popular categories may exist at launch with lighter support, but the MVP should focus its highest quality on the categories above.
+
+---
+
+## 2. Product Vision
+
+Help people make order out of world disorder.
+
+Signal Map should not feel like:
+- a news site
+- a trading terminal
+- a dashboard for experts
+
+It should feel like:
+- calm
+- premium
+- visual
+- intelligent
+- trustworthy
+- quick to understand
+
+---
+
+## 3. Problem Statement
+
+People who follow the news are overwhelmed by:
+- too many headlines
+- conflicting narratives
+- too much interpretation work
+- weak signal-to-noise ratio
+- no clear view of what is likely happening next
+
+Existing products show:
+- what was said
+- what happened
+- what one source thinks
+
+They do not synthesize multiple live signals into a clean, topic-first picture of where a story is heading.
+
+---
+
+## 4. Core User Promise
+
+When I open this app, I instantly understand what tomorrow is starting to look like on the matters I care about.
+
+---
+
+## 5. Target Users
+
+### Primary users
+- people who actively follow news and current events
+- politics followers
+- geopolitics and war followers
+- casual but engaged news readers
+- journalists and analysts
+- people who want fast clarity without headline overload
+
+### Secondary users
+- sports fans
+- celebrity/entertainment followers
+- retail investors
+- crypto users
+- people tracking cost of living, disasters, weather, or macro stories
+
+---
+
+## 6. Product Principles
+
+- Public understanding should not require login
+- Auth should unlock personalization, not access
+- Topic-first, not source-first
+- Likelihood-first, not headline-first
+- Visual-first, not article-first
+- Clarity-first, not doomscroll-first
+- Deterministic scoring first, LLM prose second
+- Structured fallbacks must exist if summarization fails
+- Automation-first with lightweight admin correction
+- Scale with modular boundaries, not premature microservices
+- Cron schedules work; workers process work; Postgres records truth
+
+---
+
+## 7. Scope
+
+### In scope for MVP
+- Public topic pages
+- Search and browse topics
+- Topic normalization engine
+- Multi-source ingestion
+- Deterministic scoring and immutable snapshot generation
+- Thresholded LLM summarization
+- Follow/unfollow topics
+- Personalized dashboard
+- “Since your last visit”
+- Email alerts and digests
+- Public topic sharing
+- Saved collections
+- Public published collections
+- Lightweight admin console
+- Source health and scoped reprocessing
+- Observability foundation
+- Topic seeding and topic search
+- Public/private route separation
+- Snapshot pointer model (`topic_latest_snapshot`)
+
+### Out of scope for MVP
+- Native mobile apps
+- Team workspaces
+- Enterprise RBAC beyond admin
+- Heavy editorial workflow
+- User comments/community
+- Full BI/analytics backend
+- Real-time trading or execution
+- Public API for third parties
+- SMS/WhatsApp push at launch
+- Full category depth across all domains
+
+---
+
+## 8. Product Architecture Summary
+
+### Public layer
+Anonymous users can:
+- search topics
+- browse categories
+- open public topic pages
+- view current picture, what changed, what’s next, timeline, and top signals
+- open public collections
+- share public topic pages and collections
+
+### Authenticated layer
+Logged-in users can:
+- follow topics
+- build a personalized dashboard
+- receive alerts/digests
+- see “since your last visit”
+- save collections
+- publish collections
+- adjust notification preferences
+
+### Internal/admin layer
+Admins can:
+- inspect source health
+- inspect jobs
+- retry failed jobs
+- merge/rename/archive topics
+- review topic candidates
+- reprocess source/topic/time windows
+- inspect snapshot history
+- inspect version registry and audit logs
+
+---
+
+## 9. Success Metrics
+
+### Product metrics
+- topic page views
+- public-to-signup conversion
+- percent of users following at least 3 topics
+- daily returning users
+- weekly returning users
+- alert open rate
+- email digest click-through rate
+- number of published collections
+- search-to-topic click rate
+
+### Quality metrics
+- topic page freshness
+- source ingestion success rate
+- topic normalization precision
+- percent of topics with valid latest snapshots
+- summary failure rate
+- stale topic count
+- admin intervention rate
+- percent of pages that can render from structured fallback when prose is unavailable
+
+### Technical metrics
+- topic page P95 response time
+- snapshot generation latency
+- ingestion throughput
+- queue backlog
+- cache hit rate
+- failed job rate
+- realtime invalidation lag
+
+---
+
+## 10. User Stories
+
+### Anonymous user
+- As a visitor, I want to search for a subject and instantly understand its current picture without signing in.
+- As a visitor, I want to see what changed and what may happen next.
+- As a visitor, I want to share a subject page with others.
+- As a visitor, I want topic pages to load quickly and feel trustworthy.
+- As a visitor, I want to be encouraged to sign up only when personalization adds clear value.
+
+### Authenticated user
+- As a signed-in user, I want to follow topics I care about.
+- As a signed-in user, I want a dashboard of my followed topics.
+- As a signed-in user, I want alerts only when meaningful changes happen.
+- As a signed-in user, I want to know what changed since I last checked.
+- As a signed-in user, I want to build and publish collections of topics.
+
+### Admin
+- As an admin, I want to see which sources are failing.
+- As an admin, I want to retry or backfill jobs.
+- As an admin, I want to merge or rename topics when automation gets messy.
+- As an admin, I want to reprocess one topic without corrupting history.
+- As an admin, I want to roll back scoring/summarization versions if necessary.
+
+---
+
+## 11. Core MVP Features
+
+### 11.1 Public Topic Pages
+**Goal**  
+Provide a public, indexable, shareable page for every supported topic.
+
+**Must include**
+- canonical topic title
+- one-line current picture
+- direction of change
+- confidence/disagreement/freshness state
+- top signals
+- subtopics
+- timeline
+- what changed
+- what to watch next
+- optional evidence drawer, hidden by default
+- CTA to follow or personalize
+
+**Rules**
+- no login required
+- fast SSR
+- edge cacheable
+- built from latest published snapshot
+- must degrade gracefully if summarization fails
+- should render from internal snapshot data only
+
+### 11.2 Search and Topic Discovery
+**Goal**  
+Help users find topics quickly.
+
+**Must include**
+- search bar
+- topic autocomplete
+- search by alias and canonical name
+- category browsing
+- trending/popular topics
+- curated seeded topics for launch
+
+**Ranking**
+Use:
+- exact alias match
+- canonical name match
+- trigram/text similarity
+- popularity score
+- freshness/activity score
+
+### 11.3 Followed Topics Dashboard
+**Goal**  
+Provide a personal home for followed subjects.
+
+**Must include**
+- followed topics list
+- top-line state for each topic
+- latest change indicator
+- quick link to topic page
+- since-last-visit summary or badge
+- mute/unmute
+- alert level settings
+
+### 11.4 Since Your Last Visit
+**Goal**  
+Tell a user what changed between the last snapshot they saw and the current latest snapshot.
+
+**Must include**
+- summary delta
+- direction shift
+- confidence/disagreement changes
+- top changed signals
+- timestamp of last visit
+- graceful fallback if no prior visit exists
+
+### 11.5 Alerts and Digests
+**Goal**  
+Keep users engaged without spamming them.
+
+**MVP channel**
+- email
+
+**Must include**
+- meaningful change alerts
+- daily digest
+- per-topic alert sensitivity
+- dedupe protection
+
+**Trigger logic**
+Alert only when:
+- direction changes materially
+- confidence/disagreement changes materially
+- a high-impact signal enters the topic
+- a major event crosses a threshold
+
+### 11.6 Saved Collections and Published Collections
+**Goal**  
+Let users organize topics and share curated subject bundles.
+
+**Must include**
+- create collection
+- add/remove/reorder topics
+- publish collection publicly
+- public route for published collection
+- no leakage of private preferences
+
+### 11.7 Multi-Source Ingestion
+**Goal**  
+Bring in data from multiple external sources in a normalized way.
+
+**Source categories**
+- prediction markets
+- forecasting platforms
+- official political/government sources
+- macro/reference sources
+- hazard/disaster sources
+- news APIs / RSS
+- controlled scraping fallback only where approved
+
+**Cadence**
+- source-specific cadence only
+- 5 minutes for high-frequency tracked market/hazard sources
+- 15 minutes for hot evidence sources
+- daily or release-based for slower official sources
+
+### 11.8 Topic Normalization and Auto-Grouping
+**Goal**  
+Turn raw source items into clean, user-facing topics.
+
+**Must include**
+- canonical topics
+- aliases
+- topic graph
+- subtopics
+- candidate topics
+- promotion rules
+- duplicate prevention
+- merge/archive controls
+- topic seeding
+- topic search
+
+### 11.9 Snapshot Scoring Engine
+**Goal**  
+Compute topic state deterministically.
+
+**Must compute**
+- current picture state
+- direction of change
+- confidence state
+- disagreement state
+- freshness state
+- top signals
+- what changed
+- what next candidate signals
+
+**Rules**
+- deterministic scoring logic must drive state
+- LLM prose may explain, not define
+- snapshots are immutable
+- `topic_latest_snapshot` is the pointer to the latest published view
+
+### 11.10 Lightweight Admin Console
+**Goal**  
+Keep the system operable.
+
+**Must include**
+- source health
+- failed job list
+- job retry
+- backfill trigger
+- topic merge/rename/archive
+- snapshot history
+- reprocessing requests
+- audit log
+- version state visibility
+
+### 11.11 Observability and Recovery
+**Goal**  
+Prevent blind debugging and unsafe operations.
+
+**Must include**
+- structured logs
+- error tracking
+- queue health
+- source health
+- snapshot generation run history
+- version registry
+- rollback path for scoring/summarization versions
+- append-only repair/reprocessing model
+
+---
+
+## 12. Functional Requirements by Domain
+
+### 12.1 Topics
+**Create**
+- mostly automatic through topic promotion
+- manual admin creation allowed
+
+**Read**
+- by slug
+- by search
+- by category
+- related topics
+- subtopics
+
+**Update**
+- admin rename
+- aliases
+- category
+- parent/relationship updates
+- public/private visibility
+
+**Delete**
+- soft delete or archive only
+
+### 12.2 Snapshots
+**Create**
+- worker-generated only
+- immutable
+- versioned
+
+**Read**
+- latest per topic
+- historical timeline
+- compare current vs old
+
+**Update**
+- no content mutation
+- only latest pointer changes
+
+**Delete**
+- avoid hard delete; mark invalid if needed
+
+### 12.3 Source Items
+**Create**
+- ingestion adapters
+- upsert by source external ID
+
+**Read**
+- mostly internal
+- admin inspection only
+
+**Update**
+- new versions on content change
+- last_seen timestamps
+
+**Delete**
+- mark inactive, do not hard delete
+
+### 12.4 Follows
+**Create**
+- authenticated only
+- unique per user/topic
+
+**Read**
+- user dashboard
+- topic personalization state
+
+**Update**
+- mute
+- alert level
+- last seen
+
+**Delete**
+- hard delete allowed
+
+### 12.5 Alerts and Notifications
+**Create**
+- automatically via follow or preferences
+- generated asynchronously
+
+**Read**
+- user settings and history
+
+**Update**
+- frequency
+- channel
+- sensitivity
+
+**Delete**
+- disable rather than delete where possible
+
+### 12.6 Collections
+**Create**
+- authenticated user
+
+**Read**
+- private to owner unless published
+- public if published
+
+**Update**
+- metadata
+- topic membership
+- order
+
+**Delete**
+- soft delete collection
+- preserve publication history
+
+---
+
+## 13. UX Requirements
+
+### Public topic page
+Above the fold must answer:
+- what is the current picture?
+- is it moving?
+- what signals point to now?
+- what should I watch next?
+
+### Auth experience
+Auth must feel like an upgrade, not a wall.
+
+Use auth prompts for:
+- follow this topic
+- save to dashboard
+- get alerts
+- remember what changed since last time
+- create a collection
+
+### Visual design
+- premium
+- dark elegant UI
+- strong typography
+- one signature visualization per topic page
+- high information density, but clean
+- calm by default, live when something moves
+- raw evidence hidden behind drawers
+
+---
+
+## 14. Non-Functional Requirements
+
+### Performance
+- public topic pages should be cacheable and fast
+- latest snapshot reads must be O(1)-friendly
+- timeline reads paginated
+- heavy assembly work must happen in workers, not request path
+
+### Reliability
+- if summarization fails, structured snapshot still publishes
+- if source fails, stale state is explicit
+- if scoring fails, last known good snapshot remains available
+
+### Scalability
+- modular monolith for web
+- separate worker process
+- Postgres-backed queue as durable truth
+- Redis for cache/dedupe only
+- source-specific scaling later if needed
+
+### Security
+- public-safe data separate from private user data
+- strict RLS for user-specific tables
+- admin-only high-risk actions
+- no third-party secrets in client paths
+
+---
+
+## 15. Recommended Technical Stack
+
+### Frontend
+- Next.js
+- TypeScript
+- shared component library
+- SSR/RSC where appropriate
+- client query library for refresh and personalization
+
+### Backend
+- Next.js route handlers or thin API layer for MVP
+- worker service for ingestion, normalization, scoring, snapshots, notifications
+- TypeScript across app and workers
+
+### Data
+- Supabase Postgres
+- pgvector inside Postgres
+- Supabase Auth
+- Supabase Realtime
+- Supabase Storage or object storage for raw payloads
+
+### Queue / background
+- Postgres-backed queue preferred for durability and simpler truth model
+- Redis only for cache, short-lived dedupe, optional locks
+
+### Hosting
+- Render for web, worker, admin
+- Supabase for DB/auth/realtime/storage
+
+### Observability
+- structured JSON logs
+- Sentry or equivalent
+- uptime checks
+- health dashboards
+- metrics around jobs, source freshness, queue latency
+
+---
+
+## 16. Data Model Summary
+
+### Public-safe core entities
+- topics
+- topic_aliases
+- topic_relationships
+- topic_subtopics
+- topic_latest_snapshot
+- topic_snapshots
+- topic_signals
+- public_topic_cards
+- public_collection_publications
+
+### Private entities
+- profiles
+- user_followed_topics
+- user_notification_preferences
+- alerts
+- notification_events
+- user_topic_seen_snapshots
+- collections
+- collection_topics
+
+### Operational entities
+- source_definitions
+- source_sync_jobs
+- source_health
+- source_items
+- source_item_versions
+- topic_candidates
+- source_item_topic_matches
+- snapshot_generation_runs
+- reprocessing_requests
+- admin_audit_logs
+- version_registry
+
+---
+
+## 17. Routing Model
+
+### Public routes
+- `/`
+- `/topics/[slug]`
+- `/collections/[slug]`
+- `/search`
+- `/categories/[category]`
+
+### Authenticated routes
+- `/dashboard`
+- `/dashboard/topics/[slug]`
+- `/dashboard/alerts`
+- `/dashboard/collections`
+- `/dashboard/settings`
+
+### Admin routes
+- `/admin`
+- `/admin/sources`
+- `/admin/topics`
+- `/admin/jobs`
+- `/admin/reprocessing`
+- `/admin/audit`
+
+---
+
+## 18. Permissions Matrix
+
+### Anonymous
+Can:
+- search
+- browse
+- open public topics
+- open public collections
+- share public links
+
+Cannot:
+- follow
+- alert
+- personalize
+- create collections
+
+### Authenticated user
+Can:
+- follow topics
+- manage alerts
+- see personalized dashboard
+- create collections
+- publish collections
+
+Cannot:
+- access admin functions
+- mutate topics globally
+- inspect internal source health
+
+### Admin
+Can:
+- perform all admin and recovery actions
+- inspect internal jobs and health
+- merge/archive topics
+- reprocess and retry jobs
+
+---
+
+## 19. Caching and Freshness Model
+
+### Edge/CDN cache
+- public topic pages
+- public collections
+- share cards / OG renders
+
+### App cache
+- assembled topic payloads
+- dashboard summary payloads
+
+### Redis cache
+- hot topic payloads
+- dedupe keys
+- short-lived locks
+- rate-limit state if needed
+
+### Freshness display
+Every topic payload must include:
+- snapshot timestamp
+- freshness status
+- staleness seconds
+- source freshness summary
+
+### Realtime
+Realtime should notify that a newer snapshot exists, not deliver heavy payloads.
+
+---
+
+## 20. Source and Summarization Policy
+
+### Source policy
+- start with a limited, high-value source set
+- prefer official APIs
+- use RSS where strong
+- use scraping only as controlled fallback
+- normalize all records to one source item schema
+- keep raw payloads in storage, not in Postgres
+
+### Summarization policy
+- deterministic scoring always runs
+- LLM summarization only runs when:
+  - material change occurred, or
+  - high-impact new evidence arrived, or
+  - max summary age threshold passed
+- if LLM fails:
+  - publish structured snapshot with no-prose fallback
+
+---
+
+## 21. Topic Seeding Strategy
+
+At launch, do not rely only on topic emergence.
+
+### Seed:
+- major politics topics
+- major geopolitics topics
+- top elections
+- key public figures
+- top conflicts
+- top popular subjects in chosen categories
+
+Each seeded topic should include:
+- canonical name
+- slug
+- aliases
+- category
+- initial related topics
+- initial subtopics if known
+
+---
+
+## 22. Delivery Plan
+
+### Phase 0 — Foundations
+- monorepo setup
+- auth setup
+- database migrations
+- observability
+- queue/job foundation
+- public/private route skeletons
+
+### Phase 1 — Data spine
+- source definitions
+- ingestion adapters
+- normalized source items
+- source health
+- raw payload archiving
+
+### Phase 2 — Topic spine
+- seeded topics
+- topic matching
+- candidate queue
+- promotion rules
+- search
+
+### Phase 3 — Intelligence spine
+- scoring engine
+- snapshot publication
+- latest snapshot pointer
+- timeline generation
+- summary generation
+
+### Phase 4 — Product surface
+- public topic pages
+- search/discovery
+- auth prompts
+- follow topic
+- dashboard
+- since your last visit
+
+### Phase 5 — Engagement
+- alerts
+- digests
+- collections
+- published collections
+
+### Phase 6 — Operations hardening
+- admin console
+- retry/reprocess
+- rollback/versioning
+- incident surfacing
+
+---
+
+## 23. Acceptance Criteria
+
+### A topic page is launch-ready when:
+- it is reachable publicly without auth
+- it renders from latest published snapshot
+- it shows current picture, change, top signals, and what next
+- it shows freshness state
+- it can survive summarization failure
+- it is cacheable and shareable
+- auth upgrades it with follow/personal features
+
+### Follow/dashboard is ready when:
+- a user can follow/unfollow topics
+- dashboard lists follows
+- latest state shows per topic
+- last-seen logic works
+- user can change alert level
+
+### Ingestion is ready when:
+- jobs are idempotent
+- failures are visible
+- changed source items trigger downstream work
+- raw payloads are archived
+- no duplicate source items are created
+
+---
+
+## 24. Risks and Mitigations
+
+### Risk: scope too large
+**Mitigation**
+- lock MVP strictly to core loop first
+- launch strongest categories first
+
+### Risk: summarization cost/reliability
+**Mitigation**
+- thresholded summaries
+- structured fallback mode
+
+### Risk: poor topic normalization
+**Mitigation**
+- seeded topics
+- composite scoring
+- lightweight admin correction
+- match audit history
+
+### Risk: source instability
+**Mitigation**
+- source health tracking
+- stale-state UI
+- retry/backfill
+- source-specific cadence
+
+### Risk: queue/job drift
+**Mitigation**
+- single durable job truth in Postgres-backed queue
+- append-only runs
+- auditable reprocessing
+
+---
+
+## 25. Open Decisions for Team Finalization
+- exact initial source list
+- exact initial categories beyond politics/geopolitics
+- exact visual centerpiece style for topic page
+- initial summarization provider
+- email provider
+- exact topic seeding list
+- exact public collection publish model:
+  - live-updating
+  - or point-in-time snapshot
+
+---
+
+## 26. Execution Notes for Full-Stack Team
+
+### Backend team owns
+- source ingestion
+- normalization
+- scoring
+- snapshots
+- auth + RLS
+- alerts
+- reprocessing
+- operational tooling
+
+### Frontend team owns
+- public topic pages
+- search/discovery
+- dashboard
+- collections
+- settings
+- loading/error/empty states
+- personalization overlays
+
+### Platform/data team owns
+- source onboarding
+- queue/retry reliability
+- database performance
+- observability
+- storage retention
+- rollout safety
+
+### Product/design owns
+- seeded topic list
+- hierarchy of categories
+- trust language
+- state labels
+- visual system
+- CTA strategy between public and auth layers
+
+---
+
+## 27. Final Implementation Notes
+- Public = understanding
+- Auth = memory, following, alerts, dashboard, collections
+- Topic pages are the product demo
+- Search and seeded topics are mandatory, not optional
+- Observability starts in Phase 0, not later
+- Structured snapshot publication must survive provider failures

@@ -1,0 +1,212 @@
+[
+  {
+    "canonical_name": "2026 US Midterm Elections",
+    "slug": "2026-us-midterm-elections",
+    "category": "politics",
+    "description": "The 2026 United States midterm elections",
+    "aliases": ["US Midterms 2026", "2026 Midterm Elections", "Midterms", "Midterm Elections", "Congressional Elections 2026"]
+  },
+  {
+    "canonical_name": "US Federal Reserve Interest Rates",
+    "slug": "us-federal-reserve-interest-rates",
+    "category": "macro",
+    "description": "Federal Reserve interest rate decisions and policy",
+    "aliases": ["Fed Rates", "Federal Funds Rate", "FOMC", "Fed Interest Rate", "Federal Reserve", "Fed Policy", "Interest Rates"]
+  },
+  {
+    "canonical_name": "Russia-Ukraine War",
+    "slug": "russia-ukraine-war",
+    "category": "geopolitics",
+    "description": "The ongoing conflict between Russia and Ukraine",
+    "aliases": ["Ukraine War", "Ukraine Conflict", "Russia Ukraine", "Russian Invasion", "Ukraine Crisis"]
+  },
+  {
+    "canonical_name": "US Inflation Rate",
+    "slug": "us-inflation-rate",
+    "category": "macro",
+    "description": "Consumer price inflation in the United States",
+    "aliases": ["CPI", "US CPI", "Inflation", "Consumer Prices", "Consumer Price Index", "Price Inflation"]
+  },
+  {
+    "canonical_name": "China-Taiwan Relations",
+    "slug": "china-taiwan-relations",
+    "category": "geopolitics",
+    "description": "Political and military tensions between China and Taiwan",
+    "aliases": ["Taiwan Strait", "Cross-Strait Relations", "Taiwan", "Taiwan Crisis", "China Taiwan"]
+  },
+  {
+    "canonical_name": "US Unemployment Rate",
+    "slug": "us-unemployment-rate",
+    "category": "macro",
+    "description": "Monthly US unemployment data and labor market trends",
+    "aliases": ["Jobs Report", "Unemployment", "Labor Market", "Nonfarm Payrolls", "Unemployment Rate", "US Jobs"]
+  },
+  {
+    "canonical_name": "Israel-Palestine Conflict",
+    "slug": "israel-palestine-conflict",
+    "category": "geopolitics",
+    "description": "The ongoing Israeli-Palestinian conflict",
+    "aliases": ["Gaza", "Gaza War", "Israel Hamas", "Middle East Conflict", "Israel Palestine", "Gaza Conflict"]
+  },
+  {
+    "canonical_name": "US Immigration Policy",
+    "slug": "us-immigration-policy",
+    "category": "politics",
+    "description": "Immigration policy and border security in the United States",
+    "aliases": ["Border Policy", "Immigration", "Border Security", "Immigration Reform", "Border Crisis"]
+  },
+  {
+    "canonical_name": "Hurricane Season 2026",
+    "slug": "hurricane-season-2026",
+    "category": "disasters",
+    "description": "2026 Atlantic hurricane season tracking and forecasts",
+    "aliases": ["Atlantic Hurricanes", "Hurricane Season", "Tropical Storms", "Hurricanes", "Tropical Cyclones"]
+  },
+  {
+    "canonical_name": "Global Oil Prices",
+    "slug": "global-oil-prices",
+    "category": "macro",
+    "description": "Crude oil price movements and energy market trends",
+    "aliases": ["Oil Prices", "Crude Oil", "WTI", "Brent Crude", "Energy Prices", "Oil Market"]
+  },
+  {
+    "canonical_name": "US Supreme Court",
+    "slug": "us-supreme-court",
+    "category": "politics",
+    "description": "US Supreme Court decisions, cases, and nominations",
+    "aliases": ["Supreme Court", "SCOTUS", "Supreme Court Decisions", "Court Rulings"]
+  },
+  {
+    "canonical_name": "US Congress Legislation",
+    "slug": "us-congress-legislation",
+    "category": "politics",
+    "description": "Major legislation moving through the US Congress",
+    "aliases": ["Congress", "US Congress", "Congressional Legislation", "Bills", "Senate Bills", "House Bills"]
+  },
+  {
+    "canonical_name": "NATO Alliance",
+    "slug": "nato-alliance",
+    "category": "geopolitics",
+    "description": "NATO military alliance activities and policy",
+    "aliases": ["NATO", "North Atlantic Treaty Organization", "NATO Alliance", "NATO Policy"]
+  },
+  {
+    "canonical_name": "European Union",
+    "slug": "european-union",
+    "category": "geopolitics",
+    "description": "European Union political and economic developments",
+    "aliases": ["EU", "European Union", "EU Policy", "Brussels", "EU Summit"]
+  },
+  {
+    "canonical_name": "North Korea",
+    "slug": "north-korea",
+    "category": "geopolitics",
+    "description": "North Korean military, nuclear, and diplomatic developments",
+    "aliases": ["North Korea", "DPRK", "Kim Jong Un", "Korean Peninsula", "North Korean Missile"]
+  },
+  {
+    "canonical_name": "Iran Nuclear Program",
+    "slug": "iran-nuclear-program",
+    "category": "geopolitics",
+    "description": "Iran's nuclear program and related diplomacy",
+    "aliases": ["Iran Nuclear", "Iran", "JCPOA", "Iran Deal", "Iranian Nuclear"]
+  },
+  {
+    "canonical_name": "US Housing Market",
+    "slug": "us-housing-market",
+    "category": "macro",
+    "description": "US housing prices, mortgage rates, and real estate trends",
+    "aliases": ["Housing Market", "Home Prices", "Real Estate", "Mortgage Rates", "Housing Crisis"]
+  },
+  {
+    "canonical_name": "US Gas Prices",
+    "slug": "us-gas-prices",
+    "category": "macro",
+    "description": "Gasoline prices and fuel cost trends in the United States",
+    "aliases": ["Gas Prices", "Gasoline Prices", "Fuel Prices", "Pump Prices"]
+  },
+  {
+    "canonical_name": "US Consumer Confidence",
+    "slug": "us-consumer-confidence",
+    "category": "macro",
+    "description": "Consumer sentiment and confidence indicators",
+    "aliases": ["Consumer Confidence", "Consumer Sentiment", "Michigan Consumer Sentiment"]
+  },
+  {
+    "canonical_name": "US Stock Market",
+    "slug": "us-stock-market",
+    "category": "macro",
+    "description": "Major US stock market indices and equity trends",
+    "aliases": ["Stock Market", "S&P 500", "Dow Jones", "Nasdaq", "Wall Street", "Equities"]
+  },
+  {
+    "canonical_name": "Earthquake Activity",
+    "slug": "earthquake-activity",
+    "category": "disasters",
+    "description": "Global earthquake activity and seismic events",
+    "aliases": ["Earthquakes", "Seismic Activity", "Earthquake", "Quake", "Tremor"]
+  },
+  {
+    "canonical_name": "Severe Weather Alerts",
+    "slug": "severe-weather-alerts",
+    "category": "disasters",
+    "description": "Active severe weather warnings and advisories",
+    "aliases": ["Severe Weather", "Weather Alerts", "Storm Warning", "Weather Warning", "Tornado Warning", "Winter Storm"]
+  },
+  {
+    "canonical_name": "Wildfire Season",
+    "slug": "wildfire-season",
+    "category": "disasters",
+    "description": "Wildfire activity and fire season tracking",
+    "aliases": ["Wildfires", "Forest Fires", "Wildfire", "Fire Season", "Brush Fire"]
+  },
+  {
+    "canonical_name": "US Debt Ceiling",
+    "slug": "us-debt-ceiling",
+    "category": "politics",
+    "description": "US federal debt ceiling negotiations and fiscal policy",
+    "aliases": ["Debt Ceiling", "Government Shutdown", "Fiscal Policy", "National Debt", "Debt Limit"]
+  },
+  {
+    "canonical_name": "Artificial Intelligence Policy",
+    "slug": "artificial-intelligence-policy",
+    "category": "politics",
+    "description": "AI regulation, policy, and governance developments",
+    "aliases": ["AI Policy", "AI Regulation", "Artificial Intelligence", "AI Governance", "AI Safety"]
+  },
+  {
+    "canonical_name": "US Healthcare Policy",
+    "slug": "us-healthcare-policy",
+    "category": "politics",
+    "description": "Healthcare legislation and policy in the United States",
+    "aliases": ["Healthcare", "Health Care", "ACA", "Affordable Care Act", "Medicare", "Medicaid"]
+  },
+  {
+    "canonical_name": "Climate Change",
+    "slug": "climate-change",
+    "category": "geopolitics",
+    "description": "Climate change developments, policy, and impact",
+    "aliases": ["Climate", "Global Warming", "Climate Policy", "COP", "Paris Agreement", "Carbon Emissions"]
+  },
+  {
+    "canonical_name": "Sudan Conflict",
+    "slug": "sudan-conflict",
+    "category": "geopolitics",
+    "description": "The ongoing civil conflict in Sudan",
+    "aliases": ["Sudan", "Sudan War", "Sudanese Civil War", "Sudan Crisis", "Khartoum"]
+  },
+  {
+    "canonical_name": "US Trade Policy",
+    "slug": "us-trade-policy",
+    "category": "politics",
+    "description": "US trade agreements, tariffs, and trade relations",
+    "aliases": ["Trade Policy", "Tariffs", "Trade War", "US Tariffs", "Trade Agreements"]
+  },
+  {
+    "canonical_name": "Global Food Prices",
+    "slug": "global-food-prices",
+    "category": "macro",
+    "description": "Global food commodity prices and food security",
+    "aliases": ["Food Prices", "Food Inflation", "Food Security", "Commodity Prices", "Grain Prices"]
+  }
+]

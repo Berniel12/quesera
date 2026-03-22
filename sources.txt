@@ -1,0 +1,874 @@
+API Integration Guide — Approved Source Architecture
+
+Product: Signal Map
+Last updated: v2 consolidated guide
+
+## 1. Purpose
+
+This document defines the approved source integration strategy for Signal Map.
+
+Signal Map is a public-first, personalized signal intelligence product that synthesizes:
+- prediction markets
+- forecasting platforms
+- official government/political data
+- macroeconomic data
+- hazard/disaster feeds
+- news/event evidence
+- subject/reference metadata
+
+into normalized topic pages showing:
+- current picture
+- what changed
+- what signals currently point to
+- what to watch next
+
+This document is for engineering, data, and product teams deciding:
+- which sources to integrate
+- what role each source plays
+- what cadence each source uses
+- what is in-scope for MVP
+- what should never be treated as a foundation
+
+---
+
+## 2. Source Strategy Principles
+
+### Principle 1 — Not all sources do the same job
+Every source must be assigned one or more explicit roles:
+
+- **Signal source** — may affect deterministic scoring and topic state
+- **Reference truth source** — anchors official facts, metadata, identifiers, or state changes
+- **Evidence source** — explains what changed, but should not usually drive score directly
+- **Watch-next / alert source** — useful for triggering freshness or upcoming-event hints
+
+### Principle 2 — Public topic pages must not depend on live third-party calls
+All sources feed worker pipelines. Topic pages only read internal normalized and snapshot tables.
+
+### Principle 3 — Prefer official + structured + stable sources first
+Priority order:
+1. Official APIs / official feeds
+2. Well-documented structured public APIs
+3. Reliable RSS / structured datasets
+4. Controlled scraping fallback only when truly necessary
+
+### Principle 4 — No brittle social/platform dependency for MVP
+Avoid building the MVP on:
+- X/Twitter
+- Reddit
+- unstable unofficial Google News or platform scraping
+- aggressive anti-bot targets
+- unclear commercial-rights sources
+
+### Principle 5 — Source-specific cadence matters
+Do not use one global refresh interval. Cadence must reflect actual source freshness and cost.
+
+---
+
+## 3. Approved Source Roles
+
+## 3.1 Signal Sources
+These may directly influence deterministic scoring.
+
+### P0 signal sources
+- Polymarket
+- Kalshi
+- Metaculus
+- FRED
+- Congress.gov event-state changes
+- GovInfo / FEC-derived political event changes
+- USGS / NOAA / NWS / Open-Meteo
+- BLS / EIA (early P1 but effectively strong macro/cost-of-living candidates)
+
+### P1 signal sources
+- Manifold
+- IFES election metadata if structured enough for scoring support
+- ACLED / similar conflict-event datasets if quality/terms work
+- DBnomics / World Bank / Eurostat / IMF expansion
+
+## 3.2 Reference Truth Sources
+These anchor metadata, IDs, official status, and subject structure.
+
+### P0 reference sources
+- Wikidata
+- Congress.gov
+- GovInfo
+- FEC
+- FRED
+- USGS
+- NOAA/NWS
+
+### P1 reference sources
+- BLS
+- EIA
+- IFES ElectionGuide
+- TMDb
+- TheSportsDB
+- World Bank
+- Eurostat
+- IMF
+
+## 3.3 Evidence Sources
+These explain changes and support evidence drawers but should not directly define state by default.
+
+### P0 evidence sources
+- One strong news API (Bing News or equivalent)
+- RSS aggregator
+- ReliefWeb
+- GDELT (filtered, careful use)
+
+### P1 evidence sources
+- UN News
+- HDX
+- UCDP
+- curated official bulletins by subject family
+
+---
+
+## 4. Approved Source Stack by Priority
+
+## 4.1 P0 — Launch Sources
+
+### 4.1.1 Polymarket
+**Role**
+- signal source
+- topic heat source
+- geopolitics/politics expectation layer
+
+**Best for**
+- geopolitics
+- conflict/war
+- global politics
+- public-interest long-tail topics
+- some entertainment/pop-culture later
+
+**Read surfaces**
+- Gamma API for events/markets/categories
+- public market/event metadata
+- optionally CLOB/Data later if needed
+
+**Use in MVP**
+- REST polling only
+- websocket later if justified
+
+**Cadence**
+- tracked markets: every 5 minutes
+- market discovery polling: slower, e.g. every 15–30 minutes
+
+**Key fields**
+- market/event IDs
+- title/question
+- category/tags
+- prices
+- volume
+- close time
+- active/inactive/resolved status
+
+**Rules**
+- low-liquidity/noisy markets must be filtered before scoring
+- market phrasing must be normalized aggressively into topics
+
+**Scoring usage**
+- yes, weighted expectation signal
+
+**Evidence usage**
+- possibly as source references in advanced evidence drawers later
+
+**Operational notes**
+- treat metadata and prices separately if needed
+- use minimum liquidity/volume threshold before contributing materially
+
+---
+
+### 4.1.2 Kalshi
+**Role**
+- signal source
+- structured event-market backbone for US politics, macro, weather/disaster
+
+**Best for**
+- US politics
+- macro
+- rates/inflation expectations
+- disasters/weather event framing
+- election event markets
+
+**Use in MVP**
+- REST polling first
+- websocket later only for hotter/premium views
+
+**Cadence**
+- tracked markets: every 5 minutes
+
+**Key fields**
+- ticker/event ID
+- market metadata
+- yes/no prices
+- volume/liquidity
+- market status
+- timestamps/history where available
+
+**Scoring usage**
+- yes, high-trust structured expectation signal
+
+**Operational notes**
+- one of the cleanest MVP integrations
+- keep as first-class signal source
+
+---
+
+### 4.1.3 Metaculus
+**Role**
+- signal source
+- long-horizon forecast layer
+- watch-next enrichment
+
+**Best for**
+- geopolitics
+- AI / science later
+- medium/long-term “what next” context
+
+**Use in MVP**
+- hourly polling
+- no need for high-frequency refresh
+
+**Cadence**
+- hourly
+
+**Key fields**
+- question ID/title
+- resolution criteria
+- status
+- aggregate forecast
+- timestamps/history if available
+
+**Scoring usage**
+- yes, but lower-frequency/longer-horizon weighting
+
+**Operational notes**
+- do not treat it like a fast live ticker
+- ideal for expectation comparison and outlook
+
+---
+
+### 4.1.4 Congress.gov
+**Role**
+- reference truth source
+- signal source for official legislative state change
+
+**Best for**
+- US politics
+- legislation
+- hearings/committees
+- official event transitions
+
+**Use in MVP**
+- yes, foundational
+
+**Cadence**
+- intraday or daily depending on relevant endpoints
+
+**Key fields**
+- bill IDs
+- action timestamps
+- status changes
+- committees
+- sponsors
+- documents/links
+
+**Scoring usage**
+- yes, for factual political state changes
+- also useful for evidence and topic enrichment
+
+**Operational notes**
+- treat as one of the main official politics anchors
+- preferred over dead/deprecated unofficial political APIs
+
+---
+
+### 4.1.5 GovInfo
+**Role**
+- reference truth source
+- evidence source
+- official political/legal document context
+
+**Best for**
+- government documents
+- official publications
+- supporting political topic context
+
+**Cadence**
+- daily or intraday depending on use
+
+**Use**
+- evidence
+- official-doc context
+- anchor for “why changed” in public policy subjects
+
+---
+
+### 4.1.6 FEC
+**Role**
+- reference truth source
+- signal source for campaign-finance state changes
+
+**Best for**
+- elections
+- campaign finance
+- candidate ecosystem topics
+
+**Cadence**
+- daily or intraday depending on filings/use
+
+**Key fields**
+- committee IDs
+- candidate IDs
+- filing dates
+- contribution totals
+- expenditure fields
+
+**Scoring usage**
+- yes, only in specific election/political subject families
+
+---
+
+### 4.1.7 FRED
+**Role**
+- signal source
+- reference truth source
+
+**Best for**
+- inflation
+- interest rates
+- unemployment
+- macro baseline
+- cost-of-living context
+
+**Cadence**
+- release-based or daily
+
+**Key fields**
+- series ID
+- date
+- value
+- units
+- source metadata
+- revision timestamp if available
+
+**Scoring usage**
+- yes
+- should be a core macro/cost-of-living input
+
+**Operational notes**
+- one of the best first integrations technically
+
+---
+
+### 4.1.8 USGS
+**Role**
+- signal source
+- reference truth source
+- alert/watch-next source
+
+**Best for**
+- earthquake subjects
+- live disaster pages
+
+**Cadence**
+- every 5–15 minutes
+
+**Scoring usage**
+- yes, for disaster subjects
+
+---
+
+### 4.1.9 NOAA / NWS / Open-Meteo
+**Role**
+- signal source
+- reference truth source
+- alert/watch-next source
+
+**Best for**
+- storms
+- heatwaves
+- weather-driven public-interest subjects
+- forecast-backed disaster pages
+
+**Cadence**
+- 5–15 minutes for active alert layers
+- slower for supporting forecast layers if needed
+
+**Scoring usage**
+- yes, for weather/disaster subjects
+
+---
+
+### 4.1.10 One Strong News API (Bing News or equivalent)
+**Role**
+- evidence source only by default
+
+**Best for**
+- contextual headlines/snippets
+- evidence drawer
+- “what changed” support
+
+**Cadence**
+- every 15 minutes for hot topics
+- slower for cold topics
+
+**Rules**
+- do not treat as direct scoring input by default
+- store metadata and snippet carefully under terms
+
+**Operational notes**
+- choose one reliable provider instead of many weak ones for MVP
+
+---
+
+### 4.1.11 RSS Aggregator
+**Role**
+- evidence source
+- low-cost topic context layer
+
+**Best for**
+- curated sources
+- official bulletins
+- publisher feeds where stable
+
+**Cadence**
+- every 15 minutes for hot feeds
+- source-specific otherwise
+
+**Operational notes**
+- good complement to commercial news API
+- use only curated/high-value feed set
+
+---
+
+### 4.1.12 ReliefWeb
+**Role**
+- evidence source
+- geopolitics/humanitarian context layer
+
+**Best for**
+- conflict zones
+- humanitarian crises
+- disaster/aid contexts
+
+**Cadence**
+- hourly or source-appropriate
+
+**Operational notes**
+- extremely valuable for geopolitics-heavy launch
+
+---
+
+### 4.1.13 GDELT
+**Role**
+- evidence source
+- event-detection / subject heat source
+- optional secondary scoring support later
+
+**Best for**
+- global event detection
+- protest/conflict/political event heat
+- multilingual coverage
+- subject emergence/context
+
+**Cadence**
+- 15 minutes if used operationally
+
+**Operational notes**
+- very valuable
+- noisy unless filtered carefully
+- should start as evidence/event-detection layer before becoming a core scoring source
+
+---
+
+### 4.1.14 Wikidata
+**Role**
+- reference truth source
+- entity spine
+
+**Best for**
+- canonical entities
+- aliases
+- linking people/countries/organizations
+- metadata normalization
+
+**Cadence**
+- seed + periodic refresh
+- not high-frequency
+
+**Operational notes**
+- should be part of topic seeding and canonicalization strategy
+
+---
+
+## 4.2 P1 — Early Expansion
+
+### Strong P1 sources
+- BLS
+- EIA
+- Manifold
+- IFES ElectionGuide
+- World Bank
+- Eurostat
+- IMF
+- HDX
+- UCDP
+- UN News
+
+### Why these are P1
+They are valuable, but either:
+- category depth is not required at launch
+- they introduce more normalization complexity
+- their use cases are narrower than the P0 core
+
+---
+
+## 4.3 P2 — Category Expansion
+- TMDb
+- TheSportsDB
+- MusicBrainz
+- DBnomics
+- ACLED
+- structured sports APIs as product expands
+
+---
+
+## 5. Sources to Avoid in MVP
+
+Avoid or defer:
+- X / Twitter as a core dependency
+- Reddit as a core dependency
+- aggressive social scraping
+- PredictIt as a foundation
+- RealClearPolitics scraping
+- unofficial sports scraping
+- unofficial entertainment scraping
+- IMDb as a central commercial dependency
+- any source with unclear commercial usage rights
+- any source that is API-dead/deprecated as a foundational assumption
+
+---
+
+## 6. Subject-Family Source Recommendations
+
+## Politics
+### P0 stack
+- Kalshi
+- Polymarket
+- Congress.gov
+- GovInfo
+- FEC
+- one news API
+- RSS
+- Wikidata
+
+### Scoring
+- market probabilities
+- official legislative/campaign event changes
+- polling only if a reliable dataset path exists
+
+### Evidence
+- news
+- official docs
+- press coverage
+
+---
+
+## Geopolitics / War / Conflict
+### P0 stack
+- Polymarket
+- Metaculus
+- ReliefWeb
+- GDELT
+- one news API
+- RSS
+- Wikidata
+
+### P1 additions
+- HDX
+- UCDP
+- UN News
+- ACLED if viable
+
+### Scoring
+- market/forecast signals
+- selected structured conflict indicators later
+
+### Evidence
+- humanitarian/event/news sources
+- official statements and bulletins
+
+---
+
+## Disasters / Weather
+### P0 stack
+- USGS
+- NOAA/NWS
+- Open-Meteo
+- GDACS if integrated
+- one news API
+
+### Scoring
+- official hazard metrics
+- alert severity
+- forecast severity
+
+### Evidence
+- bulletins
+- disaster/news context
+
+---
+
+## Cost of Living / Macro
+### P0/P1 stack
+- FRED
+- BLS
+- EIA
+- Kalshi
+- one news API
+
+### Scoring
+- inflation/rates/unemployment/energy
+- expectation overlay from structured markets
+
+### Evidence
+- official releases
+- news evidence only
+
+---
+
+## Sports
+### Later
+- structured sports API
+- TheSportsDB
+- Polymarket where relevant
+- news evidence API
+
+---
+
+## Entertainment / Celebrities
+### Later
+- TMDb
+- Wikidata
+- news evidence API
+- optional forecast/community sources later
+
+---
+
+## 7. Ingestion Cadence Table
+
+| Source Family | Approved Sources | Cadence | Primary Role |
+|---|---|---:|---|
+| Prediction markets | Kalshi, Polymarket | Every 5 min | signal |
+| Forecasting | Metaculus | Hourly | signal / watch-next |
+| News evidence | One news API, RSS | Every 15 min for hot topics | evidence |
+| Political official data | Congress.gov, GovInfo, FEC | Intraday / daily | reference truth + signal |
+| Macro official stats | FRED, later BLS/EIA | Release-based / daily | signal + reference truth |
+| Hazard/weather | USGS, NOAA/NWS, Open-Meteo | 5–15 min | signal + alert |
+| Humanitarian/conflict | ReliefWeb, GDELT, later HDX/UCDP | 15 min to daily | evidence / event heat |
+| Reference entities | Wikidata | Seed + periodic refresh | reference truth |
+
+---
+
+## 8. Adapter Requirements
+
+Every source adapter must declare:
+
+- `source_key`
+- `source_family`
+- `role_types` (signal/reference/evidence/watch-next)
+- `auth_model`
+- `cadence_seconds`
+- `license_class`
+- `risk_level`
+- `raw_payload_policy`
+- `scoring_eligible`
+- `evidence_eligible`
+- `entity_linking_strategy`
+- `rate_limit_policy`
+
+Every adapter must also implement:
+- fetch
+- normalize
+- dedupe/upsert
+- health update
+- provenance record
+- retry-safe failure semantics
+
+---
+
+## 9. Normalized Model Mapping
+
+### Observation
+Atomic normalized input record from any source.
+
+Fields:
+- `observation_id`
+- `source_name`
+- `external_id`
+- `payload_type`
+- `occurred_at`
+- `normalized_payload`
+- `content_hash`
+- `source_provenance`
+
+### Subject
+Canonical user-facing topic.
+
+Fields:
+- `subject_id`
+- `canonical_name`
+- `slug`
+- `category`
+- `aliases`
+- `entity_refs`
+- `status`
+- `seeded_flag`
+
+### Signal
+Structured score-driving input.
+
+Fields:
+- `signal_id`
+- `subject_id`
+- `source_family`
+- `source_name`
+- `signal_type`
+- `metric_type`
+- `current_value`
+- `previous_value`
+- `delta`
+- `confidence_modifier`
+- `freshness`
+- `weight`
+- `last_updated_at`
+
+### Evidence
+Context supporting explanation.
+
+Fields:
+- `evidence_id`
+- `subject_id`
+- `source_name`
+- `evidence_type`
+- `headline_or_title`
+- `snippet`
+- `url`
+- `published_at`
+- `matched_entities`
+- `relevance_score`
+
+### Provenance
+Auditability and source trace.
+
+Fields:
+- `provenance_id`
+- `source_name`
+- `endpoint`
+- `query_params`
+- `fetched_at`
+- `license_class`
+- `terms_notes`
+- `adapter_version`
+- `payload_storage_path`
+
+---
+
+## 10. Integration Order
+
+### Phase 1 — Structured truth backbone
+1. Wikidata/entity spine
+2. FRED
+3. Congress.gov
+4. GovInfo / FEC
+5. USGS / NOAA / Open-Meteo
+
+### Phase 2 — Market signal backbone
+6. Kalshi
+7. Polymarket
+8. Metaculus
+
+### Phase 3 — Evidence backbone
+9. one news API
+10. RSS aggregator
+11. ReliefWeb
+12. GDELT
+
+### Phase 4 — Category expansion
+13. BLS
+14. EIA
+15. Manifold
+16. HDX / UCDP / IFES / TMDb / TheSportsDB as needed
+
+---
+
+## 11. Engineering Rules
+
+### Rule 1
+No source writes user-facing prose directly.
+
+### Rule 2
+Only approved signal sources affect scoring by default.
+
+### Rule 3
+Weak/noisy sources must have conservative weights and thresholds.
+
+### Rule 4
+All raw payloads go to object storage when retained.
+Postgres stores metadata, hashes, paths, normalized forms, and provenance.
+
+### Rule 5
+Topic seeding is mandatory at launch.
+
+### Rule 6
+Source outages must surface as freshness/staleness changes, not silent failures.
+
+### Rule 7
+Adapters must be replaceable. Assume some APIs will degrade or die over time.
+
+---
+
+## 12. Final Approved Launch Stack
+
+### Approved P0 launch stack
+**Signal**
+- Kalshi
+- Polymarket
+- Metaculus
+- FRED
+- Congress.gov
+- GovInfo
+- FEC
+- USGS
+- NOAA/NWS
+- Open-Meteo
+
+**Evidence**
+- one strong news API
+- RSS aggregator
+- ReliefWeb
+- GDELT
+
+**Reference**
+- Wikidata
+
+### Approved P1 stack
+- BLS
+- EIA
+- Manifold
+- HDX
+- UCDP
+- IFES
+- World Bank / Eurostat / IMF
+- UN News
+
+### Approved P2 stack
+- TMDb
+- TheSportsDB
+- MusicBrainz
+- DBnomics
+- ACLED
+
+This is the source architecture Signal Map should build against unless explicitly revised.

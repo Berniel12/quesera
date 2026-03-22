@@ -3,29 +3,28 @@ import Link from "next/link";
 export function PublicNav() {
   return (
     <nav className="sticky top-0 z-50 border-b border-border/40 backdrop-blur-xl backdrop-saturate-[180%] bg-background/70">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
-        <Link href="/" className="flex items-center gap-2">
-          <div className="h-2 w-8 rounded-full bg-navy" />
-          <span className="text-lg font-bold tracking-tight text-navy">
+      <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-6">
+        <Link href="/" className="flex items-center gap-0.5">
+          <span className="text-base font-extrabold tracking-tight text-navy">
             QUESERA
           </span>
+          <span className="text-base font-extrabold text-navy ml-0.5">.</span>
         </Link>
 
-        <div className="hidden sm:block flex-1 max-w-md mx-8">
+        <div className="flex items-center gap-3">
           <Link
             href="/search"
-            className="flex h-10 w-full items-center rounded-full border border-border bg-secondary/50 px-4 text-sm text-muted-foreground transition-colors hover:bg-secondary"
+            className="hidden sm:flex h-9 items-center rounded-2xl border border-border/60 bg-card px-4 text-xs text-muted-foreground transition-colors hover:border-navy/20"
           >
-            Search topics...
+            Search
+          </Link>
+          <Link
+            href="/login"
+            className="h-9 inline-flex items-center rounded-2xl bg-navy px-5 text-xs font-medium text-white transition-colors hover:bg-navy/90"
+          >
+            Sign In
           </Link>
         </div>
-
-        <Link
-          href="/login"
-          className="rounded-full bg-primary px-5 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-        >
-          Sign In
-        </Link>
       </div>
     </nav>
   );

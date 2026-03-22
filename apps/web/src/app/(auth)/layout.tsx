@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import Link from "next/link";
 import { DashboardSidebar } from "@/components/dashboard-sidebar";
 

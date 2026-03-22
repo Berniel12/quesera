@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { PublicNav } from "@/components/public-nav";
 
 export default function PublicLayout({

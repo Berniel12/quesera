@@ -1,5 +1,5 @@
-// Pure function: maps (direction, confidence, category, disagreement) to human-readable answer labels
-// Category-aware semantic frames — "Rising" for macro, "Escalating" for geopolitics, "Bullish" for crypto
+// Pure function: maps (direction, confidence, disagreement) to conversational answer labels
+// Universal voice — no jargon, sounds like a smart friend answering your question
 
 interface AnswerStateInput {
   direction: string;
@@ -14,20 +14,7 @@ export interface AnswerState {
   intensity: "strong" | "moderate" | "weak";
 }
 
-const CATEGORY_FRAMES: Record<string, { up: string; down: string; stable: string }> = {
-  macro: { up: "Rising", down: "Easing", stable: "Holding steady" },
-  politics: { up: "Likely yes", down: "Likely no", stable: "Too close to call" },
-  disasters: { up: "Rising risk", down: "Threat easing", stable: "Situation steady" },
-  geopolitics: { up: "Escalating", down: "De-escalating", stable: "No clear shift" },
-  sports: { up: "Gaining momentum", down: "Losing ground", stable: "Holding position" },
-  crypto: { up: "Bullish", down: "Bearish", stable: "Consolidating" },
-  tech: { up: "Accelerating", down: "Slowing down", stable: "Steady state" },
-  entertainment: { up: "Trending up", down: "Cooling off", stable: "Holding attention" },
-};
-
-const DEFAULT_FRAME = { up: "Moving up", down: "Moving down", stable: "Holding steady" };
-
-// Direction → color: context-aware (rising risk = destructive, easing threat = positive)
+// Inverted categories: "up" = bad (rising risk), "down" = good (threat easing)
 const INVERTED_CATEGORIES = new Set(["disasters", "geopolitics"]);
 
 function getDirectionColor(direction: string, category: string | null): string {
@@ -41,44 +28,35 @@ function getDirectionColor(direction: string, category: string | null): string {
 export function getAnswerState(input: AnswerStateInput): AnswerState {
   const { direction, confidence, category, disagreement } = input;
 
-  // High disagreement overrides everything
+  // Experts disagree
   if (disagreement > 0.6) {
     return {
-      label: "Mixed signals",
+      label: "Experts disagree",
       colorClass: "text-warning",
       intensity: "weak",
     };
   }
 
-  // Low confidence = not enough data
+  // Too early to tell
   if (confidence < 0.4) {
     return {
-      label: "Not enough signal yet",
+      label: "Too early to tell",
       colorClass: "text-muted-foreground",
       intensity: "weak",
     };
   }
 
-  const frame = (category !== null && CATEGORY_FRAMES[category]) || DEFAULT_FRAME;
-  const directionKey = direction === "up" || direction === "down" || direction === "stable"
-    ? direction
-    : "stable";
+  const colorClass = getDirectionColor(direction, category);
 
-  const baseLabel = frame[directionKey];
-  const colorClass = getDirectionColor(directionKey, category);
-
-  // Moderate confidence = soften the label
-  if (confidence < 0.7) {
-    return {
-      label: `Leaning toward: ${baseLabel.toLowerCase()}`,
-      colorClass,
-      intensity: "moderate",
-    };
+  // Strong confidence
+  if (confidence >= 0.7) {
+    if (direction === "up") return { label: "Probably yes", colorClass, intensity: "strong" };
+    if (direction === "down") return { label: "Probably not", colorClass, intensity: "strong" };
+    return { label: "Hard to say", colorClass: "text-muted-foreground", intensity: "moderate" };
   }
 
-  return {
-    label: baseLabel,
-    colorClass,
-    intensity: "strong",
-  };
+  // Moderate confidence
+  if (direction === "up") return { label: "Looks like it", colorClass, intensity: "moderate" };
+  if (direction === "down") return { label: "Doesn't look like it", colorClass, intensity: "moderate" };
+  return { label: "Hard to say", colorClass: "text-muted-foreground", intensity: "moderate" };
 }

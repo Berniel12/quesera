@@ -87,6 +87,44 @@
   --sidebar-ring: #0B1326;
 }
 
+/* QUESERA Dark Theme — "The Horizon Night" */
+.dark {
+  --background: #0B1326;
+  --foreground: #DBE2FD;
+  --card: #131B2E;
+  --card-foreground: #DBE2FD;
+  --popover: #171F33;
+  --popover-foreground: #DBE2FD;
+  --primary: #00DAF3;
+  --primary-foreground: #00171B;
+  --secondary: #222A3E;
+  --secondary-foreground: #DBE2FD;
+  --muted: #171F33;
+  --muted-foreground: #C6C6CD;
+  --accent: #222A3E;
+  --accent-foreground: #DBE2FD;
+  --destructive: #FFB4AB;
+  --border: #2D3449;
+  --input: #2D3449;
+  --ring: #00DAF3;
+  --chart-1: #4EDEA3;
+  --chart-2: #00DAF3;
+  --chart-3: #909097;
+  --chart-4: #FF9500;
+  --chart-5: #FFB4AB;
+  --positive: #4EDEA3;
+  --warning: #FF9500;
+  --navy: #DBE2FD;
+  --sidebar: #131B2E;
+  --sidebar-foreground: #DBE2FD;
+  --sidebar-primary: #00DAF3;
+  --sidebar-primary-foreground: #00171B;
+  --sidebar-accent: #222A3E;
+  --sidebar-accent-foreground: #DBE2FD;
+  --sidebar-border: #2D3449;
+  --sidebar-ring: #00DAF3;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -270,6 +308,26 @@
   .hover-lift-sm:active {
     transform: scale(0.98);
     transition-duration: 0.1s;
+  }
+}
+
+  /* ── Glass & Glow (Dark Mode) ── */
+  .glass-panel {
+    background: rgba(45, 52, 73, 0.6);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+  .horizon-glow {
+    background: radial-gradient(circle at 50% -20%, rgba(0, 218, 243, 0.12) 0%, transparent 70%);
+  }
+  .neon-bar {
+    box-shadow: 0 0 12px rgba(0, 218, 243, 0.6);
+  }
+  .neon-text {
+    filter: drop-shadow(0 0 8px rgba(0, 218, 243, 0.5));
+  }
+  .editorial-shadow {
+    box-shadow: 0px 24px 48px rgba(11, 19, 38, 0.04);
   }
 }
 

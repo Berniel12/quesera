@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+import { ThemeInit } from "@/components/theme-init";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -28,8 +29,12 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${inter.variable} ${jetbrainsMono.variable} h-full`}
+      suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <ThemeInit />
+        {children}
+      </body>
     </html>
   );
 }

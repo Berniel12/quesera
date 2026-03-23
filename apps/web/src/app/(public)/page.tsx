@@ -122,20 +122,27 @@ export default async function LandingPage() {
   const feedQuestions = allQuestions.slice(1);
 
   return (
-    <div className="mx-auto max-w-2xl px-6">
+    <div className="mx-auto max-w-3xl px-6 dark:horizon-glow">
 
-      {/* Hero — simple, clear */}
-      <section className="pt-10 pb-8 sm:pt-14 animate-slide-up">
-        <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-navy leading-[1.1]">
-          What do you want to know?
+      {/* Hero — editorial scale */}
+      <section className="pt-10 pb-6 sm:pt-14 animate-slide-up">
+        <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-4 block animate-fade-in">
+          Live Predictions
+        </span>
+        <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-foreground leading-[1.05]">
+          What do you want
+          <br />
+          <span className="text-muted-foreground">to know?</span>
         </h1>
       </section>
 
-      {/* Search bar — prominent, full width */}
-      <section className="pb-10 animate-fade-in delay-100">
+      {/* Search bar */}
+      <section className="pb-10 animate-fade-in delay-200">
         <Link
           href="/search"
-          className="flex h-14 items-center rounded-3xl bg-white px-6 text-base text-muted-foreground shadow-[0_10px_40px_rgba(11,19,38,0.04)] hover:shadow-[0_10px_40px_rgba(11,19,38,0.08)] transition-shadow duration-300"
+          className="flex h-14 items-center rounded-3xl px-6 text-base text-muted-foreground transition-shadow duration-300
+            bg-white shadow-[0_10px_40px_rgba(11,19,38,0.04)] hover:shadow-[0_10px_40px_rgba(11,19,38,0.08)]
+            dark:glass-panel dark:shadow-none dark:border dark:border-white/5 dark:hover:border-[#00DAF3]/20"
         >
           Ask anything...
         </Link>
@@ -189,10 +196,10 @@ export default async function LandingPage() {
             We keep watching them for you.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Link href="/onboarding" className="inline-flex h-12 items-center justify-center rounded-full bg-navy px-8 text-sm font-medium text-white hover-lift">
+            <Link href="/onboarding" className="inline-flex h-12 items-center justify-center rounded-full bg-navy dark:bg-[#00DAF3] px-8 text-sm font-medium text-white dark:text-[#00171B] hover-lift">
               Pick your questions
             </Link>
-            <Link href="/login" className="inline-flex h-12 items-center justify-center rounded-full bg-white px-8 text-sm font-medium text-navy shadow-[0_4px_20px_rgba(11,19,38,0.04)] hover-lift-sm">
+            <Link href="/login" className="inline-flex h-12 items-center justify-center rounded-full bg-white dark:glass-panel dark:border dark:border-white/10 px-8 text-sm font-medium text-navy dark:text-foreground hover-lift-sm">
               Sign in
             </Link>
           </div>

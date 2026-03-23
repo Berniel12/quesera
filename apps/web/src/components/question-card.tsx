@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getAnswerState } from "@/lib/answer-state";
+import { ProbabilityGauge } from "@/components/probability-gauge";
 
 interface QuestionCardProps {
   questionText: string;
@@ -27,22 +28,9 @@ function timeAgo(dateStr: string | null): string {
 
 function getCategoryDotColor(category: string | null, direction: string | null): string {
   if (direction === "up" && (category === "disasters" || category === "geopolitics")) return "bg-destructive";
-  if (direction === "down" && (category === "disasters" || category === "geopolitics")) return "bg-positive";
-  if (category === "crypto") return "bg-warning";
+  if (category === "crypto") return "bg-warning dark:bg-[#00DAF3]";
   if (category === "disasters" || category === "geopolitics") return "bg-destructive";
-  return "bg-positive";
-}
-
-function getBarColor(answerColorClass: string): string {
-  if (answerColorClass.includes("destructive")) return "bg-destructive";
-  if (answerColorClass.includes("warning")) return "bg-warning";
-  return "bg-navy";
-}
-
-function getConfidenceLabel(confidence: number): string {
-  if (confidence >= 0.75) return "High Confidence";
-  if (confidence >= 0.5) return "Med Confidence";
-  return "Low Confidence";
+  return "bg-positive dark:bg-[#4EDEA3]";
 }
 
 function getStatusIndicator(direction: string | null, category: string | null): { icon: string; label: string } {
@@ -51,7 +39,7 @@ function getStatusIndicator(direction: string | null, category: string | null): 
   }
   if (direction === "up") return { icon: "\u2197", label: "Trending Up" };
   if (direction === "down") return { icon: "\u2198", label: "Trending Down" };
-  if (direction === "stable") return { icon: "\u2194", label: "Neutral Shift" };
+  if (direction === "stable") return { icon: "\u2192", label: "Neutral Shift" };
   return { icon: "\u2022", label: "Monitoring" };
 }
 
@@ -73,105 +61,115 @@ export function QuestionCard({
 
   const pct = confidence !== null ? Math.round(confidence * 100) : 0;
   const dotColor = getCategoryDotColor(category, direction);
-  const barColor = answerState ? getBarColor(answerState.colorClass) : "bg-navy";
-  const confLabelColor = answerState?.colorClass ?? "text-navy";
   const status = getStatusIndicator(direction, category);
   const isFresh = freshness === "fresh";
 
   const answerBorderColor = answerState?.colorClass.includes("destructive")
     ? "border-destructive"
     : answerState?.colorClass.includes("warning")
-      ? "border-warning"
-      : "border-navy";
+      ? "border-warning dark:border-[#00DAF3]"
+      : "border-navy dark:border-[#00DAF3]";
 
   const answerBgColor = answerState?.colorClass.includes("destructive")
-    ? "bg-destructive/5"
+    ? "bg-destructive/5 dark:bg-destructive/10"
     : answerState?.colorClass.includes("warning")
-      ? "bg-warning/5"
-      : "bg-navy/[0.03]";
+      ? "bg-warning/5 dark:bg-[#00DAF3]/10"
+      : "bg-navy/[0.03] dark:bg-[#00DAF3]/10";
 
   if (variant === "hero") {
     return (
       <Link href={`/topics/${slug}`}>
         <div
-          className={`group bg-white rounded-3xl p-8 shadow-[0_20px_60px_rgba(11,19,38,0.04)] hover-lift animate-card-enter ${isFresh ? "animate-glow-breathe" : ""}`}
+          className={`group relative overflow-hidden rounded-[2rem] animate-card-enter
+            bg-white dark:glass-panel
+            editorial-shadow dark:shadow-none
+            dark:border dark:border-white/5
+            hover-lift ${isFresh ? "animate-glow-breathe" : ""}`}
           style={{ contain: "layout style" }}
         >
-          {/* 1. Category pill — delay-100 */}
-          <div className="flex justify-between items-start mb-6 animate-fade-in delay-100" style={{ opacity: 0 }}>
-            <div className="flex items-center gap-2 bg-secondary/10 px-3 py-1.5 rounded-full">
-              <span className="relative h-2 w-2 flex-shrink-0">
-                <span className={`absolute inset-0 rounded-full ${dotColor} animate-pulse-live`} />
-                <span className={`relative block h-2 w-2 rounded-full ${dotColor}`} />
-              </span>
-              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                {category ?? "Signal"}
-              </span>
-            </div>
-            {snapshotPublishedAt && (
-              <span className="text-[10px] text-muted-foreground font-mono">
-                {timeAgo(snapshotPublishedAt)}
-              </span>
-            )}
-          </div>
+          {/* Dark mode: horizon glow overlay */}
+          <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 blur-[100px] -z-10 hidden dark:block" />
 
-          {/* 2. Question text — delay-200 */}
-          <h2
-            className="text-2xl sm:text-3xl font-semibold leading-snug text-navy mb-4 animate-slide-up delay-200"
-            style={{ opacity: 0 }}
-          >
-            {questionText}
-          </h2>
-
-          {/* 3. Confidence bar — delay-400 (GPU: scaleX, not width) */}
-          {confidence !== null && (
-            <div className="flex items-center gap-4 mb-8">
-              <div className="flex-1 h-1 bg-secondary rounded-full overflow-hidden">
-                <div
-                  className={`h-full ${barColor} rounded-full animate-bar-fill delay-400`}
-                  style={{ transform: "scaleX(0)", transformOrigin: "left" }}
-                />
+          <div className="flex flex-col md:flex-row gap-6 p-8 md:p-10">
+            {/* Left: question + answer */}
+            <div className="flex-1 min-w-0">
+              {/* Category pill */}
+              <div className="flex items-center gap-2 mb-6 animate-fade-in delay-100" style={{ opacity: 0 }}>
+                <span className="relative h-2 w-2 flex-shrink-0">
+                  <span className={`absolute inset-0 rounded-full ${dotColor} animate-pulse-live`} />
+                  <span className={`relative block h-2 w-2 rounded-full ${dotColor}`} />
+                </span>
+                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.15em]">
+                  {category ?? "Signal"}
+                </span>
               </div>
-              {/* 4. Confidence number — delay-600 */}
-              <span
-                className={`text-sm font-bold ${confLabelColor} whitespace-nowrap animate-number-reveal delay-600`}
+
+              {/* Question — editorial scale */}
+              <h2
+                className="text-3xl sm:text-4xl md:text-5xl font-extrabold leading-[1.05] tracking-tight text-foreground mb-6 animate-slide-up delay-200"
                 style={{ opacity: 0 }}
               >
-                {pct}% Confidence
-              </span>
-            </div>
-          )}
+                {questionText}
+              </h2>
 
-          {/* 5. Answer block — delay-700 (slides from left) */}
-          {answerState && oneLiner && (
-            <div
-              className={`${answerBgColor} rounded-2xl p-6 border-l-4 ${answerBorderColor} animate-answer-reveal delay-700`}
-              style={{ opacity: 0 }}
-            >
-              <p className="text-muted-foreground leading-relaxed">
-                <span className={`font-bold ${answerState.colorClass}`}>
-                  {answerState.label}.
-                </span>{" "}
-                {oneLiner}
-              </p>
-            </div>
-          )}
+              {/* Confidence bar */}
+              {confidence !== null && (
+                <div className="flex items-center gap-4 mb-8 animate-fade-in delay-400" style={{ opacity: 0 }}>
+                  <div className="flex-1 h-1.5 bg-secondary dark:bg-[#2D3449] rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-foreground dark:bg-primary rounded-full animate-bar-fill dark:neon-bar"
+                      style={{ transform: "scaleX(0)", transformOrigin: "left" }}
+                    />
+                  </div>
+                  <span className="text-sm font-bold text-foreground dark:text-primary whitespace-nowrap animate-number-reveal delay-600" style={{ opacity: 0 }}>
+                    {pct}% Confidence
+                  </span>
+                </div>
+              )}
 
-          {/* 6. Status row — delay-800 (last to appear) */}
-          <div
-            className="mt-6 flex items-center justify-between animate-status-fade delay-800"
-            style={{ opacity: 0 }}
-          >
-            {snapshotPublishedAt && (
-              <span className="text-xs text-muted-foreground">
-                Updated {timeAgo(snapshotPublishedAt)}
-              </span>
-            )}
-            {answerState && (
-              <span className={`flex items-center gap-1.5 text-sm font-bold ${answerState.colorClass}`}>
-                <span>{status.icon}</span>
-                {status.label}
-              </span>
+              {/* Answer block */}
+              {answerState && oneLiner && (
+                <div
+                  className={`${answerBgColor} rounded-2xl p-6 border-l-4 ${answerBorderColor} animate-answer-reveal delay-700`}
+                  style={{ opacity: 0 }}
+                >
+                  <p className="text-muted-foreground dark:text-[#C6C6CD] leading-relaxed">
+                    <span className="font-bold text-foreground dark:text-primary">
+                      {answerState.label}.
+                    </span>{" "}
+                    {oneLiner}
+                  </p>
+                </div>
+              )}
+
+              {/* Status row */}
+              <div
+                className="mt-6 flex items-center justify-between animate-status-fade delay-800"
+                style={{ opacity: 0 }}
+              >
+                {snapshotPublishedAt && (
+                  <span className="text-xs text-muted-foreground">
+                    Updated {timeAgo(snapshotPublishedAt)}
+                  </span>
+                )}
+                {answerState && (
+                  <span className="flex items-center gap-1.5 text-sm font-bold text-foreground dark:text-primary">
+                    <span>{status.icon}</span>
+                    {status.label}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Right: probability gauge (desktop) */}
+            {confidence !== null && answerState && (
+              <div className="hidden md:flex flex-shrink-0 items-center justify-center">
+                <ProbabilityGauge
+                  confidence={confidence}
+                  label={answerState.label}
+                  size="lg"
+                />
+              </div>
             )}
           </div>
         </div>
@@ -185,52 +183,56 @@ export function QuestionCard({
   return (
     <Link href={`/topics/${slug}`}>
       <div
-        className="group bg-white rounded-2xl p-5 shadow-[0_10px_40px_rgba(11,19,38,0.03)] hover-lift-sm animate-card-enter h-full"
+        className="group rounded-2xl p-6 animate-card-enter h-full
+          bg-white dark:glass-panel
+          editorial-shadow dark:shadow-none
+          dark:border dark:border-white/5
+          hover-lift-sm"
         style={{ contain: "layout style", animationDelay: `${compactDelay}ms`, opacity: 0 }}
       >
-        {/* Category pill */}
-        <div className="flex items-center gap-2 mb-3">
-          <span className="relative h-1.5 w-1.5 flex-shrink-0">
-            <span className={`absolute inset-0 rounded-full ${dotColor} animate-pulse-live`} />
-            <span className={`relative block h-1.5 w-1.5 rounded-full ${dotColor}`} />
-          </span>
-          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-            {category ?? "Signal"}
-          </span>
-        </div>
+        <div className="flex items-start gap-4">
+          <div className="flex-1 min-w-0">
+            {/* Category */}
+            <div className="flex items-center gap-2 mb-2">
+              <span className="relative h-1.5 w-1.5 flex-shrink-0">
+                <span className={`absolute inset-0 rounded-full ${dotColor} animate-pulse-live`} />
+                <span className={`relative block h-1.5 w-1.5 rounded-full ${dotColor}`} />
+              </span>
+              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.15em]">
+                {category ?? "Signal"}
+              </span>
+            </div>
 
-        {/* Question */}
-        <p className="font-semibold text-sm text-navy leading-snug mb-3">
-          {questionText}
-        </p>
+            {/* Question */}
+            <p className="font-semibold text-base text-foreground leading-snug mb-3">
+              {questionText}
+            </p>
 
-        {/* Confidence bar (GPU: scaleX) */}
-        {confidence !== null && (
-          <div className="flex items-center gap-3 mb-3">
-            <div className="flex-1 h-0.5 bg-secondary rounded-full overflow-hidden">
-              <div
-                className={`h-full ${barColor} rounded-full animate-bar-fill`}
-                style={{ transform: "scaleX(0)", transformOrigin: "left", animationDelay: `${compactDelay + 200}ms` }}
+            {/* Answer state */}
+            {answerState && (
+              <p className="text-sm font-bold text-foreground dark:text-primary">
+                {answerState.label}
+              </p>
+            )}
+
+            {oneLiner && (
+              <p className="text-xs text-muted-foreground mt-1.5 line-clamp-2 leading-relaxed">
+                {oneLiner}
+              </p>
+            )}
+          </div>
+
+          {/* Mini gauge */}
+          {confidence !== null && answerState && (
+            <div className="flex-shrink-0 pt-1">
+              <ProbabilityGauge
+                confidence={confidence}
+                label=""
+                size="sm"
               />
             </div>
-            <span className={`text-[11px] font-bold ${confLabelColor} whitespace-nowrap`}>
-              {getConfidenceLabel(confidence)}
-            </span>
-          </div>
-        )}
-
-        {/* Answer state */}
-        {answerState && (
-          <p className={`text-xs font-bold ${answerState.colorClass}`}>
-            {answerState.label}
-          </p>
-        )}
-
-        {oneLiner && (
-          <p className="text-xs text-muted-foreground mt-1.5 line-clamp-2 leading-relaxed">
-            {oneLiner}
-          </p>
-        )}
+          )}
+        </div>
       </div>
     </Link>
   );

@@ -1,29 +1,31 @@
 import Link from "next/link";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export function PublicNav() {
   return (
-    <nav className="sticky top-0 z-50 backdrop-blur-2xl backdrop-saturate-[180%] bg-[#FAF9F6]/70 shadow-[0_1px_30px_rgba(11,19,38,0.03)] animate-slide-down">
-      <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-6">
-        <Link href="/" className="flex items-center gap-0.5">
-          <span className="text-base font-extrabold tracking-tight text-navy">
+    <nav className="sticky top-0 z-50 backdrop-blur-2xl backdrop-saturate-[180%] bg-[#FAF9F6]/70 dark:bg-slate-950/60 shadow-[0_1px_30px_rgba(11,19,38,0.03)] dark:shadow-[0_4px_30px_rgba(0,0,0,0.1)] animate-slide-down">
+      <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-6">
+        <Link href="/" className="flex items-center gap-1">
+          <span className="text-xl font-extrabold tracking-[0.08em] uppercase text-navy dark:bg-gradient-to-r dark:from-[#00DAF3] dark:to-[#4EDEA3] dark:bg-clip-text dark:text-transparent">
             QUESERA
           </span>
           <span className="relative ml-0.5 h-2 w-2 self-end mb-[3px]">
-            <span className="absolute inset-0 rounded-full bg-positive animate-pulse-live" />
-            <span className="relative block h-2 w-2 rounded-full bg-positive" />
+            <span className="absolute inset-0 rounded-full bg-positive dark:bg-[#00DAF3] animate-pulse-live" />
+            <span className="relative block h-2 w-2 rounded-full bg-positive dark:bg-[#00DAF3]" />
           </span>
         </Link>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
           <Link
             href="/search"
-            className="hidden sm:flex h-9 items-center rounded-2xl border border-border/60 bg-card px-4 text-xs text-muted-foreground transition-colors hover:border-navy/20"
+            className="hidden sm:flex h-9 items-center rounded-2xl bg-secondary dark:bg-[#222A3E] px-4 text-xs text-muted-foreground transition-colors hover:text-foreground"
           >
             Search
           </Link>
           <Link
             href="/login"
-            className="h-9 inline-flex items-center rounded-2xl bg-navy px-5 text-xs font-medium text-white transition-colors hover:bg-navy/90"
+            className="h-9 inline-flex items-center rounded-2xl bg-navy dark:bg-[#00DAF3] px-5 text-xs font-medium text-white dark:text-[#00171B] transition-colors hover:opacity-90"
           >
             Sign In
           </Link>

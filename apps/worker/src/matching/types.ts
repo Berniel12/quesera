@@ -16,6 +16,10 @@ export const SOURCE_FAMILY_CATEGORY_MAP: Record<string, string> = {
   political_official: "politics",
   hazard_weather: "disasters",
   crypto_market: "crypto",
+  forecast_aggregator: "geopolitics",
+  sports_odds: "sports",
+  defi_signal: "crypto",
+  sports_signal: "sports",
 };
 
 // FRED series -> topic slugs with confidence (deterministic seed map)

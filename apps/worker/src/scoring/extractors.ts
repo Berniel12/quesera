@@ -41,6 +41,12 @@ export function extractNumericSignal(
       return extractCrypto(normalizedPayload, externalId, timestamp);
     case "prediction_market":
       return extractPredictionMarket(normalizedPayload, externalId, timestamp);
+    case "forecast_aggregator":
+      return extractForecastAggregator(normalizedPayload, externalId, timestamp);
+    case "sports_odds":
+      return extractSportsOdds(normalizedPayload, externalId, timestamp);
+    case "defi_signal":
+      return extractDefi(normalizedPayload, externalId, timestamp);
     default:
       return null;
   }
@@ -230,6 +236,95 @@ function extractPredictionMarket(
       question: payload.question,
       slug: payload.slug,
       volume_24hr: payload.volume_24hr,
+    },
+  };
+}
+
+function extractForecastAggregator(
+  payload: Record<string, unknown>,
+  externalId: string,
+  timestamp: Date,
+): ExtractedSignal | null {
+  // Metaforecast/similar: extract probability from outcome_prices
+  const pricesRaw = payload.outcome_prices;
+  let prob: number | null = null;
+
+  if (Array.isArray(pricesRaw) && pricesRaw.length > 0) {
+    prob = parseFloat(String(pricesRaw[0]));
+  }
+
+  if (prob === null || isNaN(prob)) return null;
+
+  return {
+    currentValue: prob,
+    signalTimestamp: timestamp,
+    signalType: "forecast_probability",
+    sourceName: String(payload.platform ?? "metaforecast"),
+    externalId,
+    metadata: {
+      question: payload.question,
+      platform: payload.platform,
+      quality: payload.quality,
+      num_forecasters: payload.num_forecasters,
+    },
+  };
+}
+
+function extractSportsOdds(
+  payload: Record<string, unknown>,
+  externalId: string,
+  timestamp: Date,
+): ExtractedSignal | null {
+  // The Odds API: extract implied probability from outcomes
+  const outcomes = payload.outcomes as Array<{ name: string; implied_probability: number }> | undefined;
+  if (!outcomes || outcomes.length === 0) return null;
+
+  // Use the home team probability (first outcome) as the signal value
+  const firstOutcome = outcomes[0] as { name: string; implied_probability: number } | undefined;
+  if (!firstOutcome) return null;
+  const prob = firstOutcome.implied_probability;
+  if (typeof prob !== "number" || isNaN(prob)) return null;
+
+  return {
+    currentValue: prob,
+    signalTimestamp: timestamp,
+    signalType: "odds_probability",
+    sourceName: String(payload.bookmaker ?? "odds_api"),
+    externalId,
+    metadata: {
+      sport_key: payload.sport_key,
+      home_team: payload.home_team,
+      away_team: payload.away_team,
+      outcomes,
+      bookmaker_count: payload.bookmaker_count,
+    },
+  };
+}
+
+function extractDefi(
+  payload: Record<string, unknown>,
+  externalId: string,
+  timestamp: Date,
+): ExtractedSignal | null {
+  const tvl = payload.tvl;
+  if (tvl === null || tvl === undefined) return null;
+
+  const value = typeof tvl === "number" ? tvl : parseFloat(String(tvl));
+  if (isNaN(value)) return null;
+
+  return {
+    currentValue: value,
+    signalTimestamp: timestamp,
+    signalType: "defi_tvl",
+    sourceName: String(payload.name ?? "defillama"),
+    externalId,
+    metadata: {
+      name: payload.name,
+      symbol: payload.symbol,
+      chain: payload.chain,
+      change_1d: payload.change_1d,
+      change_7d: payload.change_7d,
+      category: payload.category,
     },
   };
 }

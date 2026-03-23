@@ -25,6 +25,11 @@ import { ExchangeRatesAdapter } from "./exchange-rates.js";
 import { TheSportsDbAdapter } from "./thesportsdb.js";
 import { EurostatAdapter } from "./eurostat.js";
 import { ImfAdapter } from "./imf.js";
+import { MetaforecastAdapter } from "./metaforecast.js";
+import { PolyRouterAdapter } from "./polyrouter.js";
+import { TheOddsApiAdapter } from "./the-odds-api.js";
+import { EspnAdapter } from "./espn.js";
+import { DefiLlamaAdapter } from "./defillama.js";
 
 type AdapterConstructor = new (
   sourceDefinition: SourceDefinitionRow,
@@ -62,6 +67,12 @@ const adapters: Record<string, AdapterConstructor> = {
   thesportsdb: TheSportsDbAdapter,
   eurostat: EurostatAdapter,
   imf: ImfAdapter,
+  // Aggregators (Phase B — high coverage-to-effort ratio)
+  metaforecast: MetaforecastAdapter,
+  polyrouter: PolyRouterAdapter,
+  the_odds_api: TheOddsApiAdapter,
+  espn: EspnAdapter,
+  defillama: DefiLlamaAdapter,
 };
 
 export function getAdapter(

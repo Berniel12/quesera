@@ -7,6 +7,10 @@ export const SOURCE_FAMILY_WEIGHTS: Record<string, number> = {
   hazard_weather: 0.9,
   crypto_market: 0.8,
   prediction_market: 0.7,
+  forecast_aggregator: 0.7,
+  sports_odds: 0.75,
+  defi_signal: 0.6,
+  sports_signal: 0.5,
 };
 
 // Direction threshold (relative to normalized scale)

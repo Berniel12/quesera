@@ -7,6 +7,7 @@ interface SignalRowProps {
   delta: number | null;
   direction: string;
   freshness: string;
+  className?: string;
 }
 
 export function SignalRow({
@@ -16,6 +17,7 @@ export function SignalRow({
   delta,
   direction,
   freshness,
+  className,
 }: SignalRowProps) {
   const deltaColor =
     direction === "up"
@@ -25,7 +27,7 @@ export function SignalRow({
         : "text-muted-foreground";
 
   return (
-    <div className="flex items-center justify-between py-3 border-b border-border/40 last:border-0">
+    <div className={`flex items-center justify-between py-3 border-b border-border/40 last:border-0${className ? ` ${className}` : ""}`}>
       <div className="flex flex-col gap-0.5">
         <span className="text-sm font-medium">{sourceName}</span>
         <span className="text-xs text-muted-foreground">{signalType}</span>

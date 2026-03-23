@@ -54,12 +54,12 @@ export default function SearchPage() {
   return (
     <div className="mx-auto max-w-4xl px-6 py-12">
       <h1 className="text-2xl font-bold tracking-tight text-navy mb-6">
-        Search Topics
+        Ask a Question
       </h1>
 
       <Input
         type="text"
-        placeholder="Search for topics like inflation, elections, earthquakes..."
+        placeholder="What do you want to know?"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         className="h-12 rounded-full border-border bg-card px-6 text-base focus-visible:ring-navy"
@@ -72,12 +72,12 @@ export default function SearchPage() {
         )}
 
         {!loading && searched && results.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-lg font-medium text-navy mb-2">
-              We don&apos;t track &ldquo;{query}&rdquo; yet.
+          <div className="text-center py-12 animate-fade-in">
+            <p className="text-2xl font-bold text-navy mb-2">
+              Good question.
             </p>
-            <p className="text-muted-foreground mb-6">
-              But we can build it. Request this subject and we&apos;ll start tracking it for you.
+            <p className="text-muted-foreground mb-8">
+              We don&apos;t have signals on this yet, but we can start watching.
             </p>
             <SubjectRequest query={query} />
           </div>
@@ -102,7 +102,7 @@ export default function SearchPage() {
 
         {!searched && !loading && (
           <p className="text-sm text-muted-foreground text-center py-8">
-            Start typing to search across all subjects.
+            Ask anything. We&apos;ll show you what the signals say.
           </p>
         )}
       </div>
@@ -122,7 +122,7 @@ function SubjectRequest({ query }: { query: string }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          suggested_name: query,
+          question_text: query,
           category: category || undefined,
         }),
       });
@@ -134,10 +134,10 @@ function SubjectRequest({ query }: { query: string }) {
 
   if (submitted) {
     return (
-      <div className="rounded-3xl border border-positive/30 bg-positive/5 p-6 max-w-md mx-auto">
-        <p className="font-medium text-navy mb-1">Requested: &ldquo;{query}&rdquo;</p>
+      <div className="rounded-3xl border border-positive/30 bg-positive/5 p-6 max-w-md mx-auto animate-scale-in">
+        <p className="font-medium text-navy mb-1">We heard you.</p>
         <p className="text-sm text-muted-foreground">
-          We&apos;ll start tracking signals for this subject. You&apos;ll get a notification when it&apos;s ready.
+          We&apos;re building signals for &ldquo;{query}&rdquo;. We&apos;ll let you know when it&apos;s ready.
         </p>
       </div>
     );
@@ -150,18 +150,21 @@ function SubjectRequest({ query }: { query: string }) {
         onChange={(e) => setCategory(e.target.value)}
         className="w-full rounded-full border border-border bg-card px-4 py-2 text-sm"
       >
-        <option value="">Category (optional)</option>
+        <option value="">What area is this about? (optional)</option>
         <option value="politics">Politics</option>
         <option value="macro">Money & Economy</option>
         <option value="geopolitics">World & Geopolitics</option>
         <option value="disasters">Weather & Safety</option>
+        <option value="crypto">Crypto</option>
+        <option value="sports">Sports</option>
+        <option value="tech">Tech & AI</option>
       </select>
       <button
         onClick={handleRequest}
         disabled={submitting}
-        className="w-full rounded-full bg-navy text-white h-11 text-sm font-medium transition-colors hover:bg-navy/90 disabled:opacity-50"
+        className="w-full rounded-full bg-navy text-white h-11 text-sm font-medium transition-all hover:bg-navy/90 hover:shadow-md active:scale-[0.98] disabled:opacity-50"
       >
-        {submitting ? "Requesting..." : `Request "${query}"`}
+        {submitting ? "Sending..." : "Ask this question"}
       </button>
     </div>
   );

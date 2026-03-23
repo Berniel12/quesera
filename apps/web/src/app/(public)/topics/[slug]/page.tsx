@@ -1,39 +1,52 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
+import { getAnswerState } from "@/lib/answer-state";
 import { DirectionBadge } from "@/components/direction-badge";
 import { FreshnessBadge } from "@/components/freshness-badge";
 import { ConfidenceBar } from "@/components/confidence-bar";
 import { DisagreementIndicator } from "@/components/disagreement-indicator";
 import { SignalList } from "@/components/signal-list";
+import { ConfidenceTimeline } from "@/components/confidence-timeline";
 import { FollowButton } from "@/components/follow-button";
 import { EvidenceDrawer } from "@/components/evidence-drawer";
+import { AnimateOnScroll } from "@/components/animate-on-scroll";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface TopicPageProps {
   params: Promise<{ slug: string }>;
 }
 
-export async function generateMetadata({
-  params,
-}: TopicPageProps): Promise<Metadata> {
+export async function generateMetadata({ params }: TopicPageProps): Promise<Metadata> {
   const { slug } = await params;
   const supabase = await createClient();
 
   const { data: topic } = await supabase
     .from("topics")
-    .select("canonical_name, description")
+    .select("id, canonical_name, description")
     .eq("slug", slug)
     .eq("status", "active")
     .eq("is_public", true)
     .single();
 
-  if (!topic) return { title: "Topic Not Found" };
-  const t = topic as { canonical_name: string; description: string | null };
+  if (!topic) return { title: "Not Found" };
+  const t = topic as { id: string; canonical_name: string; description: string | null };
+
+  // Use question text for title when available
+  const { data: wrappers } = await supabase
+    .from("question_wrappers")
+    .select("question_text")
+    .eq("topic_id", t.id)
+    .eq("is_featured", true)
+    .order("sort_order", { ascending: true })
+    .limit(1);
+
+  const questionText = (wrappers as Array<{ question_text: string }> | null)?.[0]?.question_text;
+  const title = questionText ?? t.canonical_name;
 
   return {
-    title: `${t.canonical_name} - QUESERA`,
-    description: t.description ?? `Signal intelligence for ${t.canonical_name}`,
+    title: `${title} - QUESERA`,
+    description: t.description ?? `Live signal intelligence for ${t.canonical_name}`,
   };
 }
 
@@ -59,7 +72,19 @@ export default async function TopicPage({ params }: TopicPageProps) {
     description: string | null;
   };
 
-  // 2. Load latest snapshot
+  // 2. Load question wrappers for this topic
+  const { data: wrapperData } = await supabase
+    .from("question_wrappers")
+    .select("question_text, is_featured, sort_order")
+    .eq("topic_id", t.id)
+    .order("is_featured", { ascending: false })
+    .order("sort_order", { ascending: true })
+    .limit(5);
+
+  const wrappers = (wrapperData ?? []) as Array<{ question_text: string; is_featured: boolean; sort_order: number }>;
+  const primaryQuestion = wrappers[0]?.question_text ?? null;
+
+  // 3. Load latest snapshot
   const { data: latestPointer } = await supabase
     .from("topic_latest_snapshot")
     .select("snapshot_id")
@@ -94,7 +119,7 @@ export default async function TopicPage({ params }: TopicPageProps) {
     snapshot = snapData as SnapshotView | null;
   }
 
-  // 3. Load signals
+  // 4. Load signals
   let signals: Array<{
     source_name: string;
     signal_type: string;
@@ -115,7 +140,7 @@ export default async function TopicPage({ params }: TopicPageProps) {
     signals = (sigData ?? []) as typeof signals;
   }
 
-  // 4. Load historical snapshots
+  // 5. Load history
   let history: Array<{
     version: number;
     direction: string;
@@ -133,7 +158,7 @@ export default async function TopicPage({ params }: TopicPageProps) {
 
   history = (histData ?? []) as typeof history;
 
-  // Check auth for follow button (no mutation, just display)
+  // 6. Check auth for follow button
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -149,45 +174,79 @@ export default async function TopicPage({ params }: TopicPageProps) {
     isFollowing = follow !== null;
   }
 
-  // Determine prose or fallback
+  // Compute answer state
+  const answerState = snapshot
+    ? getAnswerState({
+        direction: snapshot.direction,
+        confidence: snapshot.confidence,
+        category: t.category,
+        disagreement: snapshot.disagreement,
+      })
+    : null;
+
   const hasProse = snapshot?.current_picture_text !== null && snapshot?.current_picture_text !== undefined;
   const structured = snapshot?.structured_data as {
     direction?: string;
     confidence?: number;
     signal_count?: number;
-    top_signals?: Array<{ source_family: string; signal_type: string; current_value: number; delta: number | null; direction: string }>;
   } | null;
+
+  // Headline: question text or canonical name
+  const headline = primaryQuestion ?? t.canonical_name;
 
   return (
     <div className="mx-auto max-w-4xl px-6 py-8">
-      {/* Topic Hero */}
-      <section className="mb-8">
+
+      {/* Question Hero */}
+      <section className="mb-8 animate-slide-up">
         {t.category && (
-          <span className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+          <span className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
             {t.category}
           </span>
         )}
-        <h1 className="mt-2 text-3xl font-bold tracking-tight text-navy sm:text-4xl">
-          {t.canonical_name}
+        <h1 className="mt-2 text-3xl font-bold tracking-tight text-navy sm:text-4xl leading-tight">
+          {headline}
         </h1>
-        {t.description && (
-          <p className="mt-2 text-muted-foreground">{t.description}</p>
+
+        {/* Answer state — the emotional hook */}
+        {answerState && (
+          <div className="mt-3 animate-fade-in delay-75">
+            <span className={`text-xl sm:text-2xl font-semibold ${answerState.colorClass}`}>
+              {answerState.label}
+            </span>
+            {answerState.intensity === "strong" && snapshot && (
+              <span className="ml-3 text-sm text-muted-foreground font-mono">
+                {Math.round(snapshot.confidence * 100)}% confidence
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Subject name as subtle breadcrumb (when question is primary) */}
+        {primaryQuestion && (
+          <p className="mt-2 text-xs text-muted-foreground">
+            Tracking: {t.canonical_name}
+          </p>
         )}
       </section>
 
       {snapshot ? (
         <>
-          {/* Outcome Hero */}
-          <Card className="rounded-3xl border-border/40 mb-6">
-            <CardContent className="p-8">
-              <div className="flex flex-wrap items-center gap-4 mb-4">
-                <DirectionBadge direction={snapshot.direction} size="lg" />
-                <ConfidenceBar confidence={snapshot.confidence} />
-                <FreshnessBadge freshness={snapshot.freshness} />
-                <DisagreementIndicator disagreement={snapshot.disagreement} />
-              </div>
+          {/* Signal Vitals */}
+          <div className="flex flex-wrap items-center gap-3 mb-6 animate-slide-up delay-75">
+            <DirectionBadge direction={snapshot.direction} size="md" />
+            <ConfidenceBar confidence={snapshot.confidence} />
+            <FreshnessBadge freshness={snapshot.freshness} />
+            <DisagreementIndicator disagreement={snapshot.disagreement} />
+          </div>
 
-              <p className="text-xl font-medium leading-relaxed">
+          {/* Current Picture */}
+          <Card className="rounded-3xl border-border/40 mb-6 animate-scale-in delay-150">
+            <CardContent className="p-6 sm:p-8">
+              <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-3">
+                Current Picture
+              </h2>
+              <p className="text-base sm:text-lg leading-relaxed text-foreground">
                 {hasProse
                   ? snapshot.current_picture_text
                   : `Direction: ${snapshot.direction}. Confidence: ${Math.round(snapshot.confidence * 100)}%. Based on ${structured?.signal_count ?? 0} signals.`}
@@ -195,97 +254,108 @@ export default async function TopicPage({ params }: TopicPageProps) {
             </CardContent>
           </Card>
 
-          {/* What Changed */}
-          <div className="grid gap-4 sm:grid-cols-2 mb-6">
-            <Card className="rounded-3xl border-border/40">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-                  What Changed
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pb-6">
-                <p className="text-sm leading-relaxed">
-                  {snapshot.what_changed_text ?? "No material changes detected in recent signals."}
-                </p>
-              </CardContent>
-            </Card>
+          {/* What Changed / What to Watch */}
+          <AnimateOnScroll>
+            <div className="grid gap-4 sm:grid-cols-2 mb-6">
+              <Card className="rounded-3xl border-border/40">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                    What Changed
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pb-6">
+                  <p className="text-sm leading-relaxed">
+                    {snapshot.what_changed_text ?? "No material changes detected in recent signals."}
+                  </p>
+                </CardContent>
+              </Card>
 
-            <Card className="rounded-3xl border-border/40">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-                  What to Watch
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pb-6">
-                <p className="text-sm leading-relaxed">
-                  {snapshot.what_next_text ?? "Continue monitoring current signal sources for changes."}
-                </p>
-              </CardContent>
-            </Card>
-          </div>
+              <Card className="rounded-3xl border-border/40">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                    What to Watch
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pb-6">
+                  <p className="text-sm leading-relaxed">
+                    {snapshot.what_next_text ?? "Continue monitoring current signal sources for changes."}
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+          </AnimateOnScroll>
 
-          {/* Signals */}
+          {/* Top Signals */}
           {signals.length > 0 && (
-            <Card className="rounded-3xl border-border/40 mb-6">
-              <CardHeader>
-                <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-                  Top Signals
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <SignalList signals={signals} />
-              </CardContent>
-            </Card>
+            <AnimateOnScroll>
+              <Card className="rounded-3xl border-border/40 mb-6">
+                <CardHeader>
+                  <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                    Top Signals
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <SignalList signals={signals} />
+                </CardContent>
+              </Card>
+            </AnimateOnScroll>
           )}
 
-          {/* Timeline */}
-          {history.length > 1 && (
-            <Card className="rounded-3xl border-border/40">
-              <CardHeader>
-                <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-                  History
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {history.map((h) => (
-                    <div
-                      key={h.version}
-                      className="flex items-center justify-between border-b border-border/40 pb-3 last:border-0"
+          {/* Confidence Timeline */}
+          {history.length >= 2 && (
+            <AnimateOnScroll>
+              <Card className="rounded-3xl border-border/40 mb-6">
+                <CardHeader>
+                  <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                    How This Answer Has Changed
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ConfidenceTimeline history={history} />
+                </CardContent>
+              </Card>
+            </AnimateOnScroll>
+          )}
+
+          {/* Other question framings */}
+          {wrappers.length > 1 && (
+            <AnimateOnScroll>
+              <div className="mb-6">
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+                  People also ask
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {wrappers.slice(1).map((w) => (
+                    <span
+                      key={w.question_text}
+                      className="rounded-2xl border border-border/60 bg-card px-4 py-2 text-sm text-navy font-medium"
                     >
-                      <div className="flex items-center gap-3">
-                        <DirectionBadge direction={h.direction} size="sm" />
-                        <span className="text-sm">
-                          {h.current_picture_text
-                            ? h.current_picture_text.slice(0, 80) + (h.current_picture_text.length > 80 ? "..." : "")
-                            : `v${h.version}`}
-                        </span>
-                      </div>
-                      <span className="font-mono text-xs text-muted-foreground">
-                        {new Date(h.published_at).toLocaleDateString()}
-                      </span>
-                    </div>
+                      {w.question_text}
+                    </span>
                   ))}
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </AnimateOnScroll>
           )}
 
-          {/* Evidence + Follow */}
-          <div className="mt-8 flex items-center justify-center gap-4">
-            <EvidenceDrawer topicId={t.id} />
-            <FollowButton
-              topicSlug={t.slug}
-              isAuthenticated={user !== null}
-              initialFollowing={isFollowing}
-            />
-          </div>
+          {/* Follow + Evidence */}
+          <AnimateOnScroll>
+            <div className="mt-4 flex items-center justify-center gap-4 pb-8">
+              <EvidenceDrawer topicId={t.id} />
+              <FollowButton
+                topicSlug={t.slug}
+                isAuthenticated={user !== null}
+                initialFollowing={isFollowing}
+              />
+            </div>
+          </AnimateOnScroll>
         </>
       ) : (
-        <Card className="rounded-3xl border-border/40">
+        <Card className="rounded-3xl border-border/40 animate-fade-in">
           <CardContent className="p-8 text-center">
-            <p className="text-muted-foreground">
-              Signal analysis is being prepared for this topic. Check back shortly.
+            <p className="text-lg font-medium text-navy mb-2">We&apos;re building this answer</p>
+            <p className="text-sm text-muted-foreground">
+              Signal analysis is being prepared. Check back shortly for a living answer.
             </p>
           </CardContent>
         </Card>

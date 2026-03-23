@@ -22,6 +22,8 @@ export function SignalList({ signals }: SignalListProps) {
     );
   }
 
+  const STAGGER = ["", "delay-75", "delay-150", "delay-225", "delay-300", "delay-375", "delay-450", "delay-525"];
+
   return (
     <div className="divide-y-0">
       {signals.map((s, i) => (
@@ -33,6 +35,7 @@ export function SignalList({ signals }: SignalListProps) {
           delta={s.delta}
           direction={s.direction}
           freshness={s.freshness}
+          className={`animate-fade-in ${STAGGER[i] ?? STAGGER[STAGGER.length - 1]}`}
         />
       ))}
     </div>

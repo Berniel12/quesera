@@ -1,6 +1,4 @@
 import Link from "next/link";
-import { Card, CardContent } from "@/components/ui/card";
-import { FreshnessBadge } from "@/components/freshness-badge";
 import { getAnswerState } from "@/lib/answer-state";
 
 interface QuestionCardProps {
@@ -26,85 +24,39 @@ function timeAgo(dateStr: string | null): string {
   return `${days}d ago`;
 }
 
-// SVG arc meter — semicircle confidence gauge
-function ConfidenceMeter({ confidence, colorClass, size }: { confidence: number; colorClass: string; size: "lg" | "sm" }) {
-  const pct = Math.round(confidence * 100);
-  const r = size === "lg" ? 40 : 20;
-  const stroke = size === "lg" ? 5 : 3;
-  const circumference = Math.PI * r; // half circle
-  const offset = circumference * (1 - confidence);
-  const cx = r + stroke;
-  const cy = r + stroke;
-  const svgW = (r + stroke) * 2;
-  const svgH = r + stroke * 2;
+// Category dot color — matches the design reference
+function getCategoryDotColor(category: string | null, direction: string | null): string {
+  if (direction === "up" && (category === "disasters" || category === "geopolitics")) return "bg-destructive";
+  if (direction === "down" && (category === "disasters" || category === "geopolitics")) return "bg-positive";
+  if (category === "crypto") return "bg-warning";
+  if (category === "disasters" || category === "geopolitics") return "bg-destructive";
+  return "bg-positive";
+}
 
-  // Map answer color class to stroke color
-  const strokeColor = colorClass.includes("positive")
-    ? "hsl(var(--positive))"
-    : colorClass.includes("destructive")
-      ? "hsl(var(--destructive))"
-      : colorClass.includes("warning")
-        ? "hsl(var(--warning))"
-        : "hsl(var(--navy))";
+// Confidence bar color
+function getBarColor(confidence: number, answerColorClass: string): string {
+  if (answerColorClass.includes("positive")) return "bg-navy";
+  if (answerColorClass.includes("destructive")) return "bg-destructive";
+  if (answerColorClass.includes("warning")) return "bg-warning";
+  return "bg-navy";
+}
 
-  return (
-    <div className="relative inline-flex flex-col items-center">
-      <svg width={svgW} height={svgH} viewBox={`0 0 ${svgW} ${svgH}`} className="overflow-visible">
-        {/* Glow effect behind the meter */}
-        <defs>
-          <filter id={`glow-${size}`} x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="3" result="blur" />
-            <feComposite in="SourceGraphic" in2="blur" operator="over" />
-          </filter>
-        </defs>
+// Confidence label text
+function getConfidenceLabel(confidence: number): string {
+  if (confidence >= 0.75) return "High Confidence";
+  if (confidence >= 0.5) return "Med Confidence";
+  return "Low Confidence";
+}
 
-        {/* Track */}
-        <path
-          d={`M ${stroke} ${cy} A ${r} ${r} 0 0 1 ${svgW - stroke} ${cy}`}
-          fill="none"
-          stroke="hsl(var(--border))"
-          strokeWidth={stroke}
-          strokeLinecap="round"
-        />
-
-        {/* Glow layer */}
-        <path
-          d={`M ${stroke} ${cy} A ${r} ${r} 0 0 1 ${svgW - stroke} ${cy}`}
-          fill="none"
-          stroke={strokeColor}
-          strokeWidth={stroke + 2}
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-          opacity="0.15"
-          className="animate-glow-pulse"
-          filter={`url(#glow-${size})`}
-        />
-
-        {/* Fill arc */}
-        <path
-          d={`M ${stroke} ${cy} A ${r} ${r} 0 0 1 ${svgW - stroke} ${cy}`}
-          fill="none"
-          stroke={strokeColor}
-          strokeWidth={stroke}
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          style={{ strokeDashoffset: offset }}
-          className="animate-meter-fill"
-        />
-      </svg>
-
-      {/* Percentage inside the arc */}
-      <span
-        className={`absolute font-mono font-bold animate-count-up ${
-          size === "lg" ? "text-lg -bottom-1" : "text-xs -bottom-0.5"
-        }`}
-        style={{ color: strokeColor }}
-      >
-        {pct}%
-      </span>
-    </div>
-  );
+// Bottom status icon + label
+function getStatusIndicator(direction: string | null, category: string | null, answerState: { label: string; colorClass: string }): { icon: string; label: string } {
+  if (direction === "up" && (category === "disasters" || category === "geopolitics")) {
+    return { icon: "\u26A0", label: "Elevated Alert" };
+  }
+  if (direction === "up") return { icon: "\u2197", label: "Trending Up" };
+  if (direction === "down") return { icon: "\u2198", label: "Trending Down" };
+  if (direction === "stable") return { icon: "\u2194", label: "Neutral Shift" };
+  return { icon: "\u2022", label: "Monitoring" };
 }
 
 export function QuestionCard({
@@ -119,86 +71,98 @@ export function QuestionCard({
   variant = "hero",
 }: QuestionCardProps) {
   const answerState = direction && confidence !== null
-    ? getAnswerState({
-        direction,
-        confidence,
-        category,
-        disagreement: 0,
-      })
+    ? getAnswerState({ direction, confidence, category, disagreement: 0 })
     : null;
+
+  const pct = confidence !== null ? Math.round(confidence * 100) : 0;
+  const dotColor = getCategoryDotColor(category, direction);
+  const barColor = answerState ? getBarColor(confidence ?? 0, answerState.colorClass) : "bg-navy";
+  const confLabel = confidence !== null ? getConfidenceLabel(confidence) : "";
+  const confLabelColor = answerState?.colorClass ?? "text-navy";
+  const status = answerState ? getStatusIndicator(direction, category, answerState) : null;
+
+  // Answer block border color
+  const answerBorderColor = answerState?.colorClass.includes("destructive")
+    ? "border-destructive"
+    : answerState?.colorClass.includes("warning")
+      ? "border-warning"
+      : "border-navy";
+
+  const answerBgColor = answerState?.colorClass.includes("destructive")
+    ? "bg-destructive/5"
+    : answerState?.colorClass.includes("warning")
+      ? "bg-warning/5"
+      : "bg-navy/[0.03]";
 
   if (variant === "hero") {
     return (
       <Link href={`/topics/${slug}`}>
-        <Card className="group rounded-3xl border-0 bg-card shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-500 ease-[cubic-bezier(0.25,0.1,0.25,1)] overflow-hidden">
-          <CardContent className="p-6 sm:p-8">
-            {/* Top row: category + time + freshness */}
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                {category && (
-                  <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest">
-                    {category}
-                  </span>
-                )}
-                {snapshotPublishedAt && (
-                  <span className="text-[11px] text-muted-foreground font-mono">
-                    {timeAgo(snapshotPublishedAt)}
-                  </span>
-                )}
-              </div>
-              {freshness && <FreshnessBadge freshness={freshness} />}
-            </div>
-
-            {/* Question + meter side by side */}
-            <div className="flex items-start gap-6">
-              <div className="flex-1 min-w-0">
-                <h2 className="text-2xl font-bold tracking-tight text-navy sm:text-3xl leading-tight group-hover:text-navy/80 transition-colors">
-                  {questionText}
-                </h2>
-
-                {/* Answer state label */}
-                {answerState && (
-                  <p className={`mt-3 text-lg font-semibold ${answerState.colorClass} animate-fade-in delay-150`}>
-                    {answerState.label}
-                  </p>
-                )}
-
-                {oneLiner && (
-                  <p className="mt-2 text-[15px] text-muted-foreground leading-relaxed max-w-xl line-clamp-2">
-                    {oneLiner}
-                  </p>
-                )}
-              </div>
-
-              {/* Confidence meter */}
-              {confidence !== null && answerState && (
-                <div className="hidden sm:flex flex-shrink-0 pt-2">
-                  <ConfidenceMeter
-                    confidence={confidence}
-                    colorClass={answerState.colorClass}
-                    size="lg"
-                  />
-                </div>
-              )}
-            </div>
-
-            {/* Bottom strip: mobile meter + view signals */}
-            <div className="flex items-center gap-4 mt-5 pt-4 border-t border-border/30">
-              {confidence !== null && answerState && (
-                <div className="sm:hidden">
-                  <ConfidenceMeter
-                    confidence={confidence}
-                    colorClass={answerState.colorClass}
-                    size="sm"
-                  />
-                </div>
-              )}
-              <span className="text-xs text-muted-foreground ml-auto group-hover:text-navy transition-colors">
-                View live answer
+        <div className="group bg-white rounded-3xl p-8 shadow-[0_20px_60px_rgba(11,19,38,0.04)] hover:translate-y-[-4px] transition-all duration-300 ease-out">
+          {/* Category pill with pulsing dot */}
+          <div className="flex justify-between items-start mb-6">
+            <div className="flex items-center gap-2 bg-secondary/10 px-3 py-1.5 rounded-full">
+              <span className={`relative h-2 w-2 flex-shrink-0`}>
+                <span className={`absolute inset-0 rounded-full ${dotColor} animate-pulse-live`} />
+                <span className={`relative block h-2 w-2 rounded-full ${dotColor}`} />
+              </span>
+              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                {category ?? "Signal"}
               </span>
             </div>
-          </CardContent>
-        </Card>
+            {snapshotPublishedAt && (
+              <span className="text-[10px] text-muted-foreground font-mono">
+                {timeAgo(snapshotPublishedAt)}
+              </span>
+            )}
+          </div>
+
+          {/* Question text */}
+          <h2 className="text-2xl sm:text-3xl font-semibold leading-snug text-navy mb-4 group-hover:text-navy/80 transition-colors">
+            {questionText}
+          </h2>
+
+          {/* Confidence bar */}
+          {confidence !== null && (
+            <div className="flex items-center gap-4 mb-8">
+              <div className="flex-1 h-1 bg-secondary rounded-full overflow-hidden">
+                <div
+                  className={`h-full ${barColor} rounded-full animate-meter-fill`}
+                  style={{ width: `${pct}%`, transformOrigin: "left" }}
+                />
+              </div>
+              <span className={`text-sm font-bold ${confLabelColor} whitespace-nowrap`}>
+                {pct}% Confidence
+              </span>
+            </div>
+          )}
+
+          {/* Answer block with left border accent */}
+          {answerState && oneLiner && (
+            <div className={`${answerBgColor} rounded-2xl p-6 border-l-4 ${answerBorderColor}`}>
+              <p className="text-muted-foreground leading-relaxed">
+                <span className={`font-bold ${answerState.colorClass}`}>
+                  {answerState.label}.
+                </span>{" "}
+                {oneLiner}
+              </p>
+            </div>
+          )}
+
+          {/* Bottom status row */}
+          <div className="mt-6 flex items-center justify-between">
+            {snapshotPublishedAt && (
+              <span className="text-xs text-muted-foreground">
+                Updated {timeAgo(snapshotPublishedAt)}
+              </span>
+            )}
+            {status && answerState && (
+              <span className={`flex items-center gap-1.5 text-sm font-bold ${answerState.colorClass}`}>
+                <span>{status.icon}</span>
+                {status.label}
+              </span>
+            )}
+          </div>
+        </div>
       </Link>
     );
   }
@@ -206,55 +170,51 @@ export function QuestionCard({
   // Compact variant for category lanes
   return (
     <Link href={`/topics/${slug}`}>
-      <Card className="group rounded-2xl border-0 bg-card shadow-sm hover:shadow-md hover:-translate-y-1 active:scale-[0.98] transition-all duration-300 h-full overflow-hidden">
-        <CardContent className="p-4">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex-1 min-w-0">
-              {/* Answer state as colored dot + label */}
-              {answerState && (
-                <div className="flex items-center gap-2 mb-2">
-                  <span
-                    className="h-2 w-2 rounded-full flex-shrink-0"
-                    style={{
-                      backgroundColor: answerState.colorClass.includes("positive")
-                        ? "hsl(var(--positive))"
-                        : answerState.colorClass.includes("destructive")
-                          ? "hsl(var(--destructive))"
-                          : answerState.colorClass.includes("warning")
-                            ? "hsl(var(--warning))"
-                            : "hsl(var(--muted-foreground))",
-                    }}
-                  />
-                  <span className={`text-[11px] font-semibold uppercase tracking-wide ${answerState.colorClass}`}>
-                    {answerState.label}
-                  </span>
-                </div>
-              )}
+      <div className="group bg-white rounded-2xl p-5 shadow-[0_10px_40px_rgba(11,19,38,0.03)] hover:translate-y-[-3px] active:scale-[0.98] transition-all duration-300 h-full">
+        {/* Category pill */}
+        <div className="flex items-center gap-2 mb-3">
+          <span className={`relative h-1.5 w-1.5 flex-shrink-0`}>
+            <span className={`absolute inset-0 rounded-full ${dotColor} animate-pulse-live`} />
+            <span className={`relative block h-1.5 w-1.5 rounded-full ${dotColor}`} />
+          </span>
+          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+            {category ?? "Signal"}
+          </span>
+        </div>
 
-              <p className="font-bold text-sm text-navy leading-snug group-hover:text-navy/80 transition-colors">
-                {questionText}
-              </p>
+        {/* Question */}
+        <p className="font-semibold text-sm text-navy leading-snug mb-3 group-hover:text-navy/80 transition-colors">
+          {questionText}
+        </p>
 
-              {oneLiner && (
-                <p className="text-xs text-muted-foreground mt-1.5 line-clamp-2 leading-relaxed">
-                  {oneLiner}
-                </p>
-              )}
+        {/* Confidence bar */}
+        {confidence !== null && (
+          <div className="flex items-center gap-3 mb-3">
+            <div className="flex-1 h-0.5 bg-secondary rounded-full overflow-hidden">
+              <div
+                className={`h-full ${barColor} rounded-full animate-meter-fill`}
+                style={{ width: `${pct}%` }}
+              />
             </div>
-
-            {/* Mini meter */}
-            {confidence !== null && answerState && (
-              <div className="flex-shrink-0 pt-1">
-                <ConfidenceMeter
-                  confidence={confidence}
-                  colorClass={answerState.colorClass}
-                  size="sm"
-                />
-              </div>
-            )}
+            <span className={`text-[11px] font-bold ${confLabelColor} whitespace-nowrap`}>
+              {confLabel}
+            </span>
           </div>
-        </CardContent>
-      </Card>
+        )}
+
+        {/* Answer state */}
+        {answerState && (
+          <p className={`text-xs font-bold ${answerState.colorClass}`}>
+            {answerState.label}
+          </p>
+        )}
+
+        {oneLiner && (
+          <p className="text-xs text-muted-foreground mt-1.5 line-clamp-2 leading-relaxed">
+            {oneLiner}
+          </p>
+        )}
+      </div>
     </Link>
   );
 }

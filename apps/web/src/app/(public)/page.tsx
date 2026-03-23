@@ -201,8 +201,8 @@ export default async function LandingPage() {
               Live Intelligence
             </span>
           </div>
-          <h1 className="text-3xl font-bold tracking-tight text-navy sm:text-4xl">
-            Know What&apos;s Coming
+          <h1 className="text-3xl font-extrabold tracking-tight text-navy sm:text-4xl leading-tight">
+            What do you want to know about the future?
           </h1>
         </div>
         <Link

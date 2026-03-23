@@ -108,7 +108,7 @@ export async function publishSnapshot(
   }
 
   // Step 5: UPSERT public_topic_cards (deterministic, no LLM dependency)
-  const oneLiner = `Direction: ${state.direction}, Confidence: ${Math.round(state.confidence * 100)}%`;
+  const oneLiner = generateDeterministicOneLiner(state, signals);
 
   const { error: cardError } = await supabase
     .from("public_topic_cards")
@@ -129,4 +129,68 @@ export async function publishSnapshot(
   }
 
   return { id: snapshotId, version };
+}
+
+// ── Deterministic One-Liner Generation ──
+
+/** FRED series labels for human-readable one-liners */
+const SERIES_LABELS: Record<string, string> = {
+  MORTGAGE30US: "30-year fixed",
+  CPIAUCSL: "CPI",
+  UNRATE: "Unemployment",
+  FEDFUNDS: "Fed funds rate",
+  DGS10: "10-year Treasury",
+  GDP: "GDP",
+};
+
+/** Period labels for FRED series cadences */
+const SERIES_PERIOD: Record<string, string> = {
+  MORTGAGE30US: "from last week",
+  DGS10: "from yesterday",
+  FEDFUNDS: "from prior reading",
+  CPIAUCSL: "from last month",
+  UNRATE: "from last month",
+  GDP: "from last quarter",
+};
+
+/**
+ * Generate a meaningful deterministic one-liner from scored signals.
+ * For macro_official sources with numeric values, produces something like:
+ *   "30-year fixed at 6.65%, down 0.07% from last week."
+ * Falls back to direction + confidence summary for other source families.
+ */
+function generateDeterministicOneLiner(
+  state: ScoredState,
+  signals: ScoredSignal[],
+): string {
+  // Find the primary signal (highest weight)
+  const primary = signals
+    .filter((s) => s.currentValue !== null && s.currentValue !== undefined)
+    .sort((a, b) => b.weight - a.weight)[0];
+
+  if (primary && primary.sourceFamily === "macro_official") {
+    const seriesId = String(primary.metadata?.series_id ?? "");
+    const label = SERIES_LABELS[seriesId] ?? seriesId;
+    const value = Number(primary.currentValue);
+    const delta = primary.delta !== null ? Number(primary.delta) : null;
+    const period = SERIES_PERIOD[seriesId] ?? "from prior reading";
+
+    // Format value based on typical range
+    const valueStr = value > 10 ? value.toFixed(1) : value.toFixed(2);
+
+    if (delta !== null && delta !== 0) {
+      const deltaDir = delta > 0 ? "up" : "down";
+      const deltaStr = Math.abs(delta) > 10
+        ? Math.abs(delta).toFixed(1)
+        : Math.abs(delta).toFixed(2);
+      return `${label} at ${valueStr}%, ${deltaDir} ${deltaStr}% ${period}.`;
+    }
+
+    return `${label} at ${valueStr}%, unchanged ${period}.`;
+  }
+
+  // Fallback: descriptive direction + confidence
+  const dirLabel = state.direction === "up" ? "Rising" : state.direction === "down" ? "Falling" : "Stable";
+  const confPct = Math.round(state.confidence * 100);
+  return `${dirLabel}. ${confPct}% confidence based on ${signals.length} signal${signals.length === 1 ? "" : "s"}.`;
 }

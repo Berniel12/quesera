@@ -198,12 +198,12 @@ export default async function LandingPage() {
         </h2>
         <div className="flex flex-wrap gap-2">
           {[
+            { q: "Are mortgage rates going up or down?", slug: "us-mortgage-rates" },
             { q: "Is the Middle East conflict escalating further?", slug: "iran-us-tensions" },
             { q: "Will the Fed cut rates this summer?", slug: "us-federal-reserve-interest-rates" },
             { q: "Where is Bitcoin heading next?", slug: "bitcoin-price" },
             { q: "Who is becoming the World Cup favorite?", slug: "fifa-world-cup-2026" },
             { q: "Is the China-Taiwan standoff intensifying?", slug: "china-taiwan-relations" },
-            { q: "Is a US-Iran ceasefire happening?", slug: "iran-us-tensions" },
           ].map((item, i) => (
             <Link
               key={item.q}

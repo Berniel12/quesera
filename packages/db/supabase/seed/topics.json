@@ -55,5 +55,6 @@
   {"canonical_name": "Venezuela Crisis", "slug": "venezuela-crisis", "category": "geopolitics", "description": "Venezuela political crisis and Maduro regime", "aliases": ["Venezuela", "Maduro", "Venezuelan Crisis"]},
   {"canonical_name": "US Dollar Strength", "slug": "us-dollar-strength", "category": "macro", "description": "US Dollar index and currency strength trends", "aliases": ["Dollar", "USD", "DXY", "Dollar Index", "US Dollar"]},
   {"canonical_name": "Gold Price", "slug": "gold-price", "category": "macro", "description": "Gold price movements and precious metals market", "aliases": ["Gold", "Gold Price", "XAU", "Precious Metals"]},
-  {"canonical_name": "Global Recession Risk", "slug": "global-recession-risk", "category": "macro", "description": "Indicators and signals of potential global economic recession", "aliases": ["Recession", "Economic Downturn", "Recession Risk", "Bear Market"]}
+  {"canonical_name": "Global Recession Risk", "slug": "global-recession-risk", "category": "macro", "description": "Indicators and signals of potential global economic recession", "aliases": ["Recession", "Economic Downturn", "Recession Risk", "Bear Market"]},
+  {"canonical_name": "US Mortgage Rates", "slug": "us-mortgage-rates", "category": "macro", "description": "Tracking the direction of US mortgage rates — 30-year fixed, Fed policy, and Treasury yields that drive borrowing costs.", "aliases": ["Mortgage Rates", "30-Year Mortgage Rate", "30-Year Fixed Rate", "Housing Interest Rates", "Home Loan Rates", "MORTGAGE30US"]}
 ]

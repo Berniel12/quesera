@@ -17,13 +17,26 @@ export const SOURCE_FAMILY_CATEGORY_MAP: Record<string, string> = {
   hazard_weather: "disasters",
 };
 
-// FRED series -> topic slug (deterministic bootstrap shortcut)
-export const FRED_SERIES_TOPIC_MAP: Record<string, string> = {
-  CPIAUCSL: "us-inflation-rate",
-  UNRATE: "us-unemployment-rate",
-  FEDFUNDS: "us-federal-reserve-interest-rates",
-  MORTGAGE30US: "us-federal-reserve-interest-rates",
-  DGS10: "us-federal-reserve-interest-rates",
+// FRED series -> topic slugs with confidence (deterministic seed map)
+// Multi-topic matching is intentional for shared causal signals (e.g., DGS10 affects both mortgage rates and fed rates)
+export interface SeedMapEntry {
+  slug: string;
+  confidence: number;
+}
+
+export const FRED_SERIES_SEED_MAP: Record<string, SeedMapEntry[]> = {
+  CPIAUCSL: [{ slug: "us-inflation-rate", confidence: 1.0 }],
+  UNRATE: [{ slug: "us-unemployment-rate", confidence: 1.0 }],
+  MORTGAGE30US: [{ slug: "us-mortgage-rates", confidence: 1.0 }],
+  DGS10: [
+    { slug: "us-mortgage-rates", confidence: 0.8 },
+    { slug: "us-federal-reserve-interest-rates", confidence: 0.9 },
+  ],
+  FEDFUNDS: [
+    { slug: "us-federal-reserve-interest-rates", confidence: 1.0 },
+    { slug: "us-mortgage-rates", confidence: 0.7 },
+  ],
+  GDP: [{ slug: "global-recession-risk", confidence: 0.9 }],
 };
 
 // Allowed match_method values (code-constrained, not DB enum)

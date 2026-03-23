@@ -1,5 +1,5 @@
-import type { MatchSignals } from "./types.js";
-import { SOURCE_FAMILY_CATEGORY_MAP, FRED_SERIES_TOPIC_MAP } from "./types.js";
+import type { MatchSignals, SeedMapEntry } from "./types.js";
+import { SOURCE_FAMILY_CATEGORY_MAP, FRED_SERIES_SEED_MAP } from "./types.js";
 
 interface SourceItem {
   source_item_type: string | null;
@@ -80,15 +80,25 @@ export function extractMatchSignals(
 }
 
 /**
- * Check if a source item has a deterministic seed_map match.
- * Returns the topic slug if found, null otherwise.
+ * Check if a source item has deterministic seed_map matches.
+ * Returns all matching entries (multi-topic matching is intentional for shared causal signals).
+ * Returns null if no seed map match.
  */
-export function getSeedMapMatch(item: SourceItem): string | null {
+export function getSeedMapMatches(item: SourceItem): SeedMapEntry[] | null {
   if (item.source_item_type === "macro_series_observation") {
     const seriesId = String(item.normalized_payload.series_id ?? "");
-    return FRED_SERIES_TOPIC_MAP[seriesId] ?? null;
+    const entries = FRED_SERIES_SEED_MAP[seriesId];
+    return entries && entries.length > 0 ? entries : null;
   }
   return null;
+}
+
+/** @deprecated Use getSeedMapMatches for multi-topic support */
+export function getSeedMapMatch(item: SourceItem): string | null {
+  const entries = getSeedMapMatches(item);
+  if (!entries || entries.length === 0) return null;
+  const first = entries[0];
+  return first ? first.slug : null;
 }
 
 // Human-readable names for FRED series (for trigram matching)

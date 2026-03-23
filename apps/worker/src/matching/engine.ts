@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Logger } from "@signal-map/logger";
-import { extractMatchSignals, getSeedMapMatch } from "./extractors.js";
+import { extractMatchSignals, getSeedMapMatches } from "./extractors.js";
 import { preprocessText, generateSlug } from "./preprocessing.js";
 import { trigramSearch } from "./scorers/trigram.js";
 import { batchLoadTopicEntityData, scoreFromPreloaded } from "./scorers/entity.js";
@@ -51,26 +51,28 @@ export async function matchSourceItem(
     return result;
   }
 
-  // 1. Check seed_map shortcut
-  const seedMapSlug = getSeedMapMatch(item);
-  if (seedMapSlug) {
-    const { data: topic } = await supabase
-      .from("topics")
-      .select("id")
-      .eq("slug", seedMapSlug)
-      .eq("status", "active")
-      .single();
+  // 1. Check seed_map shortcut (supports multi-topic matching)
+  const seedMapEntries = getSeedMapMatches(item);
+  if (seedMapEntries) {
+    for (const entry of seedMapEntries) {
+      const { data: topic } = await supabase
+        .from("topics")
+        .select("id")
+        .eq("slug", entry.slug)
+        .eq("status", "active")
+        .single();
 
-    if (topic) {
-      const topicId = (topic as { id: string }).id;
-      await insertMatch(supabase, item.id, topicId, "seed_map", 1.0, {
-        seed_map_slug: seedMapSlug,
-        series_id: item.normalized_payload.series_id,
-      });
-      result.matchedCount++;
-      result.topScores.push(1.0);
-      return result;
+      if (topic) {
+        const topicId = (topic as { id: string }).id;
+        await insertMatch(supabase, item.id, topicId, "seed_map", entry.confidence, {
+          seed_map_slug: entry.slug,
+          series_id: item.normalized_payload.series_id,
+        });
+        result.matchedCount++;
+        result.topScores.push(entry.confidence);
+      }
     }
+    if (result.matchedCount > 0) return result;
   }
 
   // 2. Extract signals

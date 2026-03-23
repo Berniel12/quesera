@@ -19,18 +19,18 @@ interface SignalCardProps {
   className?: string;
 }
 
-// Source family display config
-const FAMILY_CONFIG: Record<string, { label: string; icon: string; accentClass: string; darkAccent: string }> = {
-  macro_official: { label: "Official Data", icon: "\uD83C\uDFDB", accentClass: "border-navy/20", darkAccent: "dark:border-[#00DAF3]/20" },
-  political_official: { label: "Legislative", icon: "\uD83C\uDFDB", accentClass: "border-navy/20", darkAccent: "dark:border-[#00DAF3]/20" },
-  prediction_market: { label: "Market Signal", icon: "\uD83D\uDCC8", accentClass: "border-positive/20", darkAccent: "dark:border-[#4EDEA3]/20" },
-  forecasting: { label: "Forecast", icon: "\uD83D\uDD2E", accentClass: "border-warning/20", darkAccent: "dark:border-warning/20" },
-  hazard_weather: { label: "Hazard Alert", icon: "\u26A0\uFE0F", accentClass: "border-destructive/20", darkAccent: "dark:border-destructive/20" },
-  crypto_market: { label: "Crypto Data", icon: "\uD83D\uDCB0", accentClass: "border-warning/20", darkAccent: "dark:border-[#00DAF3]/20" },
-  news_evidence: { label: "News", icon: "\uD83D\uDCF0", accentClass: "border-navy/20", darkAccent: "dark:border-[#00DAF3]/20" },
+// Source family display config — colored dots, no emojis
+const FAMILY_CONFIG: Record<string, { label: string; dotColor: string; accentClass: string; darkAccent: string }> = {
+  macro_official: { label: "Official Data", dotColor: "bg-navy dark:bg-[#00DAF3]", accentClass: "border-navy/20", darkAccent: "dark:border-[#00DAF3]/20" },
+  political_official: { label: "Legislative", dotColor: "bg-navy dark:bg-[#00DAF3]", accentClass: "border-navy/20", darkAccent: "dark:border-[#00DAF3]/20" },
+  prediction_market: { label: "Market Signal", dotColor: "bg-positive dark:bg-[#4EDEA3]", accentClass: "border-positive/20", darkAccent: "dark:border-[#4EDEA3]/20" },
+  forecasting: { label: "Forecast", dotColor: "bg-warning", accentClass: "border-warning/20", darkAccent: "dark:border-warning/20" },
+  hazard_weather: { label: "Hazard Alert", dotColor: "bg-destructive", accentClass: "border-destructive/20", darkAccent: "dark:border-destructive/20" },
+  crypto_market: { label: "Crypto Data", dotColor: "bg-warning dark:bg-[#00DAF3]", accentClass: "border-warning/20", darkAccent: "dark:border-[#00DAF3]/20" },
+  news_evidence: { label: "News", dotColor: "bg-navy dark:bg-[#00DAF3]", accentClass: "border-navy/20", darkAccent: "dark:border-[#00DAF3]/20" },
 };
 
-const DEFAULT_CONFIG = { label: "Signal", icon: "\uD83D\uDCCA", accentClass: "border-navy/20", darkAccent: "dark:border-[#00DAF3]/20" };
+const DEFAULT_CONFIG = { label: "Signal", dotColor: "bg-muted-foreground", accentClass: "border-navy/20", darkAccent: "dark:border-[#00DAF3]/20" };
 
 // Series labels for macro data
 const SERIES_LABELS: Record<string, string> = {
@@ -154,7 +154,7 @@ export function SignalCard({ signal, className }: SignalCardProps) {
         <div className="flex-1 min-w-0">
           {/* Source label */}
           <div className="flex items-center gap-2 mb-1.5">
-            <span className="text-xs">{config.icon}</span>
+            <span className={`h-1.5 w-1.5 rounded-full flex-shrink-0 ${config.dotColor}`} />
             <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
               {signal.source_name}
             </span>
@@ -199,7 +199,7 @@ export function SignalGroup({ familyKey, signals }: SignalGroupProps) {
   return (
     <div className="mb-6">
       <div className="flex items-center gap-2 mb-3">
-        <span className="text-sm">{config.icon}</span>
+        <span className={`h-2 w-2 rounded-full ${config.dotColor}`} />
         <h3 className="text-[11px] font-bold uppercase tracking-[0.15em] text-muted-foreground">
           {config.label}
         </h3>

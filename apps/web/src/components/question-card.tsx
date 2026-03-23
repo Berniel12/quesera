@@ -2,6 +2,18 @@ import Link from "next/link";
 import { getAnswerState } from "@/lib/answer-state";
 import { ProbabilityGauge } from "@/components/probability-gauge";
 
+// Category accent colors for top stripe
+const CATEGORY_ACCENT: Record<string, string> = {
+  macro: "from-navy/80 to-navy/20 dark:from-[#00DAF3]/60 dark:to-[#00DAF3]/10",
+  crypto: "from-[#00DAF3]/80 to-[#00DAF3]/20 dark:from-[#00DAF3]/60 dark:to-transparent",
+  politics: "from-slate-600/60 to-slate-600/10 dark:from-[#00DAF3]/40 dark:to-transparent",
+  geopolitics: "from-destructive/60 to-destructive/10 dark:from-destructive/40 dark:to-transparent",
+  sports: "from-positive/60 to-positive/10 dark:from-[#4EDEA3]/40 dark:to-transparent",
+  disasters: "from-warning/60 to-warning/10 dark:from-warning/40 dark:to-transparent",
+  tech: "from-violet-600/60 to-violet-600/10 dark:from-violet-400/40 dark:to-transparent",
+  entertainment: "from-pink-500/60 to-pink-500/10 dark:from-pink-400/40 dark:to-transparent",
+};
+
 // Category → visual imagery (Unsplash static URLs, free tier)
 const CATEGORY_IMAGES: Record<string, string> = {
   macro: "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=800&q=60&auto=format", // stock market charts
@@ -99,16 +111,21 @@ export function QuestionCard({
             hover-lift ${isFresh ? "animate-glow-breathe" : ""}`}
           style={{ contain: "layout style" }}
         >
+          {/* Category accent stripe at top */}
+          {category && CATEGORY_ACCENT[category] && (
+            <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${CATEGORY_ACCENT[category]}`} />
+          )}
+
           {/* Background image overlay */}
           {category && CATEGORY_IMAGES[category] && (
             <div className="absolute inset-0 z-0">
               <img
                 src={CATEGORY_IMAGES[category]}
                 alt=""
-                className="absolute inset-0 w-full h-full object-cover opacity-[0.07] dark:opacity-[0.15] grayscale dark:brightness-50 dark:mix-blend-overlay"
+                className="absolute inset-0 w-full h-full object-cover opacity-[0.15] dark:opacity-30 grayscale dark:brightness-[0.4] dark:mix-blend-overlay"
                 loading="lazy"
               />
-              <div className="absolute inset-0 bg-gradient-to-r from-card via-card/95 to-card/80 dark:from-card dark:via-card/90 dark:to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-r from-card via-card/90 to-card/60 dark:from-card dark:via-card/80 dark:to-card/40" />
             </div>
           )}
 

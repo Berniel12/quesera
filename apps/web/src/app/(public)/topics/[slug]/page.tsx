@@ -198,8 +198,34 @@ export default async function TopicPage({ params }: TopicPageProps) {
   // Headline: question text or canonical name
   const headline = primaryQuestion ?? t.canonical_name;
 
+  // Category images for visual header
+  const CATEGORY_IMAGES: Record<string, string> = {
+    macro: "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=1200&q=60&auto=format",
+    crypto: "https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=1200&q=60&auto=format",
+    politics: "https://images.unsplash.com/photo-1541872703-74c5e44368f9?w=1200&q=60&auto=format",
+    geopolitics: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1200&q=60&auto=format",
+    sports: "https://images.unsplash.com/photo-1461896836934-bd45ba416857?w=1200&q=60&auto=format",
+    disasters: "https://images.unsplash.com/photo-1527482797697-8795b05a13fe?w=1200&q=60&auto=format",
+    tech: "https://images.unsplash.com/photo-1518770660439-4636190af475?w=1200&q=60&auto=format",
+    entertainment: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=1200&q=60&auto=format",
+  };
+  const categoryImage = t.category ? CATEGORY_IMAGES[t.category] : null;
+
   return (
     <div className="mx-auto max-w-4xl px-6 py-8">
+
+      {/* Category visual banner */}
+      {categoryImage && (
+        <div className="relative -mx-6 -mt-8 mb-8 h-32 sm:h-48 overflow-hidden rounded-b-3xl animate-fade-in">
+          <img
+            src={categoryImage}
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover grayscale dark:brightness-[0.3]"
+            loading="eager"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/60 to-background" />
+        </div>
+      )}
 
       {/* Question Hero */}
       <section className="mb-8 animate-slide-up">
@@ -326,6 +352,45 @@ export default async function TopicPage({ params }: TopicPageProps) {
               </AnimateOnScroll>
             );
           })()}
+
+          {/* Sources being tracked — shows breadth even for thin signal topics */}
+          <AnimateOnScroll>
+            <div className="mb-6 p-5 rounded-2xl bg-card dark:border dark:border-white/5">
+              <h3 className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-3">
+                Intelligence Sources
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {(() => {
+                  const activeFamilies = new Set(signals.map((s) => s.source_family));
+                  const ALL_FAMILIES = [
+                    { key: "prediction_market", label: "Prediction Markets" },
+                    { key: "macro_official", label: "Government Data" },
+                    { key: "crypto_market", label: "Crypto Markets" },
+                    { key: "forecasting", label: "Forecaster Consensus" },
+                    { key: "political_official", label: "Legislative Tracking" },
+                    { key: "hazard_weather", label: "Hazard Monitoring" },
+                    { key: "news_evidence", label: "News Analysis" },
+                  ];
+                  return ALL_FAMILIES.map((f) => {
+                    const active = activeFamilies.has(f.key);
+                    return (
+                      <span
+                        key={f.key}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-semibold uppercase tracking-wide ${
+                          active
+                            ? "bg-primary/10 text-primary dark:bg-[#00DAF3]/10 dark:text-[#00DAF3]"
+                            : "bg-secondary/50 text-muted-foreground/50"
+                        }`}
+                      >
+                        <span className={`h-1.5 w-1.5 rounded-full ${active ? "bg-primary dark:bg-[#00DAF3]" : "bg-muted-foreground/30"}`} />
+                        {f.label}
+                      </span>
+                    );
+                  });
+                })()}
+              </div>
+            </div>
+          </AnimateOnScroll>
 
           {/* Confidence Timeline */}
           {history.length >= 2 && (

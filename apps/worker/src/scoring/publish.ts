@@ -189,6 +189,23 @@ function generateDeterministicOneLiner(
     return `${label} at ${valueStr}%, unchanged ${period}.`;
   }
 
+  // Crypto assets: price-based one-liner
+  if (primary && primary.sourceFamily === "crypto_market") {
+    const name = String(primary.metadata?.name ?? primary.metadata?.symbol ?? "Asset");
+    const price = Number(primary.currentValue);
+    const delta = primary.delta !== null ? Number(primary.delta) : null;
+
+    const priceStr = price >= 1 ? `$${price.toLocaleString("en-US", { maximumFractionDigits: 2 })}` : `$${price.toFixed(4)}`;
+
+    if (delta !== null && delta !== 0) {
+      const pct = primary.previousValue ? ((delta / Number(primary.previousValue)) * 100) : 0;
+      const deltaDir = delta > 0 ? "up" : "down";
+      return `${name} at ${priceStr}, ${deltaDir} ${Math.abs(pct).toFixed(1)}% in 24h.`;
+    }
+
+    return `${name} at ${priceStr}, unchanged in 24h.`;
+  }
+
   // Fallback: descriptive direction + confidence
   const dirLabel = state.direction === "up" ? "Rising" : state.direction === "down" ? "Falling" : "Stable";
   const confPct = Math.round(state.confidence * 100);

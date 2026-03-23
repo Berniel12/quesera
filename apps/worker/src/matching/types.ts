@@ -15,6 +15,7 @@ export const SOURCE_FAMILY_CATEGORY_MAP: Record<string, string> = {
   macro_official: "macro",
   political_official: "politics",
   hazard_weather: "disasters",
+  crypto_market: "crypto",
 };
 
 // FRED series -> topic slugs with confidence (deterministic seed map)
@@ -37,6 +38,12 @@ export const FRED_SERIES_SEED_MAP: Record<string, SeedMapEntry[]> = {
     { slug: "us-mortgage-rates", confidence: 0.7 },
   ],
   GDP: [{ slug: "global-recession-risk", confidence: 0.9 }],
+};
+
+// CoinGecko coin_id -> topic slugs (deterministic seed map)
+export const COINGECKO_SEED_MAP: Record<string, SeedMapEntry[]> = {
+  bitcoin: [{ slug: "bitcoin-price", confidence: 1.0 }],
+  ethereum: [{ slug: "ethereum-price", confidence: 1.0 }],
 };
 
 // Allowed match_method values (code-constrained, not DB enum)

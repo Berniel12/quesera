@@ -37,6 +37,8 @@ export function extractNumericSignal(
       return extractPolitical(sourceKey, normalizedPayload, externalId, timestamp);
     case "hazard_weather":
       return extractHazard(sourceKey, normalizedPayload, externalId, timestamp);
+    case "crypto_market":
+      return extractCrypto(normalizedPayload, externalId, timestamp);
     default:
       return null;
   }
@@ -166,4 +168,30 @@ function extractHazard(
   }
 
   return null;
+}
+
+function extractCrypto(
+  payload: Record<string, unknown>,
+  externalId: string,
+  timestamp: Date,
+): ExtractedSignal | null {
+  const price = payload.current_price;
+  if (price === null || price === undefined) return null;
+
+  const value = typeof price === "number" ? price : parseFloat(String(price));
+  if (isNaN(value)) return null;
+
+  return {
+    currentValue: value,
+    signalTimestamp: timestamp,
+    signalType: "asset_price",
+    sourceName: "coingecko",
+    externalId,
+    metadata: {
+      coin_id: payload.coin_id,
+      name: payload.name,
+      symbol: payload.symbol,
+      market_cap: payload.market_cap,
+    },
+  };
 }

@@ -145,10 +145,32 @@ export async function GET(request: Request) {
     }
   }
 
+  // Enrich with question wrapper text (prefer featured wrappers)
+  const wrapperMap = new Map<string, string>();
+  if (resultIds.length > 0) {
+    const { data: wrappers } = await supabase
+      .from("question_wrappers")
+      .select("topic_id, question_text, is_featured, sort_order")
+      .in("topic_id", resultIds)
+      .order("is_featured", { ascending: false })
+      .order("sort_order", { ascending: true });
+
+    for (const w of (wrappers ?? []) as Array<{
+      topic_id: string;
+      question_text: string;
+    }>) {
+      // Keep first (best) wrapper per topic
+      if (!wrapperMap.has(w.topic_id)) {
+        wrapperMap.set(w.topic_id, w.question_text);
+      }
+    }
+  }
+
   const results = sorted.map((r) => {
     const card = cardMap.get(r.id);
     return {
       ...r,
+      question_text: wrapperMap.get(r.id) ?? null,
       one_liner: card?.one_liner ?? null,
       direction: card?.direction ?? null,
       confidence: card?.confidence ?? null,

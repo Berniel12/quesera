@@ -4,59 +4,73 @@ import { createClient } from "@/lib/supabase/server";
 export async function POST(request: Request) {
   const supabase = await createClient();
   const body = (await request.json()) as {
-    suggested_name: string;
+    question_text?: string;
+    suggested_name?: string; // backwards compat
     category?: string;
   };
 
-  if (!body.suggested_name?.trim()) {
-    return NextResponse.json({ error: "Subject name required" }, { status: 400 });
+  const questionText = (body.question_text ?? body.suggested_name ?? "").trim();
+  if (!questionText) {
+    return NextResponse.json({ error: "Question text required" }, { status: 400 });
   }
 
-  const name = body.suggested_name.trim();
-  const slug = name
+  // Normalize to slug for deduplication
+  const normalizedSlug = questionText
     .toLowerCase()
     .replace(/[^\w\s-]/g, "")
     .replace(/\s+/g, "-")
     .replace(/-+/g, "-");
 
-  // Check auth (optional — anonymous requests allowed as demand signals)
+  // Check auth (optional — anonymous requests are valid demand signals)
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Dedupe: check for existing requested candidate with same slug
+  // Dedupe: check for existing pending request with same normalized slug
   const { data: existing } = await supabase
-    .from("topic_candidates")
-    .select("id, support_count, source_item_ids")
-    .eq("suggested_slug", slug)
-    .in("status", ["pending", "requested"])
+    .from("question_requests")
+    .select("id, support_count")
+    .eq("normalized_slug", normalizedSlug)
+    .eq("status", "pending")
     .maybeSingle();
 
   if (existing) {
-    const ex = existing as { id: string; support_count: number; source_item_ids: string[] };
-    // Attach to existing — increment support_count
+    const ex = existing as { id: string; support_count: number };
     await supabase
-      .from("topic_candidates")
+      .from("question_requests")
       .update({ support_count: ex.support_count + 1 })
       .eq("id", ex.id);
 
     return NextResponse.json({
       ok: true,
-      candidate_id: ex.id,
+      request_id: ex.id,
       deduplicated: true,
+      message: "Others have asked this too. We're on it.",
     });
   }
 
-  // Create new requested candidate
-  const { data: candidate, error } = await supabase
-    .from("topic_candidates")
+  // Fuzzy-check against existing topics (advisory, not auto-promote)
+  let matchedTopicId: string | null = null;
+  const { data: topicHits } = await supabase
+    .rpc("search_topics_trigram", { search_term: questionText, result_limit: 1 });
+
+  if (topicHits && topicHits.length > 0) {
+    const hit = topicHits[0] as { id: string; similarity: number };
+    if (hit.similarity > 0.2) {
+      matchedTopicId = hit.id;
+    }
+  }
+
+  // Create new question request
+  const { data: created, error } = await supabase
+    .from("question_requests")
     .insert({
-      suggested_name: name,
-      suggested_slug: slug,
-      category: body.category ?? null,
-      status: "requested",
+      question_text: questionText,
+      normalized_slug: normalizedSlug,
+      matched_topic_id: matchedTopicId,
       support_count: 1,
-      // reviewed_by left null — set by admin on review, not by requester
+      status: "pending",
+      requested_by: user?.id ?? null,
     })
     .select("id")
     .single();
@@ -67,7 +81,8 @@ export async function POST(request: Request) {
 
   return NextResponse.json({
     ok: true,
-    candidate_id: (candidate as { id: string }).id,
+    request_id: (created as { id: string }).id,
     deduplicated: false,
+    matched_topic: matchedTopicId !== null,
   });
 }

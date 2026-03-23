@@ -10,109 +10,36 @@ import { createClient } from "@/lib/supabase/client";
 import { savePendingOnboarding, clearPendingOnboarding, applyPendingOnboarding } from "@/lib/onboarding";
 import { COUNTRY_LANE_BOOSTS, COUNTRY_TOPIC_SUGGESTIONS } from "@/lib/geo";
 import { getCountryDisplayName } from "@/lib/countries";
-
-const STORAGE_KEY = "quesera_onboarding_selections";
-
-const SUBJECT_CATALOG: Record<string, Array<{ name: string; slug: string; hot?: boolean }>> = {
-  world: [
-    { name: "Iran-US Tensions", slug: "iran-us-tensions", hot: true },
-    { name: "Russia-Ukraine War", slug: "russia-ukraine-war", hot: true },
-    { name: "Lebanon War 2026", slug: "lebanon-war-2026", hot: true },
-    { name: "US Cuba Relations", slug: "us-cuba-relations", hot: true },
-    { name: "China-Taiwan Relations", slug: "china-taiwan-relations" },
-    { name: "Israel-Palestine Conflict", slug: "israel-palestine-conflict" },
-    { name: "NATO Alliance", slug: "nato-alliance" },
-    { name: "Venezuela Crisis", slug: "venezuela-crisis" },
-    { name: "Sudan Conflict", slug: "sudan-conflict" },
-    { name: "North Korea", slug: "north-korea" },
-    { name: "Climate Change", slug: "climate-change" },
-    { name: "European Union", slug: "european-union" },
-  ],
-  money: [
-    { name: "US Stock Market", slug: "us-stock-market", hot: true },
-    { name: "Fed Interest Rates", slug: "us-federal-reserve-interest-rates", hot: true },
-    { name: "Global Recession Risk", slug: "global-recession-risk", hot: true },
-    { name: "US Inflation Rate", slug: "us-inflation-rate" },
-    { name: "Housing Market", slug: "us-housing-market" },
-    { name: "Gas Prices", slug: "us-gas-prices" },
-    { name: "Gold Price", slug: "gold-price" },
-    { name: "Oil Prices", slug: "global-oil-prices" },
-    { name: "US Dollar", slug: "us-dollar-strength" },
-    { name: "Unemployment", slug: "us-unemployment-rate" },
-    { name: "Food Prices", slug: "global-food-prices" },
-  ],
-  politics: [
-    { name: "2026 Midterm Elections", slug: "2026-us-midterm-elections", hot: true },
-    { name: "Tariffs & Trade War", slug: "us-trade-policy", hot: true },
-    { name: "TikTok Ban", slug: "tiktok-ban", hot: true },
-    { name: "AI Regulation", slug: "artificial-intelligence-policy", hot: true },
-    { name: "Supreme Court", slug: "us-supreme-court" },
-    { name: "Immigration Policy", slug: "us-immigration-policy" },
-    { name: "Debt Ceiling", slug: "us-debt-ceiling" },
-    { name: "Healthcare Policy", slug: "us-healthcare-policy" },
-    { name: "Congress", slug: "us-congress-legislation" },
-  ],
-  sports: [
-    { name: "FIFA World Cup 2026", slug: "fifa-world-cup-2026", hot: true },
-    { name: "NBA Playoffs", slug: "nba-season-2025-26", hot: true },
-    { name: "Premier League", slug: "premier-league", hot: true },
-    { name: "Champions League", slug: "champions-league" },
-    { name: "NFL Season", slug: "nfl-2026-season" },
-    { name: "Formula 1", slug: "formula-1-2026" },
-    { name: "MLB Baseball", slug: "mlb-season-2026" },
-    { name: "UFC Fights", slug: "ufc-mma" },
-  ],
-  crypto: [
-    { name: "Bitcoin", slug: "bitcoin-price", hot: true },
-    { name: "Ethereum", slug: "ethereum-price" },
-    { name: "Crypto Market", slug: "crypto-market", hot: true },
-  ],
-  tech: [
-    { name: "AI Industry", slug: "ai-industry", hot: true },
-    { name: "Tesla & Elon Musk", slug: "tesla", hot: true },
-    { name: "Apple", slug: "apple" },
-    { name: "SpaceX Starship", slug: "spacex-starship" },
-  ],
-  entertainment: [
-    { name: "Taylor Swift", slug: "taylor-swift", hot: true },
-    { name: "Marvel MCU", slug: "marvel-cinematic-universe" },
-    { name: "Oscars 2026", slug: "oscar-awards-2026" },
-  ],
-  safety: [
-    { name: "Earthquakes", slug: "earthquake-activity" },
-    { name: "Severe Weather", slug: "severe-weather-alerts" },
-    { name: "Hurricane Season", slug: "hurricane-season-2026" },
-    { name: "Wildfires", slug: "wildfire-season" },
-  ],
-};
+import type { OnboardingQuestion } from "./page";
 
 const LIFE_AREAS = [
-  { key: "world", label: "World & Conflicts", desc: "Wars, geopolitics, global tensions" },
-  { key: "money", label: "Money & Markets", desc: "Stocks, inflation, housing, gold" },
-  { key: "politics", label: "US Politics", desc: "Elections, tariffs, TikTok ban" },
-  { key: "sports", label: "Sports", desc: "NBA, World Cup, F1, UFC" },
-  { key: "crypto", label: "Crypto", desc: "Bitcoin, Ethereum, altcoins" },
+  { key: "geopolitics", label: "World & Conflicts", desc: "Wars, geopolitics, global tensions" },
+  { key: "macro", label: "Money & Markets", desc: "Inflation, housing, rates, recession" },
+  { key: "politics", label: "Politics", desc: "Elections, tariffs, AI regulation" },
+  { key: "sports", label: "Sports", desc: "World Cup, F1, NBA, Premier League" },
+  { key: "crypto", label: "Crypto", desc: "Bitcoin, Ethereum, crypto market" },
   { key: "tech", label: "Tech & AI", desc: "AI, Tesla, Apple, SpaceX" },
   { key: "entertainment", label: "Entertainment", desc: "Taylor Swift, Marvel, Oscars" },
-  { key: "safety", label: "Weather & Safety", desc: "Earthquakes, storms, wildfires" },
+  { key: "disasters", label: "Weather & Safety", desc: "Earthquakes, storms, wildfires" },
 ];
 
-// Cap hot subject pulse dots to avoid a blinking field
-const MAX_HOT_PULSE = 4;
-
-// Map category keys used in COUNTRY_LANE_BOOSTS to LIFE_AREAS keys
+// Map topic categories to life area keys
 const CATEGORY_TO_AREA: Record<string, string> = {
-  geopolitics: "world",
-  macro: "money",
+  geopolitics: "geopolitics",
+  macro: "macro",
   politics: "politics",
   sports: "sports",
   crypto: "crypto",
   tech: "tech",
   entertainment: "entertainment",
-  disasters: "safety",
+  disasters: "disasters",
 };
 
-export default function OnboardingPage() {
+interface Props {
+  questions: OnboardingQuestion[];
+}
+
+export default function OnboardingClient({ questions }: Props) {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [selectedAreas, setSelectedAreas] = useState<string[]>([]);
@@ -124,7 +51,6 @@ export default function OnboardingPage() {
   const [inferredCountryName, setInferredCountryName] = useState<string | null>(null);
   const locationFetched = useRef(false);
 
-  // Fetch inferred location on mount (best-effort, non-blocking)
   useEffect(() => {
     if (locationFetched.current) return;
     locationFetched.current = true;
@@ -137,15 +63,13 @@ export default function OnboardingPage() {
           setInferredCountryName(getCountryDisplayName(data.country));
         }
       })
-      .catch(() => { /* fail silently to global mode */ });
+      .catch(() => { /* fail silently */ });
   }, []);
 
-  // Get country-suggested topic slugs for sorting
   const countrySuggestedSlugs = new Set(
     inferredCountry ? (COUNTRY_TOPIC_SUGGESTIONS[inferredCountry] ?? []) : [],
   );
 
-  // Get boosted life area keys from country
   const boostedAreaKeys = new Set(
     inferredCountry
       ? (COUNTRY_LANE_BOOSTS[inferredCountry] ?? [])
@@ -154,7 +78,6 @@ export default function OnboardingPage() {
       : [],
   );
 
-  // Determine transition direction
   const direction = step >= prevStep.current ? "forward" : "back";
 
   function goToStep(next: number) {
@@ -177,26 +100,27 @@ export default function OnboardingPage() {
     });
   }
 
-  const seen = new Set<string>();
-  const subjects = selectedAreas
-    .flatMap((area) => (SUBJECT_CATALOG[area] ?? []).map((s) => ({ ...s, area })))
-    .filter((s) => { if (seen.has(s.slug)) return false; seen.add(s.slug); return true; })
+  // Filter questions to selected life areas
+  const filteredQuestions = questions
+    .filter((q) => {
+      const area = q.category ? CATEGORY_TO_AREA[q.category] : null;
+      return area ? selectedAreas.includes(area) : false;
+    })
     .sort((a, b) => {
-      // Country-relevant first, then hot, then rest
+      // Country-relevant first, then alive, then rest
       const aRelevant = countrySuggestedSlugs.has(a.slug) ? 1 : 0;
       const bRelevant = countrySuggestedSlugs.has(b.slug) ? 1 : 0;
       if (bRelevant !== aRelevant) return bRelevant - aRelevant;
-      return (b.hot ? 1 : 0) - (a.hot ? 1 : 0);
+      if (a.has_snapshot !== b.has_snapshot) return a.has_snapshot ? -1 : 1;
+      return 0;
     });
 
   function saveAndContinue() {
-    const sels = subjects.filter((s) => selectedSlugs.has(s.slug)).map((s) => ({ slug: s.slug, name: s.name }));
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(sels));
     goToStep(step + 1);
   }
 
   async function finish() {
-    const slugs = subjects.filter((s) => selectedSlugs.has(s.slug)).map((s) => s.slug);
+    const slugs = filteredQuestions.filter((q) => selectedSlugs.has(q.slug)).map((q) => q.slug);
 
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -206,7 +130,6 @@ export default function OnboardingPage() {
       savePendingOnboarding(slugs);
       const result = await applyPendingOnboarding();
       if (result.ok) {
-        localStorage.removeItem(STORAGE_KEY);
         clearPendingOnboarding();
       }
       router.push("/dashboard");
@@ -217,21 +140,19 @@ export default function OnboardingPage() {
     }
   }
 
-  // Track how many hot dots we have shown
-  let hotPulseCount = 0;
+  // Track live pulse dots
+  let livePulseCount = 0;
+  const MAX_LIVE_PULSE = 4;
 
   return (
     <div className="mx-auto max-w-2xl px-6 py-10">
-      {/* Progress bar — stable shell, does not transition */}
+      {/* Progress bar */}
       <div className="relative mb-8">
-        {/* Track */}
         <div className="h-1 rounded-full bg-border mx-8" />
-        {/* Fill */}
         <div
           className="absolute top-0 left-8 h-1 rounded-full bg-navy transition-all duration-500 ease-out"
           style={{ width: `${((step - 1) / 3) * 100}%`, maxWidth: "calc(100% - 4rem)" }}
         />
-        {/* Step dots */}
         <div className="absolute top-1/2 left-0 right-0 flex justify-between px-6 -translate-y-1/2">
           {[1, 2, 3, 4].map((s) => (
             <div
@@ -244,7 +165,6 @@ export default function OnboardingPage() {
         </div>
       </div>
 
-      {/* Content pane — transitions on step change */}
       <div
         key={step}
         className={direction === "forward" ? "animate-slide-up" : "animate-fade-in"}
@@ -252,7 +172,7 @@ export default function OnboardingPage() {
         {step === 1 && (
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-navy text-center mb-1">
-              What do you want to stay ahead of?
+              What questions keep you up at night?
             </h1>
             <p className="text-muted-foreground text-center mb-8">
               Pick the areas that matter to you
@@ -260,6 +180,7 @@ export default function OnboardingPage() {
             <div className="grid grid-cols-2 gap-3 mb-8">
               {LIFE_AREAS.map((area) => {
                 const isSelected = selectedAreas.includes(area.key);
+                const isBoosted = boostedAreaKeys.has(area.key);
                 return (
                   <button
                     key={area.key}
@@ -267,7 +188,9 @@ export default function OnboardingPage() {
                     className={`relative rounded-2xl border-2 p-5 text-left transition-all duration-200 active:scale-[0.98] ${
                       isSelected
                         ? "border-navy bg-navy/5 ring-1 ring-navy/20"
-                        : "border-border hover:border-navy/30"
+                        : isBoosted
+                          ? "border-navy/30 bg-navy/[0.02]"
+                          : "border-border hover:border-navy/30"
                     }`}
                   >
                     <p className="text-sm font-semibold">{area.label}</p>
@@ -283,7 +206,7 @@ export default function OnboardingPage() {
             </div>
             <div className="text-center">
               <Button onClick={() => goToStep(2)} disabled={selectedAreas.length === 0} className="rounded-full px-10 h-12 text-base active:scale-[0.98]">
-                Show me subjects
+                Show me questions
               </Button>
             </div>
           </div>
@@ -292,21 +215,21 @@ export default function OnboardingPage() {
         {step === 2 && (
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-navy text-center mb-1">
-              Tap to follow
+              Tap the questions you care about
             </h1>
             <p className="text-muted-foreground text-center mb-6">
               <span className="font-mono tabular-nums">{selectedSlugs.size}</span> selected
             </p>
             <div className="flex flex-wrap gap-2 justify-center mb-8">
-              {subjects.map((s) => {
-                const isSelected = selectedSlugs.has(s.slug);
-                const showPulse = s.hot && !isSelected && hotPulseCount < MAX_HOT_PULSE;
-                if (showPulse) hotPulseCount++;
+              {filteredQuestions.map((q) => {
+                const isSelected = selectedSlugs.has(q.slug);
+                const showPulse = q.has_snapshot && !isSelected && livePulseCount < MAX_LIVE_PULSE;
+                if (showPulse) livePulseCount++;
 
                 return (
                   <button
-                    key={s.slug}
-                    onClick={() => toggleSubject(s.slug)}
+                    key={q.slug}
+                    onClick={() => toggleSubject(q.slug)}
                     className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2.5 text-sm font-medium transition-all duration-200 active:scale-[0.97] ${
                       isSelected
                         ? "bg-navy text-white shadow-sm"
@@ -319,7 +242,7 @@ export default function OnboardingPage() {
                         <span className="relative block h-1.5 w-1.5 rounded-full bg-positive" />
                       </span>
                     )}
-                    {s.name}
+                    {q.question_text}
                   </button>
                 );
               })}
@@ -338,7 +261,7 @@ export default function OnboardingPage() {
             {inferredCountryName ? (
               <>
                 <p className="text-xs text-muted-foreground mb-3 animate-fade-in">
-                  Showing subjects relevant to {inferredCountryName}
+                  Showing questions relevant to {inferredCountryName}
                 </p>
                 <h1 className="text-2xl font-bold tracking-tight text-navy mb-2">
                   Add your city for more local signals (optional)
@@ -350,7 +273,7 @@ export default function OnboardingPage() {
               </h1>
             )}
             <p className="text-muted-foreground mb-6">
-              Helps us surface relevant local subjects where available.
+              Helps us surface relevant local questions where available.
             </p>
             <div className="max-w-sm mx-auto mb-8">
               <Input value={city} onChange={(e) => setCity(e.target.value)} placeholder="Tel Aviv, New York, London..." className="rounded-full h-12 text-center text-base" />
@@ -366,29 +289,31 @@ export default function OnboardingPage() {
           <div>
             <div className="text-center mb-8">
               <h1 className="text-2xl font-bold tracking-tight text-navy mb-1">
-                Your feed is ready
+                Your questions are being tracked
               </h1>
               <p className="text-muted-foreground">
-                <span className="font-mono tabular-nums">{selectedSlugs.size}</span> subjects being tracked
+                <span className="font-mono tabular-nums">{selectedSlugs.size}</span> questions followed
               </p>
             </div>
             <div className="space-y-2 mb-8">
-              {subjects.filter((s) => selectedSlugs.has(s.slug)).map((s, i) => {
+              {filteredQuestions.filter((q) => selectedSlugs.has(q.slug)).map((q, i) => {
                 const delayClass = i === 0 ? "" : i === 1 ? "delay-75" : i === 2 ? "delay-150" : i === 3 ? "delay-225" : i === 4 ? "delay-300" : i === 5 ? "delay-375" : "delay-450";
                 return (
-                  <Card key={s.slug} className={`rounded-2xl border-border/40 animate-slide-up ${delayClass}`}>
+                  <Card key={q.slug} className={`rounded-2xl border-border/40 animate-slide-up ${delayClass}`}>
                     <CardContent className="p-4 flex items-center justify-between">
                       <div>
-                        <p className="font-medium text-sm">{s.name}</p>
-                        <p className="text-xs text-muted-foreground capitalize">{s.area}</p>
+                        <p className="font-medium text-sm">{q.question_text}</p>
+                        <p className="text-xs text-muted-foreground capitalize">{q.category}</p>
                       </div>
-                      <span className="inline-flex items-center gap-1.5 text-xs text-positive font-mono">
-                        <span className="relative h-1.5 w-1.5">
-                          <span className="absolute inset-0 rounded-full bg-positive animate-pulse-live" />
-                          <span className="relative block h-1.5 w-1.5 rounded-full bg-positive" />
+                      {q.has_snapshot && (
+                        <span className="inline-flex items-center gap-1.5 text-xs text-positive font-mono">
+                          <span className="relative h-1.5 w-1.5">
+                            <span className="absolute inset-0 rounded-full bg-positive animate-pulse-live" />
+                            <span className="relative block h-1.5 w-1.5 rounded-full bg-positive" />
+                          </span>
+                          live
                         </span>
-                        live
-                      </span>
+                      )}
                     </CardContent>
                   </Card>
                 );
@@ -397,14 +322,14 @@ export default function OnboardingPage() {
             <Card className="rounded-3xl border-navy/20 bg-navy/[0.03] animate-scale-in delay-150">
               <CardContent className="p-8 text-center">
                 <p className="text-xl font-semibold text-navy mb-2">You are all set.</p>
-                <p className="text-sm text-muted-foreground mb-6">Sign in to save your feed and get notified when signals shift.</p>
+                <p className="text-sm text-muted-foreground mb-6">Sign in to save your questions and get notified when answers change.</p>
                 <div className="flex flex-col gap-3 max-w-xs mx-auto">
                   <Button
                     className="rounded-full h-12 text-base shadow-md hover:shadow-lg hover:scale-[1.02] transition-all active:scale-[0.98]"
                     onClick={finish}
                     disabled={saveStatus !== "idle"}
                   >
-                    {saveStatus === "saving" ? "Saving..." : saveStatus === "redirecting" ? "Redirecting to sign in..." : "Save My Feed"}
+                    {saveStatus === "saving" ? "Saving..." : saveStatus === "redirecting" ? "Redirecting to sign in..." : "Save My Questions"}
                   </Button>
                   <Button variant="ghost" className="rounded-full h-10 text-muted-foreground" onClick={() => router.push("/")}>Just browsing for now</Button>
                 </div>

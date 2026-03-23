@@ -9,6 +9,7 @@ interface SearchResult {
   id: string;
   slug: string;
   canonical_name: string;
+  question_text?: string | null;
   category: string | null;
   one_liner?: string | null;
   direction?: string | null;
@@ -88,7 +89,7 @@ export default function SearchPage() {
               <TopicCard
                 key={r.id}
                 slug={r.slug}
-                canonicalName={r.canonical_name}
+                canonicalName={r.question_text ?? r.canonical_name}
                 category={r.category}
                 direction={r.direction ?? null}
                 confidence={r.confidence ?? null}

@@ -136,14 +136,6 @@ export function getSeedMapMatches(item: SourceItem): SeedMapEntry[] | null {
   return null;
 }
 
-/** @deprecated Use getSeedMapMatches for multi-topic support */
-export function getSeedMapMatch(item: SourceItem): string | null {
-  const entries = getSeedMapMatches(item);
-  if (!entries || entries.length === 0) return null;
-  const first = entries[0];
-  return first ? first.slug : null;
-}
-
 // Human-readable names for FRED series (for trigram matching)
 const FRED_SERIES_DESCRIPTIONS: Record<string, string> = {
   CPIAUCSL: "Consumer Price Index CPI Inflation",

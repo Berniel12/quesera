@@ -4,6 +4,7 @@ import { DirectionBadge } from "@/components/direction-badge";
 import { FreshnessBadge } from "@/components/freshness-badge";
 import { AnimateOnScroll } from "@/components/animate-on-scroll";
 import { LocationStrip } from "@/components/location-strip";
+import { QuestionCard } from "@/components/question-card";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -215,44 +216,17 @@ export default async function LandingPage() {
       {/* Hero question card */}
       {heroQ && (
         <section className="pb-8 animate-slide-up delay-75">
-          <Link href={`/topics/${heroQ.slug}`}>
-            <Card className="rounded-3xl border-0 bg-card shadow-sm hover:shadow-md hover:-translate-y-px transition-all duration-300">
-              <CardContent className="p-6 sm:p-8">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    {heroQ.category && (
-                      <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest">
-                        {heroQ.category}
-                      </span>
-                    )}
-                    {heroQ.snapshot_published_at && (
-                      <span className="text-[11px] text-muted-foreground font-mono">
-                        {timeAgo(heroQ.snapshot_published_at)}
-                      </span>
-                    )}
-                  </div>
-                  {heroQ.freshness && <FreshnessBadge freshness={heroQ.freshness} />}
-                </div>
-                <h2 className="text-2xl font-bold tracking-tight text-navy sm:text-3xl">
-                  {heroQ.question_text}
-                </h2>
-                {heroQ.one_liner && (
-                  <p className="mt-2 text-[15px] text-muted-foreground leading-relaxed max-w-xl">
-                    {heroQ.one_liner}
-                  </p>
-                )}
-                <div className="flex items-center gap-4 mt-4 pt-4 border-t border-border/40">
-                  {heroQ.direction && <DirectionBadge direction={heroQ.direction} size="md" />}
-                  {heroQ.confidence !== null && (
-                    <span className="font-mono text-sm font-bold text-navy">
-                      {Math.round(heroQ.confidence * 100)}% confidence
-                    </span>
-                  )}
-                  <span className="text-xs text-muted-foreground ml-auto">View signals</span>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
+          <QuestionCard
+            questionText={heroQ.question_text}
+            slug={heroQ.slug}
+            category={heroQ.category}
+            direction={heroQ.direction}
+            confidence={heroQ.confidence}
+            freshness={heroQ.freshness}
+            oneLiner={heroQ.one_liner}
+            snapshotPublishedAt={heroQ.snapshot_published_at}
+            variant="hero"
+          />
         </section>
       )}
 
@@ -402,34 +376,24 @@ export default async function LandingPage() {
                 </Link>
               </div>
 
-              {/* Cards with snapshot data — show question text when available */}
+              {/* Cards with snapshot data — engaging question cards */}
               {laneCards.length > 0 && (
                 <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 mb-3">
                   {laneCards.slice(0, 3).map((card) => {
                     const cardQuestion = laneQuestions.find((q) => q.topic_id === card.topic_id);
                     return (
-                      <Link key={card.topic_id} href={`/topics/${card.slug}`}>
-                        <Card className="rounded-2xl border-0 bg-card shadow-sm hover:shadow-md hover:-translate-y-px active:scale-[0.98] transition-all duration-200 h-full">
-                          <CardContent className="p-4">
-                            <div className="flex items-center justify-between mb-2">
-                              {card.direction && <DirectionBadge direction={card.direction} size="sm" />}
-                              {card.snapshot_published_at && (
-                                <span className="text-[10px] text-muted-foreground font-mono">
-                                  {timeAgo(card.snapshot_published_at)}
-                                </span>
-                              )}
-                            </div>
-                            <p className="font-bold text-sm text-navy">
-                              {cardQuestion ? cardQuestion.question_text : card.canonical_name}
-                            </p>
-                            {card.one_liner && (
-                              <p className="text-xs text-muted-foreground mt-1 line-clamp-2 leading-relaxed">
-                                {card.one_liner}
-                              </p>
-                            )}
-                          </CardContent>
-                        </Card>
-                      </Link>
+                      <QuestionCard
+                        key={card.topic_id}
+                        questionText={cardQuestion ? cardQuestion.question_text : card.canonical_name}
+                        slug={card.slug}
+                        category={card.category}
+                        direction={card.direction}
+                        confidence={card.confidence}
+                        freshness={card.freshness}
+                        oneLiner={card.one_liner}
+                        snapshotPublishedAt={card.snapshot_published_at}
+                        variant="compact"
+                      />
                     );
                   })}
                 </div>

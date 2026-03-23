@@ -22,7 +22,7 @@ function getDirectionColor(direction: string, category: string | null): string {
 
   if (direction === "up") return inverted ? "text-destructive" : "text-positive";
   if (direction === "down") return inverted ? "text-positive" : "text-destructive";
-  return "text-muted-foreground";
+  return "text-navy";
 }
 
 export function getAnswerState(input: AnswerStateInput): AnswerState {
@@ -37,8 +37,8 @@ export function getAnswerState(input: AnswerStateInput): AnswerState {
     };
   }
 
-  // Too early to tell
-  if (confidence < 0.4) {
+  // Very low confidence — not enough data
+  if (confidence < 0.3) {
     return {
       label: "Too early to tell",
       colorClass: "text-muted-foreground",
@@ -48,15 +48,22 @@ export function getAnswerState(input: AnswerStateInput): AnswerState {
 
   const colorClass = getDirectionColor(direction, category);
 
-  // Strong confidence
-  if (confidence >= 0.7) {
+  // ── STRONG confidence (>= 0.65) ──
+  if (confidence >= 0.65) {
     if (direction === "up") return { label: "Probably yes", colorClass, intensity: "strong" };
     if (direction === "down") return { label: "Probably not", colorClass, intensity: "strong" };
-    return { label: "Hard to say", colorClass: "text-muted-foreground", intensity: "moderate" };
+    // Stable or unknown with strong confidence = we're watching, it's steady
+    return { label: "Not right now", colorClass: "text-navy", intensity: "strong" };
   }
 
-  // Moderate confidence
+  // ── MODERATE confidence (0.3 - 0.65) ──
   if (direction === "up") return { label: "Looks like it", colorClass, intensity: "moderate" };
   if (direction === "down") return { label: "Doesn't look like it", colorClass, intensity: "moderate" };
-  return { label: "Hard to say", colorClass: "text-muted-foreground", intensity: "moderate" };
+
+  // Stable or unknown with moderate confidence
+  if (confidence >= 0.5) {
+    return { label: "Signs point to no", colorClass: "text-navy", intensity: "moderate" };
+  }
+
+  return { label: "We're watching", colorClass: "text-navy", intensity: "moderate" };
 }

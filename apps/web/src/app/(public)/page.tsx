@@ -379,7 +379,7 @@ export default async function LandingPage() {
               {/* Cards with snapshot data — engaging question cards */}
               {laneCards.length > 0 && (
                 <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 mb-3">
-                  {laneCards.slice(0, 3).map((card) => {
+                  {laneCards.slice(0, 3).map((card, i) => {
                     const cardQuestion = laneQuestions.find((q) => q.topic_id === card.topic_id);
                     return (
                       <QuestionCard
@@ -393,6 +393,7 @@ export default async function LandingPage() {
                         oneLiner={card.one_liner}
                         snapshotPublishedAt={card.snapshot_published_at}
                         variant="compact"
+                        staggerIndex={i}
                       />
                     );
                   })}

@@ -36,7 +36,7 @@ export function AnimateOnScroll({
           observer.disconnect();
         }
       },
-      { threshold: 0.1 },
+      { threshold: 0.15, rootMargin: "0px 0px -40px 0px" },
     );
 
     observer.observe(el);
@@ -49,6 +49,7 @@ export function AnimateOnScroll({
       className={`${visible ? animation : ""} ${className}`}
       style={{
         opacity: visible ? undefined : 0,
+        transform: visible ? undefined : "translateY(20px)",
         animationDelay: delay > 0 ? `${delay}ms` : undefined,
       }}
     >

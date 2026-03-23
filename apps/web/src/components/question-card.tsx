@@ -11,6 +11,7 @@ interface QuestionCardProps {
   oneLiner: string | null;
   snapshotPublishedAt: string | null;
   variant?: "hero" | "compact";
+  staggerIndex?: number;
 }
 
 function timeAgo(dateStr: string | null): string {
@@ -24,7 +25,6 @@ function timeAgo(dateStr: string | null): string {
   return `${days}d ago`;
 }
 
-// Category dot color — matches the design reference
 function getCategoryDotColor(category: string | null, direction: string | null): string {
   if (direction === "up" && (category === "disasters" || category === "geopolitics")) return "bg-destructive";
   if (direction === "down" && (category === "disasters" || category === "geopolitics")) return "bg-positive";
@@ -33,23 +33,19 @@ function getCategoryDotColor(category: string | null, direction: string | null):
   return "bg-positive";
 }
 
-// Confidence bar color
-function getBarColor(confidence: number, answerColorClass: string): string {
-  if (answerColorClass.includes("positive")) return "bg-navy";
+function getBarColor(answerColorClass: string): string {
   if (answerColorClass.includes("destructive")) return "bg-destructive";
   if (answerColorClass.includes("warning")) return "bg-warning";
   return "bg-navy";
 }
 
-// Confidence label text
 function getConfidenceLabel(confidence: number): string {
   if (confidence >= 0.75) return "High Confidence";
   if (confidence >= 0.5) return "Med Confidence";
   return "Low Confidence";
 }
 
-// Bottom status icon + label
-function getStatusIndicator(direction: string | null, category: string | null, answerState: { label: string; colorClass: string }): { icon: string; label: string } {
+function getStatusIndicator(direction: string | null, category: string | null): { icon: string; label: string } {
   if (direction === "up" && (category === "disasters" || category === "geopolitics")) {
     return { icon: "\u26A0", label: "Elevated Alert" };
   }
@@ -69,6 +65,7 @@ export function QuestionCard({
   oneLiner,
   snapshotPublishedAt,
   variant = "hero",
+  staggerIndex = 0,
 }: QuestionCardProps) {
   const answerState = direction && confidence !== null
     ? getAnswerState({ direction, confidence, category, disagreement: 0 })
@@ -76,12 +73,11 @@ export function QuestionCard({
 
   const pct = confidence !== null ? Math.round(confidence * 100) : 0;
   const dotColor = getCategoryDotColor(category, direction);
-  const barColor = answerState ? getBarColor(confidence ?? 0, answerState.colorClass) : "bg-navy";
-  const confLabel = confidence !== null ? getConfidenceLabel(confidence) : "";
+  const barColor = answerState ? getBarColor(answerState.colorClass) : "bg-navy";
   const confLabelColor = answerState?.colorClass ?? "text-navy";
-  const status = answerState ? getStatusIndicator(direction, category, answerState) : null;
+  const status = getStatusIndicator(direction, category);
+  const isFresh = freshness === "fresh";
 
-  // Answer block border color
   const answerBorderColor = answerState?.colorClass.includes("destructive")
     ? "border-destructive"
     : answerState?.colorClass.includes("warning")
@@ -97,11 +93,14 @@ export function QuestionCard({
   if (variant === "hero") {
     return (
       <Link href={`/topics/${slug}`}>
-        <div className="group bg-white rounded-3xl p-8 shadow-[0_20px_60px_rgba(11,19,38,0.04)] hover:translate-y-[-4px] transition-all duration-300 ease-out">
-          {/* Category pill with pulsing dot */}
-          <div className="flex justify-between items-start mb-6">
+        <div
+          className={`group bg-white rounded-3xl p-8 shadow-[0_20px_60px_rgba(11,19,38,0.04)] hover-lift animate-card-enter ${isFresh ? "animate-glow-breathe" : ""}`}
+          style={{ contain: "layout style" }}
+        >
+          {/* 1. Category pill — delay-100 */}
+          <div className="flex justify-between items-start mb-6 animate-fade-in delay-100" style={{ opacity: 0 }}>
             <div className="flex items-center gap-2 bg-secondary/10 px-3 py-1.5 rounded-full">
-              <span className={`relative h-2 w-2 flex-shrink-0`}>
+              <span className="relative h-2 w-2 flex-shrink-0">
                 <span className={`absolute inset-0 rounded-full ${dotColor} animate-pulse-live`} />
                 <span className={`relative block h-2 w-2 rounded-full ${dotColor}`} />
               </span>
@@ -116,29 +115,39 @@ export function QuestionCard({
             )}
           </div>
 
-          {/* Question text */}
-          <h2 className="text-2xl sm:text-3xl font-semibold leading-snug text-navy mb-4 group-hover:text-navy/80 transition-colors">
+          {/* 2. Question text — delay-200 */}
+          <h2
+            className="text-2xl sm:text-3xl font-semibold leading-snug text-navy mb-4 animate-slide-up delay-200"
+            style={{ opacity: 0 }}
+          >
             {questionText}
           </h2>
 
-          {/* Confidence bar */}
+          {/* 3. Confidence bar — delay-400 (GPU: scaleX, not width) */}
           {confidence !== null && (
             <div className="flex items-center gap-4 mb-8">
               <div className="flex-1 h-1 bg-secondary rounded-full overflow-hidden">
                 <div
-                  className={`h-full ${barColor} rounded-full animate-meter-fill`}
-                  style={{ width: `${pct}%`, transformOrigin: "left" }}
+                  className={`h-full ${barColor} rounded-full animate-bar-fill delay-400`}
+                  style={{ transform: "scaleX(0)", transformOrigin: "left" }}
                 />
               </div>
-              <span className={`text-sm font-bold ${confLabelColor} whitespace-nowrap`}>
+              {/* 4. Confidence number — delay-600 */}
+              <span
+                className={`text-sm font-bold ${confLabelColor} whitespace-nowrap animate-number-reveal delay-600`}
+                style={{ opacity: 0 }}
+              >
                 {pct}% Confidence
               </span>
             </div>
           )}
 
-          {/* Answer block with left border accent */}
+          {/* 5. Answer block — delay-700 (slides from left) */}
           {answerState && oneLiner && (
-            <div className={`${answerBgColor} rounded-2xl p-6 border-l-4 ${answerBorderColor}`}>
+            <div
+              className={`${answerBgColor} rounded-2xl p-6 border-l-4 ${answerBorderColor} animate-answer-reveal delay-700`}
+              style={{ opacity: 0 }}
+            >
               <p className="text-muted-foreground leading-relaxed">
                 <span className={`font-bold ${answerState.colorClass}`}>
                   {answerState.label}.
@@ -148,14 +157,17 @@ export function QuestionCard({
             </div>
           )}
 
-          {/* Bottom status row */}
-          <div className="mt-6 flex items-center justify-between">
+          {/* 6. Status row — delay-800 (last to appear) */}
+          <div
+            className="mt-6 flex items-center justify-between animate-status-fade delay-800"
+            style={{ opacity: 0 }}
+          >
             {snapshotPublishedAt && (
               <span className="text-xs text-muted-foreground">
                 Updated {timeAgo(snapshotPublishedAt)}
               </span>
             )}
-            {status && answerState && (
+            {answerState && (
               <span className={`flex items-center gap-1.5 text-sm font-bold ${answerState.colorClass}`}>
                 <span>{status.icon}</span>
                 {status.label}
@@ -167,13 +179,18 @@ export function QuestionCard({
     );
   }
 
-  // Compact variant for category lanes
+  // ── Compact variant ──
+  const compactDelay = staggerIndex * 150;
+
   return (
     <Link href={`/topics/${slug}`}>
-      <div className="group bg-white rounded-2xl p-5 shadow-[0_10px_40px_rgba(11,19,38,0.03)] hover:translate-y-[-3px] active:scale-[0.98] transition-all duration-300 h-full">
+      <div
+        className="group bg-white rounded-2xl p-5 shadow-[0_10px_40px_rgba(11,19,38,0.03)] hover-lift-sm animate-card-enter h-full"
+        style={{ contain: "layout style", animationDelay: `${compactDelay}ms`, opacity: 0 }}
+      >
         {/* Category pill */}
         <div className="flex items-center gap-2 mb-3">
-          <span className={`relative h-1.5 w-1.5 flex-shrink-0`}>
+          <span className="relative h-1.5 w-1.5 flex-shrink-0">
             <span className={`absolute inset-0 rounded-full ${dotColor} animate-pulse-live`} />
             <span className={`relative block h-1.5 w-1.5 rounded-full ${dotColor}`} />
           </span>
@@ -183,21 +200,21 @@ export function QuestionCard({
         </div>
 
         {/* Question */}
-        <p className="font-semibold text-sm text-navy leading-snug mb-3 group-hover:text-navy/80 transition-colors">
+        <p className="font-semibold text-sm text-navy leading-snug mb-3">
           {questionText}
         </p>
 
-        {/* Confidence bar */}
+        {/* Confidence bar (GPU: scaleX) */}
         {confidence !== null && (
           <div className="flex items-center gap-3 mb-3">
             <div className="flex-1 h-0.5 bg-secondary rounded-full overflow-hidden">
               <div
-                className={`h-full ${barColor} rounded-full animate-meter-fill`}
-                style={{ width: `${pct}%` }}
+                className={`h-full ${barColor} rounded-full animate-bar-fill`}
+                style={{ transform: "scaleX(0)", transformOrigin: "left", animationDelay: `${compactDelay + 200}ms` }}
               />
             </div>
             <span className={`text-[11px] font-bold ${confLabelColor} whitespace-nowrap`}>
-              {confLabel}
+              {getConfidenceLabel(confidence)}
             </span>
           </div>
         )}

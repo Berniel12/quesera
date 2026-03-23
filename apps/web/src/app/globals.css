@@ -99,7 +99,13 @@
   }
 }
 
-/* ── QUESERA Animation Keyframes ── */
+/* ── QUESERA Animation Keyframes — GPU-optimized, spring-eased ── */
+/* Only transform + opacity — composited by GPU, 60fps guaranteed */
+
+/* Spring curves */
+/* Standard spring: cubic-bezier(0.22, 1, 0.36, 1) — fast in, elegant settle */
+/* Bouncy spring: cubic-bezier(0.34, 1.56, 0.64, 1) — slight overshoot */
+/* Smooth decel: cubic-bezier(0.16, 1, 0.3, 1) — long elegant deceleration */
 
 @keyframes q-fade-in {
   from { opacity: 0; }
@@ -107,23 +113,23 @@
 }
 
 @keyframes q-slide-up {
-  from { opacity: 0; transform: translateY(12px); }
+  from { opacity: 0; transform: translateY(20px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes q-slide-down {
-  from { opacity: 0; transform: translateY(-8px); }
+  from { opacity: 0; transform: translateY(-12px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes q-scale-in {
-  from { opacity: 0; transform: scale(0.95); }
+  from { opacity: 0; transform: scale(0.92); }
   to { opacity: 1; transform: scale(1); }
 }
 
 @keyframes q-pulse-live {
-  0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(2); opacity: 0; }
+  0%, 100% { transform: scale(1); opacity: 0.6; }
+  50% { transform: scale(2.5); opacity: 0; }
 }
 
 @keyframes q-shimmer {
@@ -133,41 +139,63 @@
 
 @keyframes q-pop {
   0% { transform: scale(1); }
-  50% { transform: scale(0.96); }
+  40% { transform: scale(0.95); }
   100% { transform: scale(1); }
 }
 
-@keyframes q-meter-fill {
-  from { stroke-dashoffset: 126; }
+/* Confidence bar fill — GPU composited via scaleX */
+@keyframes q-bar-fill {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
 }
 
-@keyframes q-count-up {
-  from { opacity: 0; transform: translateY(4px); }
+/* Number/text reveal after bar fills */
+@keyframes q-number-reveal {
+  from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-@keyframes q-glow-pulse {
-  0%, 100% { opacity: 0.4; }
-  50% { opacity: 0.8; }
+/* Answer block slides from left (matches left border accent) */
+@keyframes q-answer-reveal {
+  from { opacity: 0; transform: translateX(-8px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+/* Status text fades in last */
+@keyframes q-status-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Card entrance — used for staggered card cascades */
+@keyframes q-card-enter {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Subtle glow breathing on fresh/active cards */
+@keyframes q-glow-breathe {
+  0%, 100% { box-shadow: 0 20px 60px rgba(11, 19, 38, 0.04); }
+  50% { box-shadow: 0 20px 60px rgba(11, 19, 38, 0.08), 0 0 0 1px rgba(52, 199, 89, 0.06); }
 }
 
 /* ── QUESERA Animation Utilities ── */
 
 @layer utilities {
   .animate-fade-in {
-    animation: q-fade-in 0.5s ease-out both;
+    animation: q-fade-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
   .animate-slide-up {
-    animation: q-slide-up 0.5s ease-out both;
+    animation: q-slide-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
   .animate-slide-down {
-    animation: q-slide-down 0.4s ease-out both;
+    animation: q-slide-down 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
   .animate-scale-in {
-    animation: q-scale-in 0.4s ease-out both;
+    animation: q-scale-in 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
   }
   .animate-pulse-live {
-    animation: q-pulse-live 2s ease-in-out infinite;
+    animation: q-pulse-live 2.5s ease-in-out infinite;
   }
   .animate-shimmer {
     background: linear-gradient(90deg, var(--muted) 25%, rgba(142, 142, 147, 0.08) 50%, var(--muted) 75%);
@@ -175,26 +203,74 @@
     animation: q-shimmer 1.5s ease-in-out infinite;
   }
   .animate-pop {
-    animation: q-pop 0.2s ease-out;
+    animation: q-pop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
   }
-  .animate-meter-fill {
-    animation: q-meter-fill 1.2s cubic-bezier(0.4, 0, 0.2, 1) both;
+  .animate-bar-fill {
+    transform-origin: left;
+    animation: q-bar-fill 1.4s cubic-bezier(0.16, 1, 0.3, 1) both;
   }
-  .animate-count-up {
-    animation: q-count-up 0.6s ease-out 0.4s both;
+  .animate-number-reveal {
+    animation: q-number-reveal 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
-  .animate-glow-pulse {
-    animation: q-glow-pulse 3s ease-in-out infinite;
+  .animate-answer-reveal {
+    animation: q-answer-reveal 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .animate-status-fade {
+    animation: q-status-fade 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .animate-card-enter {
+    animation: q-card-enter 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .animate-glow-breathe {
+    animation: q-glow-breathe 4s ease-in-out infinite;
   }
 
-  /* Stagger delay helpers — 75ms increments */
+  /* Orchestration delays — fine increments for cascading reveals */
+  .delay-50 { animation-delay: 50ms; }
   .delay-75 { animation-delay: 75ms; }
+  .delay-100 { animation-delay: 100ms; }
   .delay-150 { animation-delay: 150ms; }
+  .delay-200 { animation-delay: 200ms; }
   .delay-225 { animation-delay: 225ms; }
+  .delay-250 { animation-delay: 250ms; }
   .delay-300 { animation-delay: 300ms; }
+  .delay-350 { animation-delay: 350ms; }
   .delay-375 { animation-delay: 375ms; }
+  .delay-400 { animation-delay: 400ms; }
   .delay-450 { animation-delay: 450ms; }
+  .delay-500 { animation-delay: 500ms; }
   .delay-525 { animation-delay: 525ms; }
+  .delay-600 { animation-delay: 600ms; }
+  .delay-700 { animation-delay: 700ms; }
+  .delay-800 { animation-delay: 800ms; }
+
+  /* Premium hover transition — only transform + box-shadow, never transition-all */
+  .hover-lift {
+    will-change: transform;
+    transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .hover-lift:hover {
+    transform: scale(1.01) translateY(-6px);
+    box-shadow: 0 30px 80px rgba(11, 19, 38, 0.08);
+  }
+  .hover-lift:active {
+    transform: scale(0.99) translateY(-2px);
+    transition-duration: 0.15s;
+  }
+
+  /* Compact card hover — subtler */
+  .hover-lift-sm {
+    will-change: transform;
+    transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .hover-lift-sm:hover {
+    transform: scale(1.005) translateY(-4px);
+    box-shadow: 0 20px 60px rgba(11, 19, 38, 0.07);
+  }
+  .hover-lift-sm:active {
+    transform: scale(0.98);
+    transition-duration: 0.1s;
+  }
 }
 
 /* ── Reduced Motion ── */
@@ -204,20 +280,23 @@
   .animate-slide-up,
   .animate-slide-down,
   .animate-scale-in,
-  .animate-pop {
+  .animate-pop,
+  .animate-bar-fill,
+  .animate-number-reveal,
+  .animate-answer-reveal,
+  .animate-status-fade,
+  .animate-card-enter {
     animation: none !important;
     opacity: 1 !important;
     transform: none !important;
   }
   .animate-pulse-live,
   .animate-shimmer,
-  .animate-glow-pulse {
+  .animate-glow-breathe {
     animation: none !important;
   }
-  .animate-meter-fill,
-  .animate-count-up {
-    animation: none !important;
-    opacity: 1 !important;
-    transform: none !important;
+  .hover-lift,
+  .hover-lift-sm {
+    transition: none !important;
   }
 }

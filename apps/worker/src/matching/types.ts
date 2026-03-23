@@ -25,7 +25,9 @@ export interface SeedMapEntry {
   confidence: number;
 }
 
+// Macro series seed map — covers FRED, BLS, and EIA series (all use macro_series_observation type)
 export const FRED_SERIES_SEED_MAP: Record<string, SeedMapEntry[]> = {
+  // FRED series
   CPIAUCSL: [{ slug: "us-inflation-rate", confidence: 1.0 }],
   UNRATE: [{ slug: "us-unemployment-rate", confidence: 1.0 }],
   MORTGAGE30US: [{ slug: "us-mortgage-rates", confidence: 1.0 }],
@@ -38,6 +40,15 @@ export const FRED_SERIES_SEED_MAP: Record<string, SeedMapEntry[]> = {
     { slug: "us-mortgage-rates", confidence: 0.7 },
   ],
   GDP: [{ slug: "global-recession-risk", confidence: 0.9 }],
+
+  // BLS series
+  CES0000000001: [{ slug: "us-unemployment-rate", confidence: 0.9 }],   // Total nonfarm payrolls
+  LNS14000000: [{ slug: "us-unemployment-rate", confidence: 1.0 }],     // Unemployment rate
+  "CUSR0000SA0": [{ slug: "us-inflation-rate", confidence: 1.0 }],      // CPI-U seasonally adjusted
+  "CUUR0000SA0": [{ slug: "us-inflation-rate", confidence: 0.9 }],      // CPI-U unadjusted
+
+  // EIA series
+  "PET.RWTC.W": [{ slug: "global-oil-prices", confidence: 1.0 }],      // WTI crude oil weekly
 };
 
 // CoinGecko coin_id -> topic slugs (deterministic seed map)

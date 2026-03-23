@@ -133,7 +133,7 @@ export async function publishSnapshot(
 
 // ── Deterministic One-Liner Generation ──
 
-/** FRED series labels for human-readable one-liners */
+/** Macro series labels for human-readable one-liners (FRED + BLS + EIA) */
 const SERIES_LABELS: Record<string, string> = {
   MORTGAGE30US: "30-year fixed",
   CPIAUCSL: "CPI",
@@ -141,9 +141,14 @@ const SERIES_LABELS: Record<string, string> = {
   FEDFUNDS: "Fed funds rate",
   DGS10: "10-year Treasury",
   GDP: "GDP",
+  CES0000000001: "Nonfarm payrolls",
+  LNS14000000: "Unemployment rate",
+  "CUSR0000SA0": "CPI-U",
+  "CUUR0000SA0": "CPI-U (unadjusted)",
+  "PET.RWTC.W": "WTI crude oil",
 };
 
-/** Period labels for FRED series cadences */
+/** Period labels for macro series cadences */
 const SERIES_PERIOD: Record<string, string> = {
   MORTGAGE30US: "from last week",
   DGS10: "from yesterday",
@@ -151,6 +156,11 @@ const SERIES_PERIOD: Record<string, string> = {
   CPIAUCSL: "from last month",
   UNRATE: "from last month",
   GDP: "from last quarter",
+  CES0000000001: "from last month",
+  LNS14000000: "from last month",
+  "CUSR0000SA0": "from last month",
+  "CUUR0000SA0": "from last month",
+  "PET.RWTC.W": "from last week",
 };
 
 /**

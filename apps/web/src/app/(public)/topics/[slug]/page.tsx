@@ -6,7 +6,7 @@ import { DirectionBadge } from "@/components/direction-badge";
 import { FreshnessBadge } from "@/components/freshness-badge";
 import { ConfidenceBar } from "@/components/confidence-bar";
 import { DisagreementIndicator } from "@/components/disagreement-indicator";
-import { SignalList } from "@/components/signal-list";
+import { SignalGroup } from "@/components/signal-card";
 import { ConfidenceTimeline } from "@/components/confidence-timeline";
 import { FollowButton } from "@/components/follow-button";
 import { EvidenceDrawer } from "@/components/evidence-drawer";
@@ -119,23 +119,27 @@ export default async function TopicPage({ params }: TopicPageProps) {
     snapshot = snapData as SnapshotView | null;
   }
 
-  // 4. Load signals
+  // 4. Load signals (with metadata for rich display)
   let signals: Array<{
     source_name: string;
+    source_family: string;
     signal_type: string;
     current_value: number;
+    previous_value: number | null;
     delta: number | null;
     direction: string;
     freshness: string;
+    weight: number;
+    metadata: Record<string, unknown> | null;
   }> = [];
 
   if (snapshotId) {
     const { data: sigData } = await supabase
       .from("topic_signals")
-      .select("source_name, signal_type, current_value, delta, direction, freshness, weight")
+      .select("source_name, source_family, signal_type, current_value, previous_value, delta, direction, freshness, weight, metadata")
       .eq("snapshot_id", snapshotId)
       .order("weight", { ascending: false })
-      .limit(10);
+      .limit(20);
 
     signals = (sigData ?? []) as typeof signals;
   }
@@ -222,9 +226,16 @@ export default async function TopicPage({ params }: TopicPageProps) {
           </div>
         )}
 
+        {/* Signal synthesis badge */}
+        {signals.length > 0 && (
+          <p className="mt-3 text-xs text-muted-foreground animate-fade-in delay-150">
+            Synthesized from {signals.length} signals across {new Set(signals.map((s) => s.source_family)).size} source types
+          </p>
+        )}
+
         {/* Subject name as subtle breadcrumb (when question is primary) */}
         {primaryQuestion && (
-          <p className="mt-2 text-xs text-muted-foreground">
+          <p className="mt-1 text-[10px] text-muted-foreground/60">
             Tracking: {t.canonical_name}
           </p>
         )}
@@ -285,21 +296,36 @@ export default async function TopicPage({ params }: TopicPageProps) {
             </div>
           </AnimateOnScroll>
 
-          {/* Top Signals */}
-          {signals.length > 0 && (
-            <AnimateOnScroll>
-              <Card className="rounded-3xl border-border/40 mb-6">
-                <CardHeader>
-                  <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-                    Top Signals
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <SignalList signals={signals} />
-                </CardContent>
-              </Card>
-            </AnimateOnScroll>
-          )}
+          {/* Signal Intelligence — grouped by source family */}
+          {signals.length > 0 && (() => {
+            const grouped = new Map<string, typeof signals>();
+            for (const s of signals) {
+              const key = s.source_family ?? "unknown";
+              const existing = grouped.get(key) ?? [];
+              existing.push(s);
+              grouped.set(key, existing);
+            }
+            // Order: prediction_market first, then macro, then others
+            const ORDER = ["prediction_market", "macro_official", "crypto_market", "forecasting", "political_official", "hazard_weather", "news_evidence"];
+            const sortedKeys = [...grouped.keys()].sort((a, b) => {
+              const ai = ORDER.indexOf(a);
+              const bi = ORDER.indexOf(b);
+              return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+            });
+
+            return (
+              <AnimateOnScroll>
+                <div className="mb-6">
+                  <h2 className="text-[11px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-4">
+                    Signal Intelligence
+                  </h2>
+                  {sortedKeys.map((key) => (
+                    <SignalGroup key={key} familyKey={key} signals={grouped.get(key) ?? []} />
+                  ))}
+                </div>
+              </AnimateOnScroll>
+            );
+          })()}
 
           {/* Confidence Timeline */}
           {history.length >= 2 && (

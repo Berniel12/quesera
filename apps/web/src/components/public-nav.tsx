@@ -8,7 +8,10 @@ export function PublicNav() {
           <span className="text-base font-extrabold tracking-tight text-navy">
             QUESERA
           </span>
-          <span className="text-base font-extrabold text-navy ml-0.5">.</span>
+          <span className="relative ml-0.5 h-2 w-2 self-end mb-[3px]">
+            <span className="absolute inset-0 rounded-full bg-positive animate-pulse-live" />
+            <span className="relative block h-2 w-2 rounded-full bg-positive" />
+          </span>
         </Link>
 
         <div className="flex items-center gap-3">

@@ -1,5 +1,5 @@
 import type { MatchSignals, SeedMapEntry } from "./types.js";
-import { SOURCE_FAMILY_CATEGORY_MAP, FRED_SERIES_SEED_MAP, COINGECKO_SEED_MAP } from "./types.js";
+import { SOURCE_FAMILY_CATEGORY_MAP, FRED_SERIES_SEED_MAP, COINGECKO_SEED_MAP, USGS_TOPIC_SLUG } from "./types.js";
 
 interface SourceItem {
   source_item_type: string | null;
@@ -97,6 +97,11 @@ export function getSeedMapMatches(item: SourceItem): SeedMapEntry[] | null {
     const coinId = String(item.normalized_payload.coin_id ?? "");
     const entries = COINGECKO_SEED_MAP[coinId];
     return entries && entries.length > 0 ? entries : null;
+  }
+
+  // USGS earthquakes: all items → earthquake-activity
+  if (item.source_item_type === "earthquake") {
+    return [{ slug: USGS_TOPIC_SLUG, confidence: 1.0 }];
   }
 
   return null;

@@ -57,6 +57,9 @@ export const COINGECKO_SEED_MAP: Record<string, SeedMapEntry[]> = {
   ethereum: [{ slug: "ethereum-price", confidence: 1.0 }],
 };
 
+// USGS: all earthquake items → earthquake-activity topic
+export const USGS_TOPIC_SLUG = "earthquake-activity";
+
 // Allowed match_method values (code-constrained, not DB enum)
 export const MATCH_METHODS = [
   "trigram",

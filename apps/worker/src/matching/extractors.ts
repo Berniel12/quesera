@@ -1,5 +1,5 @@
 import type { MatchSignals, SeedMapEntry } from "./types.js";
-import { SOURCE_FAMILY_CATEGORY_MAP, FRED_SERIES_SEED_MAP, COINGECKO_SEED_MAP, USGS_TOPIC_SLUG, POLYMARKET_SLUG_RULES, CONGRESS_TITLE_RULES } from "./types.js";
+import { SOURCE_FAMILY_CATEGORY_MAP, FRED_SERIES_SEED_MAP, COINGECKO_SEED_MAP, USGS_TOPIC_SLUG, POLYMARKET_SLUG_RULES, MANIFOLD_QUESTION_RULES, CONGRESS_TITLE_RULES } from "./types.js";
 
 interface SourceItem {
   source_item_type: string | null;
@@ -109,12 +109,23 @@ export function getSeedMapMatches(item: SourceItem): SeedMapEntry[] | null {
     return [{ slug: "severe-weather-alerts", confidence: 1.0 }];
   }
 
-  // Polymarket markets: slug keyword matching (conservative patterns)
+  // Prediction market items: keyword matching on slug or question text
   if (item.source_item_type === "market") {
+    // Try Polymarket slug-based matching first
     const slug = String(item.normalized_payload.slug ?? "").toLowerCase();
     if (slug) {
       for (const rule of POLYMARKET_SLUG_RULES) {
         if (slug.includes(rule.pattern)) {
+          return rule.entries;
+        }
+      }
+    }
+
+    // Try Manifold/generic question-text matching
+    const question = String(item.normalized_payload.question ?? "").toLowerCase();
+    if (question) {
+      for (const rule of MANIFOLD_QUESTION_RULES) {
+        if (question.includes(rule.pattern)) {
           return rule.entries;
         }
       }

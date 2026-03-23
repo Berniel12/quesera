@@ -26,29 +26,54 @@ export interface SeedMapEntry {
 }
 
 // Macro series seed map — covers FRED, BLS, and EIA series (all use macro_series_observation type)
+// Cross-topic mappings: the same data feeds multiple topics where causally relevant
 export const FRED_SERIES_SEED_MAP: Record<string, SeedMapEntry[]> = {
-  // FRED series
-  CPIAUCSL: [{ slug: "us-inflation-rate", confidence: 1.0 }],
-  UNRATE: [{ slug: "us-unemployment-rate", confidence: 1.0 }],
+  // FRED series — with cross-topic mappings
+  CPIAUCSL: [
+    { slug: "us-inflation-rate", confidence: 1.0 },
+    { slug: "global-recession-risk", confidence: 0.6 },  // inflation is a recession indicator
+  ],
+  UNRATE: [
+    { slug: "us-unemployment-rate", confidence: 1.0 },
+    { slug: "global-recession-risk", confidence: 0.7 },  // rising unemployment signals recession
+  ],
   MORTGAGE30US: [{ slug: "us-mortgage-rates", confidence: 1.0 }],
   DGS10: [
     { slug: "us-mortgage-rates", confidence: 0.8 },
     { slug: "us-federal-reserve-interest-rates", confidence: 0.9 },
+    { slug: "global-recession-risk", confidence: 0.7 },  // yield curve is recession predictor
   ],
   FEDFUNDS: [
     { slug: "us-federal-reserve-interest-rates", confidence: 1.0 },
     { slug: "us-mortgage-rates", confidence: 0.7 },
+    { slug: "global-recession-risk", confidence: 0.6 },  // rate policy affects recession risk
   ],
-  GDP: [{ slug: "global-recession-risk", confidence: 0.9 }],
+  GDP: [
+    { slug: "global-recession-risk", confidence: 0.9 },
+    { slug: "us-unemployment-rate", confidence: 0.6 },   // GDP growth correlates with employment
+  ],
 
-  // BLS series
-  CES0000000001: [{ slug: "us-unemployment-rate", confidence: 0.9 }],   // Total nonfarm payrolls
-  LNS14000000: [{ slug: "us-unemployment-rate", confidence: 1.0 }],     // Unemployment rate
-  "CUSR0000SA0": [{ slug: "us-inflation-rate", confidence: 1.0 }],      // CPI-U seasonally adjusted
-  "CUUR0000SA0": [{ slug: "us-inflation-rate", confidence: 0.9 }],      // CPI-U unadjusted
+  // BLS series — with cross-topic mappings
+  CES0000000001: [
+    { slug: "us-unemployment-rate", confidence: 0.9 },
+    { slug: "global-recession-risk", confidence: 0.5 },  // payroll changes signal economic health
+  ],
+  LNS14000000: [
+    { slug: "us-unemployment-rate", confidence: 1.0 },
+    { slug: "global-recession-risk", confidence: 0.7 },
+  ],
+  "CUSR0000SA0": [
+    { slug: "us-inflation-rate", confidence: 1.0 },
+    { slug: "global-recession-risk", confidence: 0.5 },
+  ],
+  "CUUR0000SA0": [{ slug: "us-inflation-rate", confidence: 0.9 }],
 
   // EIA series
-  "PET.RWTC.W": [{ slug: "global-oil-prices", confidence: 1.0 }],      // WTI crude oil weekly
+  "PET.RWTC.W": [
+    { slug: "global-oil-prices", confidence: 1.0 },
+    { slug: "us-inflation-rate", confidence: 0.5 },      // oil prices drive inflation
+    { slug: "global-recession-risk", confidence: 0.4 },   // oil shocks can trigger recessions
+  ],
 };
 
 // CoinGecko coin_id -> topic slugs (deterministic seed map)
@@ -74,6 +99,27 @@ export const POLYMARKET_SLUG_RULES: Array<{ pattern: string; entries: SeedMapEnt
   { pattern: "champions-league", entries: [{ slug: "champions-league", confidence: 0.9 }] },
   { pattern: "nba", entries: [{ slug: "nba-season-2025-26", confidence: 0.9 }] },
   { pattern: "nfl", entries: [{ slug: "nfl-2026-season", confidence: 0.9 }] },
+];
+
+// Manifold Markets question keyword → topic mappings
+// Reuses similar patterns as Polymarket but matches on normalized_payload.question
+export const MANIFOLD_QUESTION_RULES: Array<{ pattern: string; entries: SeedMapEntry[] }> = [
+  { pattern: "world cup", entries: [{ slug: "fifa-world-cup-2026", confidence: 0.8 }] },
+  { pattern: "bitcoin", entries: [{ slug: "bitcoin-price", confidence: 0.7 }] },
+  { pattern: "ethereum", entries: [{ slug: "ethereum-price", confidence: 0.7 }] },
+  { pattern: "fed rate", entries: [{ slug: "us-federal-reserve-interest-rates", confidence: 0.7 }] },
+  { pattern: "interest rate", entries: [{ slug: "us-federal-reserve-interest-rates", confidence: 0.6 }] },
+  { pattern: "recession", entries: [{ slug: "global-recession-risk", confidence: 0.8 }] },
+  { pattern: "mortgage", entries: [{ slug: "us-mortgage-rates", confidence: 0.7 }] },
+  { pattern: "inflation", entries: [{ slug: "us-inflation-rate", confidence: 0.7 }] },
+  { pattern: "unemployment", entries: [{ slug: "us-unemployment-rate", confidence: 0.7 }] },
+  { pattern: "earthquake", entries: [{ slug: "earthquake-activity", confidence: 0.7 }] },
+  { pattern: "hurricane", entries: [{ slug: "severe-weather-alerts", confidence: 0.7 }] },
+  { pattern: "tariff", entries: [{ slug: "us-trade-policy", confidence: 0.7 }] },
+  { pattern: "ai regulation", entries: [{ slug: "artificial-intelligence-policy", confidence: 0.8 }] },
+  { pattern: "artificial intelligence", entries: [{ slug: "artificial-intelligence-policy", confidence: 0.7 }] },
+  { pattern: "formula 1", entries: [{ slug: "formula-1-2026", confidence: 0.8 }] },
+  { pattern: "f1 ", entries: [{ slug: "formula-1-2026", confidence: 0.7 }] },
 ];
 
 // Congress.gov title keyword → topic mappings (conservative, policy-specific only)

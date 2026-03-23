@@ -80,11 +80,10 @@ export async function aggregateSignals(
     }
   }
 
-  // Extract and score signals
-  const signals: ScoredSignal[] = [];
-  let skippedCount = 0;
-
-  for (const item of items as Array<{
+  // Group items by series for intra-batch delta computation
+  // For structured numeric sources (FRED), we can compute direction from
+  // the two most recent observations of the same series within the matched items.
+  const typedItems = items as Array<{
     id: string;
     source_id: string;
     source_key: string;
@@ -92,9 +91,53 @@ export async function aggregateSignals(
     normalized_payload: Record<string, unknown>;
     occurred_at: string | null;
     last_seen_at: string;
-  }>) {
+  }>;
+
+  const seriesGroups = new Map<string, typeof typedItems>();
+  for (const item of typedItems) {
+    const seriesId = String(item.normalized_payload.series_id ?? "");
+    if (seriesId) {
+      const group = seriesGroups.get(seriesId) ?? [];
+      group.push(item);
+      seriesGroups.set(seriesId, group);
+    }
+  }
+
+  // Sort each series group by occurred_at descending to find latest + prior
+  for (const [, group] of seriesGroups) {
+    group.sort((a, b) => {
+      const dateA = a.occurred_at ? new Date(a.occurred_at).getTime() : 0;
+      const dateB = b.occurred_at ? new Date(b.occurred_at).getTime() : 0;
+      return dateB - dateA;
+    });
+  }
+
+  // Build intra-batch prior value map: series_id → prior observation value
+  const batchPriorMap = new Map<string, number>();
+  for (const [seriesId, group] of seriesGroups) {
+    if (group.length >= 2) {
+      const priorItem = group[1]; // second most recent
+      if (priorItem) {
+        const rawVal = priorItem.normalized_payload.value;
+        const val = typeof rawVal === "number" ? rawVal : parseFloat(String(rawVal ?? ""));
+        if (!isNaN(val)) batchPriorMap.set(seriesId, val);
+      }
+    }
+  }
+
+  // Extract and score signals — only use the MOST RECENT observation per series
+  const signals: ScoredSignal[] = [];
+  let skippedCount = 0;
+  const processedSeries = new Set<string>();
+
+  for (const item of typedItems) {
     const def = defMap.get(item.source_id);
     if (!def) continue;
+
+    // For macro series, only process the most recent observation per series
+    const seriesId = String(item.normalized_payload.series_id ?? "");
+    if (seriesId && processedSeries.has(seriesId)) continue;
+    if (seriesId) processedSeries.add(seriesId);
 
     const extracted = extractNumericSignal(
       def.source_family,
@@ -110,10 +153,16 @@ export async function aggregateSignals(
       continue;
     }
 
-    // Align with prior signal
+    // Determine previous value: prefer prior snapshot, fall back to intra-batch
     const priorKey = `${def.source_family}:${item.external_id}`;
-    const prior = priorSignalMap.get(priorKey);
-    const previousValue = prior?.current_value ?? null;
+    const priorFromSnapshot = priorSignalMap.get(priorKey);
+    let previousValue = priorFromSnapshot?.current_value ?? null;
+
+    // Intra-batch fallback for first snapshot or missing prior
+    if (previousValue === null && seriesId) {
+      previousValue = batchPriorMap.get(seriesId) ?? null;
+    }
+
     const delta =
       previousValue !== null ? extracted.currentValue - previousValue : null;
 

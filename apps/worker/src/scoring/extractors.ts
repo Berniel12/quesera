@@ -25,9 +25,10 @@ export function extractNumericSignal(
   occurredAt: string | null,
   lastSeenAt: string,
 ): ExtractedSignal | null {
-  const timestamp = occurredAt
-    ? new Date(occurredAt)
-    : new Date(lastSeenAt);
+  // Use lastSeenAt (sync time) for freshness computation.
+  // occurredAt is useful for ordering observations but not for determining staleness —
+  // weekly FRED data "occurred" days ago but was just freshly synced.
+  const timestamp = new Date(lastSeenAt);
 
   switch (sourceFamily) {
     case "macro_official":

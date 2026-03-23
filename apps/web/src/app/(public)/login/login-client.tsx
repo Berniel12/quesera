@@ -67,10 +67,12 @@ export default function LoginPage() {
 
   async function handleGoogleSignIn() {
     setLoading(true);
+    // Use explicit origin to avoid Render reverse proxy resolving to localhost
+    const appOrigin = process.env.NEXT_PUBLIC_APP_URL ?? window.location.origin;
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/api/auth/callback`,
+        redirectTo: `${appOrigin}/api/auth/callback`,
       },
     });
 

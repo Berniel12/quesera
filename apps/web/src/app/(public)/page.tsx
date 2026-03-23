@@ -141,8 +141,8 @@ export default async function LandingPage() {
         <Link
           href="/search"
           className="flex h-14 items-center rounded-3xl px-6 text-base text-muted-foreground transition-shadow duration-300
-            bg-white shadow-[0_10px_40px_rgba(11,19,38,0.04)] hover:shadow-[0_10px_40px_rgba(11,19,38,0.08)]
-            dark:glass-panel dark:shadow-none dark:border dark:border-white/5 dark:hover:border-[#00DAF3]/20"
+            bg-card shadow-[0_10px_40px_rgba(11,19,38,0.04)] hover:shadow-[0_10px_40px_rgba(11,19,38,0.08)]
+            dark:border dark:border-white/5 dark:hover:border-[#00DAF3]/20"
         >
           Ask anything...
         </Link>
@@ -199,7 +199,7 @@ export default async function LandingPage() {
             <Link href="/onboarding" className="inline-flex h-12 items-center justify-center rounded-full bg-navy dark:bg-[#00DAF3] px-8 text-sm font-medium text-white dark:text-[#00171B] hover-lift">
               Pick your questions
             </Link>
-            <Link href="/login" className="inline-flex h-12 items-center justify-center rounded-full bg-white dark:glass-panel dark:border dark:border-white/10 px-8 text-sm font-medium text-navy dark:text-foreground hover-lift-sm">
+            <Link href="/login" className="inline-flex h-12 items-center justify-center rounded-full bg-card dark:border dark:border-white/10 px-8 text-sm font-medium text-navy dark:text-foreground hover-lift-sm">
               Sign in
             </Link>
           </div>

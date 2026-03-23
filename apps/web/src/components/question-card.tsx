@@ -2,6 +2,18 @@ import Link from "next/link";
 import { getAnswerState } from "@/lib/answer-state";
 import { ProbabilityGauge } from "@/components/probability-gauge";
 
+// Category → visual imagery (Unsplash static URLs, free tier)
+const CATEGORY_IMAGES: Record<string, string> = {
+  macro: "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=800&q=60&auto=format", // stock market charts
+  crypto: "https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=800&q=60&auto=format", // bitcoin/crypto
+  politics: "https://images.unsplash.com/photo-1541872703-74c5e44368f9?w=800&q=60&auto=format", // capitol building
+  geopolitics: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=800&q=60&auto=format", // globe/world
+  sports: "https://images.unsplash.com/photo-1461896836934-bd45ba416857?w=800&q=60&auto=format", // stadium
+  disasters: "https://images.unsplash.com/photo-1527482797697-8795b05a13fe?w=800&q=60&auto=format", // storm/weather
+  tech: "https://images.unsplash.com/photo-1518770660439-4636190af475?w=800&q=60&auto=format", // technology/circuits
+  entertainment: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800&q=60&auto=format", // concert/entertainment
+};
+
 interface QuestionCardProps {
   questionText: string;
   slug: string;
@@ -81,16 +93,29 @@ export function QuestionCard({
       <Link href={`/topics/${slug}`}>
         <div
           className={`group relative overflow-hidden rounded-[2rem] animate-card-enter
-            bg-white dark:glass-panel
+            bg-card
             editorial-shadow dark:shadow-none
             dark:border dark:border-white/5
             hover-lift ${isFresh ? "animate-glow-breathe" : ""}`}
           style={{ contain: "layout style" }}
         >
-          {/* Dark mode: horizon glow overlay */}
-          <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 blur-[100px] -z-10 hidden dark:block" />
+          {/* Background image overlay */}
+          {category && CATEGORY_IMAGES[category] && (
+            <div className="absolute inset-0 z-0">
+              <img
+                src={CATEGORY_IMAGES[category]}
+                alt=""
+                className="absolute inset-0 w-full h-full object-cover opacity-[0.07] dark:opacity-[0.15] grayscale dark:brightness-50 dark:mix-blend-overlay"
+                loading="lazy"
+              />
+              <div className="absolute inset-0 bg-gradient-to-r from-card via-card/95 to-card/80 dark:from-card dark:via-card/90 dark:to-transparent" />
+            </div>
+          )}
 
-          <div className="flex flex-col md:flex-row gap-6 p-8 md:p-10">
+          {/* Dark mode: glow accent */}
+          <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 blur-[100px] hidden dark:block" />
+
+          <div className="relative z-10 flex flex-col md:flex-row gap-6 p-8 md:p-10">
             {/* Left: question + answer */}
             <div className="flex-1 min-w-0">
               {/* Category pill */}
@@ -184,7 +209,7 @@ export function QuestionCard({
     <Link href={`/topics/${slug}`}>
       <div
         className="group rounded-2xl p-6 animate-card-enter h-full
-          bg-white dark:glass-panel
+          bg-card
           editorial-shadow dark:shadow-none
           dark:border dark:border-white/5
           hover-lift-sm"

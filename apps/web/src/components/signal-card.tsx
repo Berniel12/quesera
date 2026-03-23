@@ -146,7 +146,7 @@ export function SignalCard({ signal, className }: SignalCardProps) {
 
   return (
     <div className={`rounded-2xl p-4 border-l-2 ${config.accentClass} ${config.darkAccent}
-      bg-white dark:glass-panel
+      bg-card
       ${isHighWeight ? "editorial-shadow dark:shadow-none" : ""}
       animate-fade-in ${className ?? ""}`}
     >

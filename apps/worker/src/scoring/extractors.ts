@@ -39,6 +39,8 @@ export function extractNumericSignal(
       return extractHazard(sourceKey, normalizedPayload, externalId, timestamp);
     case "crypto_market":
       return extractCrypto(normalizedPayload, externalId, timestamp);
+    case "prediction_market":
+      return extractPredictionMarket(normalizedPayload, externalId, timestamp);
     default:
       return null;
   }
@@ -192,6 +194,42 @@ function extractCrypto(
       name: payload.name,
       symbol: payload.symbol,
       market_cap: payload.market_cap,
+    },
+  };
+}
+
+function extractPredictionMarket(
+  payload: Record<string, unknown>,
+  externalId: string,
+  timestamp: Date,
+): ExtractedSignal | null {
+  // Extract Yes probability from outcome_prices array
+  const pricesRaw = payload.outcome_prices;
+  let yesProb: number | null = null;
+
+  if (typeof pricesRaw === "string") {
+    try {
+      const parsed = JSON.parse(pricesRaw) as unknown[];
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        yesProb = parseFloat(String(parsed[0]));
+      }
+    } catch { /* ignore parse errors */ }
+  } else if (Array.isArray(pricesRaw) && pricesRaw.length > 0) {
+    yesProb = parseFloat(String(pricesRaw[0]));
+  }
+
+  if (yesProb === null || isNaN(yesProb)) return null;
+
+  return {
+    currentValue: yesProb,
+    signalTimestamp: timestamp,
+    signalType: "market_probability",
+    sourceName: "polymarket",
+    externalId,
+    metadata: {
+      question: payload.question,
+      slug: payload.slug,
+      volume_24hr: payload.volume_24hr,
     },
   };
 }

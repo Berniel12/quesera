@@ -60,6 +60,22 @@ export const COINGECKO_SEED_MAP: Record<string, SeedMapEntry[]> = {
 // USGS: all earthquake items → earthquake-activity topic
 export const USGS_TOPIC_SLUG = "earthquake-activity";
 
+// Polymarket slug keyword → topic mappings (conservative, explicit patterns only)
+export const POLYMARKET_SLUG_RULES: Array<{ pattern: string; entries: SeedMapEntry[] }> = [
+  { pattern: "world-cup", entries: [{ slug: "fifa-world-cup-2026", confidence: 0.9 }] },
+  { pattern: "f1-drivers", entries: [{ slug: "formula-1-2026", confidence: 0.9 }] },
+  { pattern: "bitcoin-price", entries: [{ slug: "bitcoin-price", confidence: 0.9 }] },
+  { pattern: "ethereum-price", entries: [{ slug: "ethereum-price", confidence: 0.9 }] },
+  { pattern: "fed-rate", entries: [{ slug: "us-federal-reserve-interest-rates", confidence: 0.8 }] },
+  { pattern: "interest-rate-cut", entries: [{ slug: "us-federal-reserve-interest-rates", confidence: 0.8 }] },
+  { pattern: "recession", entries: [{ slug: "global-recession-risk", confidence: 0.8 }] },
+  { pattern: "iran", entries: [{ slug: "iran-us-tensions", confidence: 0.7 }] },
+  { pattern: "premier-league", entries: [{ slug: "premier-league", confidence: 0.9 }] },
+  { pattern: "champions-league", entries: [{ slug: "champions-league", confidence: 0.9 }] },
+  { pattern: "nba", entries: [{ slug: "nba-season-2025-26", confidence: 0.9 }] },
+  { pattern: "nfl", entries: [{ slug: "nfl-2026-season", confidence: 0.9 }] },
+];
+
 // Allowed match_method values (code-constrained, not DB enum)
 export const MATCH_METHODS = [
   "trigram",

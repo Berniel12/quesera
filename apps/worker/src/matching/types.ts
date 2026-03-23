@@ -76,6 +76,17 @@ export const POLYMARKET_SLUG_RULES: Array<{ pattern: string; entries: SeedMapEnt
   { pattern: "nfl", entries: [{ slug: "nfl-2026-season", confidence: 0.9 }] },
 ];
 
+// Congress.gov title keyword → topic mappings (conservative, policy-specific only)
+export const CONGRESS_TITLE_RULES: Array<{ pattern: string; entries: SeedMapEntry[] }> = [
+  { pattern: "artificial intelligence", entries: [{ slug: "artificial-intelligence-policy", confidence: 0.9 }] },
+  { pattern: "tariff", entries: [{ slug: "us-trade-policy", confidence: 0.9 }] },
+  { pattern: "trade", entries: [{ slug: "us-trade-policy", confidence: 0.7 }] },
+  { pattern: "immigration", entries: [{ slug: "us-immigration-policy", confidence: 0.9 }] },
+  { pattern: "border security", entries: [{ slug: "us-immigration-policy", confidence: 0.8 }] },
+  { pattern: "debt ceiling", entries: [{ slug: "us-debt-ceiling", confidence: 1.0 }] },
+  { pattern: "debt limit", entries: [{ slug: "us-debt-ceiling", confidence: 1.0 }] },
+];
+
 // Allowed match_method values (code-constrained, not DB enum)
 export const MATCH_METHODS = [
   "trigram",

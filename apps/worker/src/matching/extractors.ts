@@ -1,5 +1,5 @@
 import type { MatchSignals, SeedMapEntry } from "./types.js";
-import { SOURCE_FAMILY_CATEGORY_MAP, FRED_SERIES_SEED_MAP, COINGECKO_SEED_MAP, USGS_TOPIC_SLUG, POLYMARKET_SLUG_RULES } from "./types.js";
+import { SOURCE_FAMILY_CATEGORY_MAP, FRED_SERIES_SEED_MAP, COINGECKO_SEED_MAP, USGS_TOPIC_SLUG, POLYMARKET_SLUG_RULES, CONGRESS_TITLE_RULES } from "./types.js";
 
 interface SourceItem {
   source_item_type: string | null;
@@ -110,6 +110,18 @@ export function getSeedMapMatches(item: SourceItem): SeedMapEntry[] | null {
     if (slug) {
       for (const rule of POLYMARKET_SLUG_RULES) {
         if (slug.includes(rule.pattern)) {
+          return rule.entries;
+        }
+      }
+    }
+  }
+
+  // Congress.gov bills: title keyword matching (policy-specific only)
+  if (item.source_item_type === "bill") {
+    const title = String(item.normalized_payload.title ?? "").toLowerCase();
+    if (title) {
+      for (const rule of CONGRESS_TITLE_RULES) {
+        if (title.includes(rule.pattern)) {
           return rule.entries;
         }
       }

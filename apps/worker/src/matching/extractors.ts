@@ -104,6 +104,11 @@ export function getSeedMapMatches(item: SourceItem): SeedMapEntry[] | null {
     return [{ slug: USGS_TOPIC_SLUG, confidence: 1.0 }];
   }
 
+  // NOAA weather alerts: all items → severe-weather-alerts
+  if (item.source_item_type === "weather_alert") {
+    return [{ slug: "severe-weather-alerts", confidence: 1.0 }];
+  }
+
   // Polymarket markets: slug keyword matching (conservative patterns)
   if (item.source_item_type === "market") {
     const slug = String(item.normalized_payload.slug ?? "").toLowerCase();

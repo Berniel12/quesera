@@ -17,9 +17,7 @@
     "@signal-map/queue": "workspace:*",
     "@signal-map/shared": "workspace:*",
     "@supabase/supabase-js": "^2.49.0",
-    "resend": "^6.9.4"
-  },
-  "devDependencies": {
+    "resend": "^6.9.4",
     "tsx": "^4.19.0"
   }
 }

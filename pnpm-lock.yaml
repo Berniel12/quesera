@@ -126,7 +126,6 @@ importers:
       resend:
         specifier: ^6.9.4
         version: 6.9.4
-    devDependencies:
       tsx:
         specifier: ^4.19.0
         version: 4.21.0

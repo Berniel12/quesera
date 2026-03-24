@@ -8,7 +8,7 @@ export {
   LicenseClassEnum,
   RiskLevelEnum,
   SOURCE_FAMILIES,
-} from "./constants.js";
+} from "./constants";
 export type {
   JobType,
   JobStatus,
@@ -19,7 +19,7 @@ export type {
   LicenseClass,
   RiskLevel,
   SourceFamily,
-} from "./constants.js";
+} from "./constants";
 
 export {
   AppError,
@@ -28,4 +28,4 @@ export {
   ForbiddenError,
   ValidationError,
   JobError,
-} from "./errors.js";
+} from "./errors";

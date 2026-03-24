@@ -24,20 +24,23 @@ export class PolymarketAdapter extends BaseAdapter {
         if ((market.volume24hr ?? 0) < minVolume) continue;
 
         items.push({
-          externalId: market.condition_id ?? market.question_id ?? String(offset),
+          externalId: market.conditionId ?? market.questionID ?? String(market.id),
           payload: {
             question: market.question,
             description: market.description,
             outcomes: market.outcomes,
             outcome_prices: market.outcomePrices,
             volume_24hr: market.volume24hr,
-            liquidity: market.liquidity,
-            end_date: market.endDate,
-            category: market.category,
+            liquidity: market.liquidityNum ?? market.liquidity,
+            end_date: market.endDateIso ?? market.endDate,
             slug: market.slug,
             active: market.active,
+            image: market.image,
+            featured: market.featured,
+            last_trade_price: market.lastTradePrice,
+            one_day_price_change: market.oneDayPriceChange,
           },
-          occurredAt: market.endDate ? new Date(market.endDate) : undefined,
+          occurredAt: market.endDateIso ? new Date(market.endDateIso) : undefined,
         });
       }
 
@@ -78,16 +81,22 @@ export class PolymarketAdapter extends BaseAdapter {
 }
 
 interface PolymarketMarket {
-  condition_id?: string;
-  question_id?: string;
+  id: number;
+  conditionId?: string;
+  questionID?: string;
   question: string;
   description: string;
   outcomes: string;
   outcomePrices: string;
   volume24hr: number;
   liquidity: number;
+  liquidityNum?: number;
   endDate: string;
-  category: string;
+  endDateIso?: string;
   slug: string;
   active: boolean;
+  image?: string;
+  featured?: boolean;
+  lastTradePrice?: number;
+  oneDayPriceChange?: number;
 }

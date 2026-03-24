@@ -1,4 +1,5 @@
 // Cron job entry point: triggers snapshot generation via the web API
+export {};
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://quesera-web.onrender.com";
 const SECRET = process.env.CRON_SECRET ?? "";
 

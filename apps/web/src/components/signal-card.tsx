@@ -1,6 +1,25 @@
 // Rich signal card — shows metadata context, not just raw numbers
 // Each source family gets semantic labels extracted from metadata
 
+const HUMAN_SOURCE_NAMES: Record<string, string> = {
+  fred: "Federal Reserve Data",
+  bls: "Labor Statistics",
+  eia: "Energy Data",
+  polymarket: "Polymarket",
+  kalshi: "Kalshi",
+  metaculus: "Metaculus",
+  manifold: "Manifold Markets",
+  coingecko: "CoinGecko",
+  usgs_earthquakes: "US Geological Survey",
+  noaa_nws: "Weather Service",
+  congress_gov: "US Congress",
+  polyrouter: "Market Consensus",
+  the_odds_api: "Bookmaker Odds",
+  metaforecast: "Forecaster Consensus",
+  espn: "ESPN",
+  defillama: "DeFi Llama",
+};
+
 interface SignalData {
   source_name: string;
   source_family: string;
@@ -156,7 +175,7 @@ export function SignalCard({ signal, className }: SignalCardProps) {
           <div className="flex items-center gap-2 mb-1.5">
             <span className={`h-1.5 w-1.5 rounded-full flex-shrink-0 ${config.dotColor}`} />
             <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
-              {signal.source_name}
+              {HUMAN_SOURCE_NAMES[signal.source_name] ?? signal.source_name}
             </span>
           </div>
 

@@ -1,60 +1,6 @@
 import Link from "next/link";
 import { getAnswerState } from "@/lib/answer-state";
 
-// Abstract, diverse, beautiful imagery — each card looks unique
-// NOT literal category photos. Atmospheric, editorial, varied.
-const CARD_IMAGE_POOL: string[] = [
-  "https://images.unsplash.com/photo-1557683316-973673baf926?w=600&q=70&auto=format", // abstract blue gradient
-  "https://images.unsplash.com/photo-1558591710-4b4a1ae0f04d?w=600&q=70&auto=format", // marble texture pink
-  "https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=600&q=70&auto=format", // colorful gradient
-  "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&q=70&auto=format", // abstract 3D shapes
-  "https://images.unsplash.com/photo-1620121692029-d088224ddc74?w=600&q=70&auto=format", // purple abstract waves
-  "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=600&q=70&auto=format", // geometric abstract
-  "https://images.unsplash.com/photo-1614850523296-d8c1af93d400?w=600&q=70&auto=format", // abstract liquid art
-  "https://images.unsplash.com/photo-1614851099175-e5b30eb6f696?w=600&q=70&auto=format", // 3D abstract blobs
-  "https://images.unsplash.com/photo-1553356084-58ef4a67b2a7?w=600&q=70&auto=format", // paint swirls
-  "https://images.unsplash.com/photo-1604076913837-52ab5f7c1ac2?w=600&q=70&auto=format", // dark abstract texture
-  "https://images.unsplash.com/photo-1550684376-efcbd6e3f031?w=600&q=70&auto=format", // neon blue abstract
-  "https://images.unsplash.com/photo-1567359781514-3b964e2b04d6?w=600&q=70&auto=format", // warm gradient
-  "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&q=70&auto=format", // abstract architecture
-  "https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=600&q=70&auto=format", // abstract mesh gradient
-  "https://images.unsplash.com/photo-1557672172-298e090bd0f1?w=600&q=70&auto=format", // watercolor abstract
-  "https://images.unsplash.com/photo-1633186223985-73bd2ce6e868?w=600&q=70&auto=format", // 3D abstract dark
-];
-
-// Pick unique image per card from abstract pool — each card looks different
-function getCardImage(slug: string): string {
-  let hash = 0;
-  for (let i = 0; i < slug.length; i++) {
-    hash = ((hash << 5) - hash + slug.charCodeAt(i)) | 0;
-  }
-  return CARD_IMAGE_POOL[Math.abs(hash) % CARD_IMAGE_POOL.length];
-}
-
-// Category accent stripe color
-const CATEGORY_ACCENT: Record<string, string> = {
-  macro: "from-navy/80 to-navy/20 dark:from-[#00DAF3]/60 dark:to-[#00DAF3]/10",
-  crypto: "from-[#00DAF3]/80 to-[#00DAF3]/20 dark:from-[#00DAF3]/60 dark:to-transparent",
-  politics: "from-slate-600/60 to-slate-600/10 dark:from-[#00DAF3]/40 dark:to-transparent",
-  geopolitics: "from-destructive/60 to-destructive/10 dark:from-destructive/40 dark:to-transparent",
-  sports: "from-positive/60 to-positive/10 dark:from-[#4EDEA3]/40 dark:to-transparent",
-  disasters: "from-warning/60 to-warning/10 dark:from-warning/40 dark:to-transparent",
-  tech: "from-violet-600/60 to-violet-600/10 dark:from-violet-400/40 dark:to-transparent",
-  entertainment: "from-pink-500/60 to-pink-500/10 dark:from-pink-400/40 dark:to-transparent",
-};
-
-// Category gradient class for card background tint
-const CATEGORY_GRADIENT: Record<string, string> = {
-  macro: "cat-gradient-macro",
-  crypto: "cat-gradient-crypto",
-  politics: "cat-gradient-politics",
-  geopolitics: "cat-gradient-geopolitics",
-  sports: "cat-gradient-sports",
-  disasters: "cat-gradient-disasters",
-  tech: "cat-gradient-tech",
-  entertainment: "cat-gradient-entertainment",
-};
-
 // Category dot colors
 const CATEGORY_DOT: Record<string, string> = {
   macro: "bg-navy dark:bg-[#00DAF3]",
@@ -67,16 +13,16 @@ const CATEGORY_DOT: Record<string, string> = {
   entertainment: "bg-pink-500 dark:bg-pink-400",
 };
 
-// Category border for compact cards
-const CATEGORY_BORDER: Record<string, string> = {
-  macro: "border-l-navy dark:border-l-[#00DAF3]",
-  crypto: "border-l-[#00DAF3]",
-  politics: "border-l-slate-500 dark:border-l-[#00DAF3]",
-  geopolitics: "border-l-destructive",
-  sports: "border-l-positive dark:border-l-[#4EDEA3]",
-  disasters: "border-l-warning",
-  tech: "border-l-violet-500 dark:border-l-violet-400",
-  entertainment: "border-l-pink-500 dark:border-l-pink-400",
+// Category gradient accent for card backgrounds
+const CATEGORY_BG: Record<string, string> = {
+  macro: "from-navy/[0.04] to-transparent dark:from-[#00DAF3]/[0.08] dark:to-transparent",
+  crypto: "from-[#00DAF3]/[0.06] to-transparent dark:from-[#00DAF3]/[0.12] dark:to-transparent",
+  politics: "from-slate-500/[0.04] to-transparent dark:from-[#00DAF3]/[0.06] dark:to-transparent",
+  geopolitics: "from-destructive/[0.04] to-transparent dark:from-destructive/[0.08] dark:to-transparent",
+  sports: "from-positive/[0.04] to-transparent dark:from-[#4EDEA3]/[0.08] dark:to-transparent",
+  disasters: "from-warning/[0.06] to-transparent dark:from-warning/[0.10] dark:to-transparent",
+  tech: "from-violet-500/[0.04] to-transparent dark:from-violet-400/[0.08] dark:to-transparent",
+  entertainment: "from-pink-500/[0.04] to-transparent dark:from-pink-400/[0.08] dark:to-transparent",
 };
 
 interface QuestionCardProps {
@@ -103,14 +49,19 @@ function timeAgo(dateStr: string | null): string {
   return `${days}d ago`;
 }
 
-function getStatusIndicator(direction: string | null, category: string | null): { icon: string; label: string } {
-  if (direction === "up" && (category === "disasters" || category === "geopolitics")) {
-    return { icon: "\u26A0", label: "Elevated" };
-  }
-  if (direction === "up") return { icon: "\u2197", label: "Trending Up" };
-  if (direction === "down") return { icon: "\u2198", label: "Trending Down" };
-  if (direction === "stable") return { icon: "\u2192", label: "Stable" };
-  return { icon: "\u2022", label: "Monitoring" };
+type CardStyle = "gauge" | "bignum" | "arrow" | "alert" | "minimal" | "pill" | "split" | "meter" | "spotlight" | "ticker";
+
+// Pick a card style — deterministic variety, every card looks different
+function getCardStyle(slug: string, category: string | null, confidence: number | null, direction: string | null): CardStyle {
+  // Forced styles for specific data shapes
+  if ((category === "disasters" || category === "geopolitics") && direction === "up") return "alert";
+  if (direction === "up" || direction === "down") return "arrow";
+
+  // Hash-based variety for everything else — 8 remaining styles
+  let hash = 0;
+  for (let i = 0; i < slug.length; i++) hash = ((hash << 5) - hash + slug.charCodeAt(i)) | 0;
+  const styles: CardStyle[] = ["gauge", "bignum", "minimal", "pill", "split", "meter", "spotlight", "ticker"];
+  return styles[Math.abs(hash) % styles.length];
 }
 
 export function QuestionCard({
@@ -129,64 +80,34 @@ export function QuestionCard({
     ? getAnswerState({ direction, confidence, category, disagreement: 0 })
     : null;
 
+  const pct = confidence !== null ? Math.round(confidence * 100) : 0;
   const dotColor = category ? (CATEGORY_DOT[category] ?? "bg-muted-foreground") : "bg-muted-foreground";
-  const status = getStatusIndicator(direction, category);
+  const catBg = category ? (CATEGORY_BG[category] ?? "") : "";
   const isFresh = freshness === "fresh";
-  const catGradient = category ? (CATEGORY_GRADIENT[category] ?? "") : "";
-  const catBorder = category ? (CATEGORY_BORDER[category] ?? "") : "";
-  const heroImage = getCardImage(slug);
 
   const answerBorderColor = answerState?.colorClass.includes("destructive")
     ? "border-destructive"
-    : answerState?.colorClass.includes("warning")
-      ? "border-warning dark:border-[#00DAF3]"
-      : "border-navy dark:border-[#00DAF3]";
+    : answerState?.colorClass.includes("positive")
+      ? "border-positive dark:border-[#4EDEA3]"
+      : answerState?.colorClass.includes("muted")
+        ? "border-muted-foreground/30"
+        : "border-navy dark:border-[#00DAF3]";
 
-  const answerBgColor = answerState?.colorClass.includes("destructive")
-    ? "bg-destructive/5 dark:bg-destructive/10"
-    : answerState?.colorClass.includes("warning")
-      ? "bg-warning/5 dark:bg-[#00DAF3]/10"
-      : "bg-navy/[0.03] dark:bg-[#00DAF3]/10";
-
-  // ── Hero variant — large, image-rich, dramatic ──
+  // ── Hero variant — large, editorial ──
   if (variant === "hero") {
     return (
       <Link href={`/topics/${slug}`}>
         <div
           className={`group relative overflow-hidden rounded-[2rem] animate-card-enter
-            bg-card
+            bg-gradient-to-br ${catBg} bg-card
             card-shadow-rich
             dark:border dark:border-white/5
             hover-lift ${isFresh ? "animate-glow-breathe" : ""}`}
           style={{ contain: "layout style" }}
         >
-          {/* Category accent stripe */}
-          {category && CATEGORY_ACCENT[category] && (
-            <div className={`absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r ${CATEGORY_ACCENT[category]} z-20`} />
-          )}
-
-          {/* Full-bleed background image — visible and atmospheric */}
-          {heroImage && (
-            <div className="absolute inset-0 z-0">
-              <img
-                src={heroImage}
-                alt=""
-                className="absolute inset-0 w-full h-full object-cover opacity-20 dark:opacity-25 dark:brightness-[0.5]"
-                loading="lazy"
-              />
-              {/* Gradient overlay: strong on left (text), fading on right (image shows through) */}
-              <div className="absolute inset-0 bg-gradient-to-r from-card via-card/90 to-card/50 dark:from-card dark:via-card/80 dark:to-card/30" />
-              {/* Bottom fade for clean text */}
-              <div className="absolute inset-0 bg-gradient-to-t from-card/80 via-transparent to-transparent" />
-            </div>
-          )}
-
-          {/* Dark mode: glow accent */}
-          <div className="absolute top-0 right-0 w-80 h-80 bg-primary/10 blur-[120px] hidden dark:block z-0" />
-
-          <div className="relative z-10 p-8 md:p-10 min-h-[280px] flex flex-col justify-end">
-            {/* Category pill + status */}
-            <div className="flex items-center gap-3 mb-4 animate-fade-in delay-100" style={{ opacity: 0 }}>
+          <div className="relative z-10 p-8 md:p-10">
+            {/* Category */}
+            <div className="flex items-center gap-2 mb-4">
               <span className="relative h-2 w-2 flex-shrink-0">
                 <span className={`absolute inset-0 rounded-full ${dotColor} animate-pulse-live`} />
                 <span className={`relative block h-2 w-2 rounded-full ${dotColor}`} />
@@ -194,39 +115,39 @@ export function QuestionCard({
               <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.15em]">
                 {category ?? "Signal"}
               </span>
-              {direction && direction !== "stable" && direction !== "unknown" && (
-                <span className="text-[10px] font-bold text-foreground/50 uppercase tracking-wider">
-                  {status.icon} {status.label}
-                </span>
-              )}
               {snapshotPublishedAt && (
-                <span className="text-[10px] text-muted-foreground/50 ml-auto">
-                  {timeAgo(snapshotPublishedAt)}
-                </span>
+                <span className="text-[10px] text-muted-foreground/50 ml-auto">{timeAgo(snapshotPublishedAt)}</span>
               )}
             </div>
 
-            {/* Question — editorial scale */}
-            <h2
-              className="text-3xl sm:text-4xl md:text-5xl font-extrabold leading-[1.05] tracking-tight text-foreground mb-5 animate-slide-up delay-200"
-              style={{ opacity: 0 }}
-            >
+            {/* Question */}
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-extrabold leading-[1.05] tracking-tight text-foreground mb-5">
               {questionText}
             </h2>
 
-            {/* Answer block with strong visual treatment */}
-            {answerState && oneLiner && (
-              <div
-                className={`${answerBgColor} rounded-2xl p-5 border-l-4 ${answerBorderColor} backdrop-blur-sm animate-answer-reveal delay-700`}
-                style={{ opacity: 0 }}
-              >
-                <p className="text-muted-foreground dark:text-[#C6C6CD] leading-relaxed">
-                  <span className="font-bold text-foreground dark:text-primary text-lg">
-                    {answerState.label}.
-                  </span>{" "}
-                  {oneLiner}
-                </p>
+            {/* Verdict + confidence bar */}
+            {answerState && (
+              <div className="flex items-center gap-4 mb-4">
+                <span className={`text-2xl sm:text-3xl font-black ${answerState.colorClass}`}>{answerState.label}</span>
+                {confidence !== null && (
+                  <div className="flex items-center gap-2 flex-1 max-w-[200px]">
+                    <div className="h-2 flex-1 rounded-full bg-border/50 dark:bg-white/10 overflow-hidden">
+                      <div
+                        className={`h-full rounded-full ${answerState.colorClass.includes("destructive") ? "bg-destructive" : answerState.colorClass.includes("positive") ? "bg-positive dark:bg-[#4EDEA3]" : "bg-muted-foreground/40"} animate-bar-fill`}
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                    <span className="text-xs font-bold font-mono text-muted-foreground">{pct}%</span>
+                  </div>
+                )}
               </div>
+            )}
+
+            {/* One-liner */}
+            {oneLiner && (
+              <p className="text-muted-foreground dark:text-[#C6C6CD] leading-relaxed max-w-xl">
+                {oneLiner}
+              </p>
             )}
           </div>
         </div>
@@ -234,105 +155,409 @@ export function QuestionCard({
     );
   }
 
-  // ── Compact variant — rich with image thumbnail, category accent, confidence ring ──
-  const compactDelay = staggerIndex * 150;
-  const compactImage = getCardImage(slug);
+  // ── Compact variants — each card looks different ──
+  const compactDelay = staggerIndex * 120;
+  const cardStyle = getCardStyle(slug, category, confidence, direction);
 
-  return (
-    <Link href={`/topics/${slug}`}>
-      <div
-        className={`group relative overflow-hidden rounded-2xl animate-card-enter h-full
-          bg-card ${catGradient}
-          card-shadow-rich
-          dark:border dark:border-white/5
-          hover-lift-sm`}
-        style={{ contain: "layout style", animationDelay: `${compactDelay}ms`, opacity: 0 }}
-      >
-        {/* Subtle left accent border */}
-        {catBorder && (
-          <div className={`absolute left-0 top-0 bottom-0 w-[3px] ${catBorder.replace("border-l-", "bg-")}`} />
-        )}
+  // ═══════════════════════════════════════════════════
+  // GAUGE style — big circular confidence meter
+  // ═══════════════════════════════════════════════════
+  if (cardStyle === "gauge") {
+    const circumference = 2 * Math.PI * 40;
+    const strokeDasharray = `${(pct / 100) * circumference} ${circumference}`;
 
-        <div className="flex items-stretch">
-          {/* Image thumbnail on right — visible and beautiful */}
-          {compactImage && (
-            <div className="hidden sm:block relative w-28 flex-shrink-0 overflow-hidden">
-              <img
-                src={compactImage}
-                alt=""
-                className="absolute inset-0 w-full h-full object-cover opacity-60 dark:opacity-40 group-hover:opacity-80 dark:group-hover:opacity-60 transition-opacity duration-500 group-hover:scale-105 transition-transform"
-                loading="lazy"
-              />
-              <div className="absolute inset-0 bg-gradient-to-l from-card via-card/40 to-transparent" />
+    return (
+      <Link href={`/topics/${slug}`}>
+        <div
+          className="group rounded-2xl p-5 animate-card-enter h-full bg-card card-shadow-rich dark:border dark:border-white/5 hover-lift-sm"
+          style={{ animationDelay: `${compactDelay}ms`, opacity: 0 }}
+        >
+          <div className="flex items-center gap-5">
+            {/* Gauge */}
+            <div className="flex-shrink-0 relative h-20 w-20">
+              <svg viewBox="0 0 100 100" className="h-20 w-20 -rotate-90">
+                <circle cx="50" cy="50" r="40" fill="none" strokeWidth="6" className="stroke-border/30 dark:stroke-white/10" />
+                <circle
+                  cx="50" cy="50" r="40" fill="none" strokeWidth="6" strokeLinecap="round"
+                  strokeDasharray={strokeDasharray}
+                  className={answerState?.colorClass.includes("destructive") ? "stroke-destructive" : answerState?.colorClass.includes("positive") ? "stroke-positive dark:stroke-[#4EDEA3]" : "stroke-muted-foreground/40"}
+                />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-lg font-black font-mono text-foreground dark:text-primary">{pct}</span>
+                <span className="text-[8px] text-muted-foreground uppercase tracking-wider">conf</span>
+              </div>
             </div>
-          )}
 
-          <div className="flex-1 min-w-0 p-5 flex items-start gap-4">
             <div className="flex-1 min-w-0">
-              {/* Category + status row */}
-              <div className="flex items-center gap-2 mb-2.5">
-                <span className="relative h-1.5 w-1.5 flex-shrink-0">
-                  <span className={`absolute inset-0 rounded-full ${dotColor} animate-pulse-live`} />
-                  <span className={`relative block h-1.5 w-1.5 rounded-full ${dotColor}`} />
-                </span>
-                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.15em]">
-                  {category ?? "Signal"}
-                </span>
-                {direction && direction !== "stable" && direction !== "unknown" && (
-                  <span className="text-[10px] font-medium text-muted-foreground/70">
-                    {status.icon}
-                  </span>
-                )}
+              <div className="flex items-center gap-2 mb-1">
+                <span className={`h-1.5 w-1.5 rounded-full ${dotColor}`} />
+                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.12em]">{category ?? "Signal"}</span>
               </div>
-
-              {/* Question */}
-              <p className="font-semibold text-base text-foreground leading-snug mb-3">
-                {questionText}
-              </p>
-
-              {/* Answer state — colored, bold */}
+              <p className="font-semibold text-base text-foreground leading-snug mb-2">{questionText}</p>
               {answerState && (
-                <p className={`text-sm font-bold ${answerState.colorClass}`}>
-                  {answerState.label}
-                </p>
+                <span className={`text-sm font-bold ${answerState.colorClass}`}>{answerState.label}</span>
               )}
-
-              {oneLiner && (
-                <p className="text-xs text-muted-foreground mt-1.5 line-clamp-2 leading-relaxed">
-                  {oneLiner}
-                </p>
-              )}
-
               {snapshotPublishedAt && (
-                <p className="text-[10px] text-muted-foreground/60 mt-2.5">
-                  Updated {timeAgo(snapshotPublishedAt)}
-                </p>
+                <p className="text-[10px] text-muted-foreground/60 mt-1">{timeAgo(snapshotPublishedAt)}</p>
               )}
             </div>
+          </div>
+        </div>
+      </Link>
+    );
+  }
 
-            {/* Confidence ring */}
-            {confidence !== null && (
-              <div className="flex-shrink-0 flex flex-col items-center gap-1 pt-1">
-                <div className="relative h-12 w-12 rounded-full flex items-center justify-center">
-                  <svg viewBox="0 0 36 36" className="h-12 w-12 -rotate-90">
-                    <circle cx="18" cy="18" r="15" fill="none" stroke="currentColor" strokeWidth="2" className="text-border dark:text-white/10" />
-                    <circle
-                      cx="18" cy="18" r="15" fill="none"
-                      strokeWidth="2.5"
-                      strokeLinecap="round"
-                      strokeDasharray={`${Math.round(confidence * 94)} 94`}
-                      className={answerState?.colorClass.includes("destructive") ? "text-destructive" : answerState?.colorClass.includes("warning") ? "text-warning dark:text-[#00DAF3]" : "text-navy dark:text-[#00DAF3]"}
-                      style={{ stroke: "currentColor" }}
-                    />
-                  </svg>
-                  <span className="absolute text-[11px] font-bold font-mono text-foreground dark:text-primary">
-                    {Math.round(confidence * 100)}
-                  </span>
-                </div>
+  // ═══════════════════════════════════════════════════
+  // BIGNUM style — large confidence number dominates
+  // ═══════════════════════════════════════════════════
+  if (cardStyle === "bignum") {
+    return (
+      <Link href={`/topics/${slug}`}>
+        <div
+          className={`group rounded-2xl animate-card-enter h-full bg-gradient-to-br ${catBg} bg-card card-shadow-rich dark:border dark:border-white/5 hover-lift-sm overflow-hidden`}
+          style={{ animationDelay: `${compactDelay}ms`, opacity: 0 }}
+        >
+          <div className="flex items-stretch">
+            {/* Big number block */}
+            <div className="flex-shrink-0 w-24 sm:w-28 flex flex-col items-center justify-center bg-foreground/[0.03] dark:bg-white/[0.04] border-r border-border/30 dark:border-white/5">
+              <span className="text-3xl sm:text-4xl font-black font-mono text-foreground dark:text-primary">{pct}</span>
+              <span className="text-[9px] text-muted-foreground uppercase tracking-wider mt-0.5">confidence</span>
+            </div>
+
+            <div className="flex-1 min-w-0 p-5">
+              <div className="flex items-center gap-2 mb-1.5">
+                <span className={`h-1.5 w-1.5 rounded-full ${dotColor}`} />
+                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.12em]">{category ?? "Signal"}</span>
               </div>
+              <p className="font-semibold text-base text-foreground leading-snug mb-2">{questionText}</p>
+              {answerState && (
+                <span className={`text-sm font-bold ${answerState.colorClass}`}>{answerState.label}</span>
+              )}
+              {oneLiner && (
+                <p className="text-xs text-muted-foreground mt-1.5 line-clamp-2 leading-relaxed">{oneLiner}</p>
+              )}
+              {snapshotPublishedAt && (
+                <p className="text-[10px] text-muted-foreground/60 mt-2">{timeAgo(snapshotPublishedAt)}</p>
+              )}
+            </div>
+          </div>
+        </div>
+      </Link>
+    );
+  }
+
+  // ═══════════════════════════════════════════════════
+  // ARROW style — prominent direction indicator
+  // ═══════════════════════════════════════════════════
+  if (cardStyle === "arrow") {
+    const isUp = direction === "up";
+    const arrowColor = answerState?.colorClass.includes("destructive")
+      ? "text-destructive"
+      : answerState?.colorClass.includes("positive")
+        ? "text-positive dark:text-[#4EDEA3]"
+        : "text-foreground";
+
+    return (
+      <Link href={`/topics/${slug}`}>
+        <div
+          className={`group rounded-2xl p-5 animate-card-enter h-full bg-card card-shadow-rich dark:border dark:border-white/5 hover-lift-sm border-l-[3px] ${answerBorderColor}`}
+          style={{ animationDelay: `${compactDelay}ms`, opacity: 0 }}
+        >
+          <div className="flex items-start gap-4">
+            {/* Direction arrow */}
+            <div className={`flex-shrink-0 h-12 w-12 rounded-xl flex items-center justify-center ${isUp ? "bg-positive/10 dark:bg-[#4EDEA3]/10" : "bg-destructive/10"}`}>
+              <span className={`text-2xl ${arrowColor}`}>{isUp ? "\u2197" : "\u2198"}</span>
+            </div>
+
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <span className={`h-1.5 w-1.5 rounded-full ${dotColor}`} />
+                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.12em]">{category ?? "Signal"}</span>
+                <span className={`text-[10px] font-bold ${arrowColor}`}>{isUp ? "Moving Up" : "Moving Down"}</span>
+              </div>
+              <p className="font-semibold text-base text-foreground leading-snug mb-2">{questionText}</p>
+              {answerState && (
+                <span className={`text-sm font-bold ${answerState.colorClass}`}>{answerState.label}</span>
+              )}
+              {oneLiner && (
+                <p className="text-xs text-muted-foreground mt-1.5 line-clamp-2 leading-relaxed">{oneLiner}</p>
+              )}
+              {snapshotPublishedAt && (
+                <p className="text-[10px] text-muted-foreground/60 mt-2">{timeAgo(snapshotPublishedAt)}</p>
+              )}
+            </div>
+          </div>
+        </div>
+      </Link>
+    );
+  }
+
+  // ═══════════════════════════════════════════════════
+  // ALERT style — bold warning treatment
+  // ═══════════════════════════════════════════════════
+  if (cardStyle === "alert") {
+    return (
+      <Link href={`/topics/${slug}`}>
+        <div
+          className="group rounded-2xl animate-card-enter h-full bg-destructive/[0.04] dark:bg-destructive/[0.08] border border-destructive/20 dark:border-destructive/30 card-shadow-rich hover-lift-sm overflow-hidden"
+          style={{ animationDelay: `${compactDelay}ms`, opacity: 0 }}
+        >
+          {/* Alert top bar */}
+          <div className="bg-destructive/10 dark:bg-destructive/20 px-5 py-2 flex items-center gap-2">
+            <span className="text-destructive text-sm">{"\u26A0"}</span>
+            <span className="text-[10px] font-bold text-destructive uppercase tracking-[0.12em]">{category ?? "Alert"}</span>
+            {snapshotPublishedAt && (
+              <span className="text-[10px] text-destructive/60 ml-auto">{timeAgo(snapshotPublishedAt)}</span>
+            )}
+          </div>
+          <div className="p-5">
+            <p className="font-semibold text-base text-foreground leading-snug mb-2">{questionText}</p>
+            {answerState && (
+              <span className={`text-sm font-bold ${answerState.colorClass}`}>{answerState.label}</span>
+            )}
+            {oneLiner && (
+              <p className="text-xs text-muted-foreground mt-1.5 line-clamp-2 leading-relaxed">{oneLiner}</p>
             )}
           </div>
         </div>
+      </Link>
+    );
+  }
+
+  // ═══════════════════════════════════════════════════
+  // PILL style — compact verdict pill + question
+  // ═══════════════════════════════════════════════════
+  if (cardStyle === "pill") {
+    const pillBg = answerState?.colorClass.includes("destructive") ? "bg-destructive/10 text-destructive"
+      : answerState?.colorClass.includes("positive") ? "bg-positive/10 text-positive dark:bg-[#4EDEA3]/10 dark:text-[#4EDEA3]"
+      : "bg-muted text-muted-foreground";
+
+    return (
+      <Link href={`/topics/${slug}`}>
+        <div
+          className="group rounded-2xl p-5 animate-card-enter h-full bg-card card-shadow-rich dark:border dark:border-white/5 hover-lift-sm"
+          style={{ animationDelay: `${compactDelay}ms`, opacity: 0 }}
+        >
+          <div className="flex items-center gap-2 mb-3">
+            <span className={`h-1.5 w-1.5 rounded-full ${dotColor}`} />
+            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.12em]">{category ?? "Signal"}</span>
+          </div>
+          <p className="font-semibold text-base text-foreground leading-snug mb-3">{questionText}</p>
+          <div className="flex items-center gap-3 flex-wrap">
+            {answerState && (
+              <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-bold ${pillBg}`}>
+                {answerState.label}
+              </span>
+            )}
+            {confidence !== null && (
+              <span className="text-[11px] font-mono font-bold text-muted-foreground">{pct}% confidence</span>
+            )}
+            {snapshotPublishedAt && (
+              <span className="text-[10px] text-muted-foreground/50 ml-auto">{timeAgo(snapshotPublishedAt)}</span>
+            )}
+          </div>
+        </div>
+      </Link>
+    );
+  }
+
+  // ═══════════════════════════════════════════════════
+  // SPLIT style — two-tone split card (verdict | question)
+  // ═══════════════════════════════════════════════════
+  if (cardStyle === "split") {
+    const splitBg = answerState?.colorClass.includes("destructive") ? "bg-destructive/[0.06] dark:bg-destructive/[0.12]"
+      : answerState?.colorClass.includes("positive") ? "bg-positive/[0.06] dark:bg-[#4EDEA3]/[0.12]"
+      : "bg-muted/50 dark:bg-white/[0.04]";
+
+    return (
+      <Link href={`/topics/${slug}`}>
+        <div
+          className="group rounded-2xl animate-card-enter h-full bg-card card-shadow-rich dark:border dark:border-white/5 hover-lift-sm overflow-hidden"
+          style={{ animationDelay: `${compactDelay}ms`, opacity: 0 }}
+        >
+          <div className="flex flex-col sm:flex-row">
+            {/* Verdict side */}
+            <div className={`${splitBg} sm:w-1/3 p-5 flex flex-col justify-center items-center sm:items-start`}>
+              {answerState && (
+                <span className={`text-xl sm:text-2xl font-black ${answerState.colorClass} leading-tight`}>{answerState.label}</span>
+              )}
+              {confidence !== null && (
+                <span className="text-xs font-mono text-muted-foreground mt-1">{pct}%</span>
+              )}
+            </div>
+            {/* Question side */}
+            <div className="flex-1 p-5">
+              <div className="flex items-center gap-2 mb-1.5">
+                <span className={`h-1.5 w-1.5 rounded-full ${dotColor}`} />
+                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.12em]">{category ?? "Signal"}</span>
+              </div>
+              <p className="font-semibold text-base text-foreground leading-snug mb-2">{questionText}</p>
+              {oneLiner && (
+                <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">{oneLiner}</p>
+              )}
+              {snapshotPublishedAt && (
+                <p className="text-[10px] text-muted-foreground/50 mt-2">{timeAgo(snapshotPublishedAt)}</p>
+              )}
+            </div>
+          </div>
+        </div>
+      </Link>
+    );
+  }
+
+  // ═══════════════════════════════════════════════════
+  // METER style — horizontal bar meter dominates
+  // ═══════════════════════════════════════════════════
+  if (cardStyle === "meter") {
+    const meterColor = answerState?.colorClass.includes("destructive") ? "bg-destructive"
+      : answerState?.colorClass.includes("positive") ? "bg-positive dark:bg-[#4EDEA3]"
+      : "bg-navy dark:bg-[#00DAF3]";
+
+    return (
+      <Link href={`/topics/${slug}`}>
+        <div
+          className="group rounded-2xl p-5 animate-card-enter h-full bg-card card-shadow-rich dark:border dark:border-white/5 hover-lift-sm"
+          style={{ animationDelay: `${compactDelay}ms`, opacity: 0 }}
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <span className={`h-1.5 w-1.5 rounded-full ${dotColor}`} />
+            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.12em]">{category ?? "Signal"}</span>
+            {snapshotPublishedAt && (
+              <span className="text-[10px] text-muted-foreground/50 ml-auto">{timeAgo(snapshotPublishedAt)}</span>
+            )}
+          </div>
+          <p className="font-semibold text-base text-foreground leading-snug mb-3">{questionText}</p>
+
+          {/* Big meter */}
+          <div className="mb-3">
+            <div className="h-3 w-full rounded-full bg-border/30 dark:bg-white/10 overflow-hidden">
+              <div className={`h-full rounded-full ${meterColor} animate-bar-fill`} style={{ width: `${pct}%` }} />
+            </div>
+            <div className="flex justify-between mt-1">
+              <span className="text-[9px] text-muted-foreground/60">0%</span>
+              <span className="text-xs font-bold font-mono text-foreground">{pct}%</span>
+              <span className="text-[9px] text-muted-foreground/60">100%</span>
+            </div>
+          </div>
+
+          {answerState && (
+            <span className={`text-sm font-bold ${answerState.colorClass}`}>{answerState.label}</span>
+          )}
+        </div>
+      </Link>
+    );
+  }
+
+  // ═══════════════════════════════════════════════════
+  // SPOTLIGHT style — verdict as hero, question secondary
+  // ═══════════════════════════════════════════════════
+  if (cardStyle === "spotlight") {
+    return (
+      <Link href={`/topics/${slug}`}>
+        <div
+          className={`group rounded-2xl p-5 animate-card-enter h-full bg-gradient-to-br ${catBg} bg-card card-shadow-rich dark:border dark:border-white/5 hover-lift-sm`}
+          style={{ animationDelay: `${compactDelay}ms`, opacity: 0 }}
+        >
+          {/* Giant verdict */}
+          {answerState && (
+            <div className="mb-3">
+              <span className={`text-2xl font-black ${answerState.colorClass} leading-none`}>{answerState.label}</span>
+            </div>
+          )}
+          <p className="font-semibold text-sm text-foreground leading-snug mb-2">{questionText}</p>
+          <div className="flex items-center gap-3">
+            <span className={`h-1.5 w-1.5 rounded-full ${dotColor}`} />
+            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.12em]">{category ?? "Signal"}</span>
+            {confidence !== null && (
+              <span className="text-[10px] font-mono font-bold text-muted-foreground">{pct}%</span>
+            )}
+            {snapshotPublishedAt && (
+              <span className="text-[10px] text-muted-foreground/50 ml-auto">{timeAgo(snapshotPublishedAt)}</span>
+            )}
+          </div>
+        </div>
+      </Link>
+    );
+  }
+
+  // ═══════════════════════════════════════════════════
+  // TICKER style — compact inline like a stock ticker
+  // ═══════════════════════════════════════════════════
+  if (cardStyle === "ticker") {
+    return (
+      <Link href={`/topics/${slug}`}>
+        <div
+          className="group rounded-2xl animate-card-enter h-full bg-card card-shadow-rich dark:border dark:border-white/5 hover-lift-sm overflow-hidden"
+          style={{ animationDelay: `${compactDelay}ms`, opacity: 0 }}
+        >
+          <div className="flex items-center p-4 gap-4">
+            {/* Confidence circle */}
+            <div className={`flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center ${answerState?.colorClass.includes("destructive") ? "bg-destructive/10" : answerState?.colorClass.includes("positive") ? "bg-positive/10 dark:bg-[#4EDEA3]/10" : "bg-muted"}`}>
+              <span className="text-sm font-black font-mono text-foreground">{pct}</span>
+            </div>
+            {/* Content */}
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-sm text-foreground leading-snug truncate">{questionText}</p>
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className={`h-1 w-1 rounded-full ${dotColor}`} />
+                <span className="text-[10px] text-muted-foreground uppercase tracking-wider">{category}</span>
+                {answerState && (
+                  <span className={`text-[11px] font-bold ${answerState.colorClass}`}>{answerState.label}</span>
+                )}
+              </div>
+            </div>
+            {/* Timestamp */}
+            {snapshotPublishedAt && (
+              <span className="text-[10px] text-muted-foreground/50 flex-shrink-0">{timeAgo(snapshotPublishedAt)}</span>
+            )}
+          </div>
+        </div>
+      </Link>
+    );
+  }
+
+  // ═══════════════════════════════════════════════════
+  // MINIMAL style — clean, text-first with confidence bar
+  // ═══════════════════════════════════════════════════
+  return (
+    <Link href={`/topics/${slug}`}>
+      <div
+        className="group rounded-2xl p-5 animate-card-enter h-full bg-card card-shadow-rich dark:border dark:border-white/5 hover-lift-sm"
+        style={{ animationDelay: `${compactDelay}ms`, opacity: 0 }}
+      >
+        <div className="flex items-center gap-2 mb-2">
+          <span className={`h-1.5 w-1.5 rounded-full ${dotColor}`} />
+          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.12em]">{category ?? "Signal"}</span>
+          {snapshotPublishedAt && (
+            <span className="text-[10px] text-muted-foreground/50 ml-auto">{timeAgo(snapshotPublishedAt)}</span>
+          )}
+        </div>
+
+        <p className="font-semibold text-base text-foreground leading-snug mb-3">{questionText}</p>
+
+        {answerState && (
+          <div className="flex items-center gap-3 mb-2">
+            <span className={`text-sm font-bold ${answerState.colorClass}`}>{answerState.label}</span>
+          </div>
+        )}
+
+        {/* Horizontal confidence bar */}
+        {confidence !== null && (
+          <div className="flex items-center gap-2 mt-3">
+            <div className="h-1.5 flex-1 rounded-full bg-border/40 dark:bg-white/10 overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all ${answerState?.colorClass.includes("destructive") ? "bg-destructive" : answerState?.colorClass.includes("positive") ? "bg-positive dark:bg-[#4EDEA3]" : "bg-muted-foreground/30"}`}
+                style={{ width: `${pct}%` }}
+              />
+            </div>
+            <span className="text-[10px] font-bold font-mono text-muted-foreground w-7 text-right">{pct}%</span>
+          </div>
+        )}
+
+        {oneLiner && (
+          <p className="text-xs text-muted-foreground mt-2 line-clamp-2 leading-relaxed">{oneLiner}</p>
+        )}
       </div>
     </Link>
   );

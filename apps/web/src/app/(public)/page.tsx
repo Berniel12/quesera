@@ -171,13 +171,29 @@ export default async function LandingPage() {
     return (b.confidence ?? 0) - (a.confidence ?? 0);
   });
 
-  const heroQ = allQuestions[0];
-  const feed = allQuestions.slice(1);
+  // Randomize which questions appear on each page load
+  // Shuffle using Fisher-Yates, seeded by current minute (changes every minute)
+  const shuffled = [...allQuestions];
+  const seed = Math.floor(Date.now() / 60000); // changes every minute
+  let rng = seed;
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    rng = (rng * 1103515245 + 12345) & 0x7fffffff;
+    const j = rng % (i + 1);
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
 
-  // Split feed into grid positions
-  const featured = feed.slice(0, 2);  // Two featured cards
-  const grid = feed.slice(2, 8);      // Bento grid cards
-  const rest = feed.slice(8);         // Remaining compact
+  // Pick hero from top-confidence questions (not random — should be interesting)
+  const heroPool = allQuestions.filter((q) => q.confidence !== null && q.confidence > 0.3);
+  const heroIndex = heroPool.length > 0 ? Math.abs(seed) % heroPool.length : 0;
+  const heroQ = heroPool[heroIndex] ?? allQuestions[0];
+
+  // Rest of feed: shuffled, excluding hero
+  const feed = shuffled.filter((q) => q.topic_id !== heroQ?.topic_id);
+
+  // Split feed into grid positions — show up to 20 in the bento, rest in ticker
+  const featured = feed.slice(0, 2);   // Two featured cards
+  const grid = feed.slice(2, 10);      // Bento grid cards (up to 8)
+  const rest = feed.slice(10, 30);     // Ticker rows (up to 20 more)
 
   return (
     <div className="mx-auto max-w-6xl px-4 sm:px-6 dark:horizon-glow">

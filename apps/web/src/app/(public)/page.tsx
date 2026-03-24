@@ -199,10 +199,10 @@ export default async function LandingPage() {
     feed.push(q);
   }
 
-  // Split feed into grid positions — show up to 20 in the bento, rest in ticker
-  const featured = feed.slice(0, 2);   // Two featured cards
-  const grid = feed.slice(2, 10);      // Bento grid cards (up to 8)
-  const rest = feed.slice(10, 30);     // Ticker rows (up to 20 more)
+  // Split feed: first item goes to hero side card, rest to bento grid
+  const featured = feed.slice(1, 3);   // Two featured cards (skip [0], it's in hero side)
+  const grid = feed.slice(3, 11);      // Bento grid cards (up to 8)
+  const rest = feed.slice(11, 31);     // Ticker rows (up to 20 more)
 
   return (
     <div className="mx-auto max-w-6xl px-4 sm:px-6 dark:horizon-glow">
@@ -253,30 +253,37 @@ export default async function LandingPage() {
               </div>
             </Link>
 
-            {/* Side gauge card */}
-            <div className="lg:col-span-4 rounded-[2rem] p-6 sm:p-8 flex flex-col items-center justify-center text-center
-              bg-card dark:glass-panel card-shadow-rich dark:border dark:border-white/5 relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
-              {/* SVG gauge */}
-              <div className="relative mb-4">
-                <svg className="w-40 h-40 -rotate-90" viewBox="0 0 200 200">
-                  <circle cx="100" cy="100" r="85" fill="none" strokeWidth="8" className="stroke-border/20 dark:stroke-white/10" />
-                  <circle cx="100" cy="100" r="85" fill="none" strokeWidth="8" strokeLinecap="round"
-                    strokeDasharray={`${(pct / 100) * 534} 534`}
-                    className="stroke-primary dark:drop-shadow-[0_0_12px_rgba(0,218,243,0.6)]" />
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-5xl font-black tracking-tighter text-foreground dark:text-primary">{pct}%</span>
-                  <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-bold">{ans?.label ?? "Tracking"}</span>
-                </div>
-              </div>
-              {heroQ.one_liner && (
-                <p className="text-xs text-muted-foreground leading-relaxed max-w-[200px]">{heroQ.one_liner}</p>
-              )}
-              {heroQ.snapshot_published_at && (
-                <span className="text-[10px] text-muted-foreground/50 mt-3">{timeAgo(heroQ.snapshot_published_at)}</span>
-              )}
-            </div>
+            {/* Second question card -- different question, not a repeat */}
+            {feed[0] && (() => {
+              const q2 = feed[0];
+              const a2 = CAT_ACCENT[q2.category ?? ""] ?? DEFAULT_ACCENT;
+              const pct2 = q2.confidence !== null ? Math.round(q2.confidence * 100) : 0;
+              const ans2 = q2.direction && q2.confidence !== null
+                ? getAnswerState({ direction: q2.direction, confidence: q2.confidence, category: q2.category, disagreement: 0 }) : null;
+              return (
+                <Link href={`/topics/${q2.slug}`} className="lg:col-span-4">
+                  <div className={`h-full rounded-[2rem] p-6 sm:p-8 flex flex-col justify-between
+                    bg-gradient-to-br ${a2.bg} bg-card dark:bg-[#131B2E] card-shadow-rich dark:border dark:border-white/5 hover-lift-sm`}>
+                    <div>
+                      <span className={`text-[10px] font-bold uppercase tracking-[0.2em] ${a2.text} block mb-3`}>{a2.label}</span>
+                      <h2 className="text-lg sm:text-xl font-bold text-foreground tracking-tight leading-tight mb-3">{q2.question_text}</h2>
+                    </div>
+                    <div>
+                      {ans2 && <span className={`text-xl font-black ${ans2.colorClass} block mb-1`}>{ans2.label}</span>}
+                      <div className="flex items-center gap-2">
+                        <div className="h-1.5 flex-1 rounded-full bg-border/30 dark:bg-white/10 overflow-hidden">
+                          <div className={`h-full rounded-full bg-current ${a2.text} animate-bar-fill`} style={{ width: `${pct2}%` }} />
+                        </div>
+                        <span className={`text-xs font-bold font-mono ${a2.text}`}>{pct2}%</span>
+                      </div>
+                      {q2.snapshot_published_at && (
+                        <span className="text-[10px] text-muted-foreground/50 mt-2 block">{timeAgo(q2.snapshot_published_at)}</span>
+                      )}
+                    </div>
+                  </div>
+                </Link>
+              );
+            })()}
           </section>
         );
       })()}

@@ -53,7 +53,7 @@ export async function GET(request: Request) {
       await enqueue(supabase, {
         job_type: "snapshot_generation",
         payload: { topic_id: topicId },
-        priority: 1,
+        priority: 10,
       });
       enqueued.push(topicId);
     } catch {

@@ -126,8 +126,11 @@ export default async function LandingPage() {
     return (b.confidence ?? 0) - (a.confidence ?? 0);
   });
 
-  const heroQ = aliveQuestions[0];
-  const feedQuestions = aliveQuestions.slice(1);
+  // Rotate hero question — changes each page load, picks from top candidates
+  const heroPool = aliveQuestions.slice(0, Math.min(5, aliveQuestions.length));
+  const heroIndex = heroPool.length > 0 ? Math.floor(Math.random() * heroPool.length) : 0;
+  const heroQ = heroPool[heroIndex];
+  const feedQuestions = aliveQuestions.filter((q) => q !== heroQ);
 
   return (
     <div className="mx-auto max-w-3xl px-6 dark:horizon-glow">

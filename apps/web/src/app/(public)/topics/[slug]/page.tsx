@@ -34,16 +34,63 @@ const SOURCE_LABELS: Record<string, string> = {
   defillama: "DeFi Llama",
 };
 
-// Category images
-const CATEGORY_IMAGES: Record<string, string> = {
-  macro: "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=1200&q=60&auto=format",
-  crypto: "https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=1200&q=60&auto=format",
-  politics: "https://images.unsplash.com/photo-1541872703-74c5e44368f9?w=1200&q=60&auto=format",
-  geopolitics: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1200&q=60&auto=format",
-  sports: "https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=1200&q=60&auto=format",
-  disasters: "https://images.unsplash.com/photo-1527482797697-8795b05a13fe?w=1200&q=60&auto=format",
-  tech: "https://images.unsplash.com/photo-1518770660439-4636190af475?w=1200&q=60&auto=format",
-  entertainment: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=1200&q=60&auto=format",
+// Category hero images — high-res, dramatic compositions
+const CATEGORY_IMAGES: Record<string, string[]> = {
+  macro: [
+    "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=1400&q=75&auto=format",
+    "https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?w=1400&q=75&auto=format",
+  ],
+  crypto: [
+    "https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=1400&q=75&auto=format",
+    "https://images.unsplash.com/photo-1622630998477-20aa696ecb05?w=1400&q=75&auto=format",
+  ],
+  politics: [
+    "https://images.unsplash.com/photo-1541872703-74c5e44368f9?w=1400&q=75&auto=format",
+    "https://images.unsplash.com/photo-1529107386315-e1a2ed48a620?w=1400&q=75&auto=format",
+  ],
+  geopolitics: [
+    "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1400&q=75&auto=format",
+    "https://images.unsplash.com/photo-1526778548025-fa2f459cd5c1?w=1400&q=75&auto=format",
+  ],
+  sports: [
+    "https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=1400&q=75&auto=format",
+    "https://images.unsplash.com/photo-1461896836934-bd45ba8fcb39?w=1400&q=75&auto=format",
+  ],
+  disasters: [
+    "https://images.unsplash.com/photo-1527482797697-8795b05a13fe?w=1400&q=75&auto=format",
+    "https://images.unsplash.com/photo-1509803874385-db7c23652552?w=1400&q=75&auto=format",
+  ],
+  tech: [
+    "https://images.unsplash.com/photo-1518770660439-4636190af475?w=1400&q=75&auto=format",
+    "https://images.unsplash.com/photo-1677442136019-21780ecad995?w=1400&q=75&auto=format",
+  ],
+  entertainment: [
+    "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=1400&q=75&auto=format",
+    "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=1400&q=75&auto=format",
+  ],
+};
+
+function pickCategoryImage(category: string | null, slug: string): string | null {
+  if (!category) return null;
+  const pool = CATEGORY_IMAGES[category];
+  if (!pool || pool.length === 0) return null;
+  let hash = 0;
+  for (let i = 0; i < slug.length; i++) {
+    hash = ((hash << 5) - hash + slug.charCodeAt(i)) | 0;
+  }
+  return pool[Math.abs(hash) % pool.length];
+}
+
+// Category accent colors for key metric background
+const CATEGORY_METRIC_BG: Record<string, string> = {
+  macro: "from-navy/5 to-navy/[0.02] dark:from-[#00DAF3]/10 dark:to-[#00DAF3]/[0.03]",
+  crypto: "from-[#00DAF3]/8 to-[#00DAF3]/[0.02] dark:from-[#00DAF3]/15 dark:to-[#00DAF3]/[0.03]",
+  politics: "from-slate-500/5 to-slate-500/[0.01] dark:from-[#00DAF3]/10 dark:to-[#00DAF3]/[0.02]",
+  geopolitics: "from-destructive/5 to-destructive/[0.01] dark:from-destructive/10 dark:to-destructive/[0.02]",
+  sports: "from-positive/5 to-positive/[0.01] dark:from-[#4EDEA3]/10 dark:to-[#4EDEA3]/[0.02]",
+  disasters: "from-warning/5 to-warning/[0.01] dark:from-warning/10 dark:to-warning/[0.02]",
+  tech: "from-violet-500/5 to-violet-500/[0.01] dark:from-violet-400/10 dark:to-violet-400/[0.02]",
+  entertainment: "from-pink-500/5 to-pink-500/[0.01] dark:from-pink-400/10 dark:to-pink-400/[0.02]",
 };
 
 function formatKeyMetric(signal: { source_family: string; signal_type: string; current_value: number; metadata: Record<string, unknown> | null }): { value: string; label: string } | null {
@@ -305,25 +352,34 @@ export default async function TopicPage({ params }: TopicPageProps) {
     }
   }
 
-  const categoryImage = t.category ? CATEGORY_IMAGES[t.category] : null;
+  const categoryImage = pickCategoryImage(t.category, t.slug);
+  const metricBg = t.category ? (CATEGORY_METRIC_BG[t.category] ?? "from-muted to-transparent dark:from-primary/10 dark:to-transparent") : "from-muted to-transparent";
 
   return (
     <div className="mx-auto max-w-4xl px-6 py-8">
 
-      {/* Category banner */}
+      {/* Category banner — dramatic, full-bleed image */}
       {categoryImage && (
-        <div className="relative -mx-6 -mt-8 mb-8 h-32 sm:h-48 overflow-hidden rounded-b-3xl animate-fade-in">
-          <img src={categoryImage} alt="" className="absolute inset-0 w-full h-full object-cover grayscale dark:brightness-[0.3]" loading="eager" />
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/60 to-background" />
+        <div className="relative -mx-6 -mt-8 mb-0 h-48 sm:h-64 md:h-72 overflow-hidden animate-fade-in">
+          <img
+            src={categoryImage}
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover dark:brightness-[0.4]"
+            loading="eager"
+          />
+          {/* Strong bottom gradient so text below is readable */}
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background" />
+          <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-b from-transparent to-background" />
         </div>
       )}
+      {!categoryImage && <div className="mb-8" />}
 
       {/* ── HERO: Question + Answer + Follow ── */}
-      <section className="mb-8 animate-slide-up">
+      <section className={`mb-8 animate-slide-up ${categoryImage ? "-mt-16 relative z-10" : ""}`}>
         {t.category && (
           <span className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">{t.category}</span>
         )}
-        <h1 className="mt-2 text-3xl font-bold tracking-tight text-foreground sm:text-4xl leading-tight">{headline}</h1>
+        <h1 className="mt-2 text-3xl font-bold tracking-tight text-foreground sm:text-4xl md:text-5xl leading-tight">{headline}</h1>
 
         {answerState && (
           <div className="mt-3 flex items-center gap-4 flex-wrap animate-fade-in delay-75">
@@ -343,18 +399,21 @@ export default async function TopicPage({ params }: TopicPageProps) {
 
       {snapshot ? (
         <>
-          {/* ── KEY METRIC ── */}
+          {/* ── KEY METRIC — dramatic number display ── */}
           {keyMetric && (
             <div className="mb-6 animate-scale-in delay-150">
-              <div className="text-center py-6 px-4 rounded-2xl bg-card dark:border dark:border-white/5">
-                <p className="text-4xl sm:text-5xl font-black tracking-tight text-foreground dark:text-primary">{keyMetric.value}</p>
-                <p className="text-sm text-muted-foreground mt-1">{keyMetric.label}</p>
+              <div className={`text-center py-8 px-6 rounded-3xl bg-gradient-to-br ${metricBg} border border-border/30 dark:border-white/5 card-shadow-rich`}>
+                <p className="text-5xl sm:text-6xl font-black tracking-tight text-foreground dark:text-primary metric-glow">{keyMetric.value}</p>
+                <p className="text-sm text-muted-foreground mt-2 font-medium">{keyMetric.label}</p>
               </div>
             </div>
           )}
 
+          {/* ── Section divider ── */}
+          <div className="section-line mb-6" />
+
           {/* ── CURRENT PICTURE ── */}
-          <Card className="rounded-3xl border-border/40 mb-6 animate-fade-in delay-200">
+          <Card className="rounded-3xl border-border/40 mb-6 animate-fade-in delay-200 card-shadow-rich">
             <CardContent className="p-6 sm:p-8">
               <p className="text-base sm:text-lg leading-relaxed text-foreground">
                 {hasProse ? snapshot.current_picture_text : `We're tracking this topic. ${signals.length > 0 ? `Based on ${signals.length} data points, conditions appear ${snapshot.direction === "stable" ? "steady" : snapshot.direction}.` : "Check back soon for a fuller picture."}`}
@@ -376,7 +435,7 @@ export default async function TopicPage({ params }: TopicPageProps) {
           {/* ── WHAT CHANGED / WHAT TO WATCH ── */}
           <AnimateOnScroll>
             <div className="grid gap-4 sm:grid-cols-2 mb-6">
-              <Card className="rounded-3xl border-border/40">
+              <Card className="rounded-3xl border-border/40 card-shadow-rich">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wide">What Changed</CardTitle>
                 </CardHeader>
@@ -384,7 +443,7 @@ export default async function TopicPage({ params }: TopicPageProps) {
                   <p className="text-sm leading-relaxed">{snapshot.what_changed_text ?? "No material changes detected recently."}</p>
                 </CardContent>
               </Card>
-              <Card className="rounded-3xl border-border/40">
+              <Card className="rounded-3xl border-border/40 card-shadow-rich">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wide">What to Watch</CardTitle>
                 </CardHeader>
@@ -411,6 +470,7 @@ export default async function TopicPage({ params }: TopicPageProps) {
             });
             return (
               <AnimateOnScroll>
+                <div className="section-line mb-6" />
                 <div className="mb-6">
                   <h2 className="text-[11px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-4">What the data shows</h2>
                   {sortedKeys.map((key) => (
@@ -464,6 +524,7 @@ export default async function TopicPage({ params }: TopicPageProps) {
           {/* ── PEOPLE ALSO WONDERING ── */}
           {relatedQuestions.length > 0 && (
             <AnimateOnScroll>
+              <div className="section-line mb-6" />
               <div className="mb-8">
                 <h2 className="text-[11px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-4">People also wondering</h2>
                 <div className="grid gap-3 sm:grid-cols-2">
@@ -471,13 +532,23 @@ export default async function TopicPage({ params }: TopicPageProps) {
                     const rqState = rq.direction && rq.confidence !== null
                       ? getAnswerState({ direction: rq.direction, confidence: rq.confidence, category: t.category, disagreement: 0 })
                       : null;
+                    const rqImage = pickCategoryImage(t.category, rq.slug);
                     return (
                       <Link key={rq.slug} href={`/topics/${rq.slug}`}>
-                        <div className="p-4 rounded-2xl bg-card dark:border dark:border-white/5 hover-lift-sm">
-                          <p className="text-sm font-semibold text-foreground leading-snug">{rq.question_text}</p>
-                          {rqState && (
-                            <p className={`text-xs font-bold mt-1.5 ${rqState.colorClass}`}>{rqState.label}</p>
+                        <div className="relative overflow-hidden p-4 rounded-2xl bg-card dark:border dark:border-white/5 card-shadow-rich hover-lift-sm">
+                          {/* Subtle background image */}
+                          {rqImage && (
+                            <div className="absolute inset-0 z-0">
+                              <img src={rqImage} alt="" className="absolute inset-0 w-full h-full object-cover opacity-[0.06] dark:opacity-[0.1]" loading="lazy" />
+                              <div className="absolute inset-0 bg-gradient-to-r from-card via-card/95 to-card/80" />
+                            </div>
                           )}
+                          <div className="relative z-10">
+                            <p className="text-sm font-semibold text-foreground leading-snug">{rq.question_text}</p>
+                            {rqState && (
+                              <p className={`text-xs font-bold mt-1.5 ${rqState.colorClass}`}>{rqState.label}</p>
+                            )}
+                          </div>
                         </div>
                       </Link>
                     );

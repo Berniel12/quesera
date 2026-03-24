@@ -135,8 +135,8 @@ export default async function LandingPage() {
   return (
     <div className="mx-auto max-w-3xl px-6 dark:horizon-glow">
 
-      {/* Hero — daily briefing */}
-      <section className="pt-10 pb-6 sm:pt-14 animate-slide-up">
+      {/* Hero — daily briefing with atmospheric image */}
+      <section className="relative pt-10 pb-6 sm:pt-14 animate-slide-up">
         <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-4 block animate-fade-in">
           {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
         </span>
@@ -187,20 +187,19 @@ export default async function LandingPage() {
       {feedQuestions.length > 0 && (
         <section className="flex flex-col gap-4 pb-8">
           {feedQuestions.map((q, i) => (
-            <AnimateOnScroll key={q.topic_id} delay={i * 50}>
-              <QuestionCard
-                questionText={q.question_text}
-                slug={q.slug}
-                category={q.category}
-                direction={q.direction}
-                confidence={q.confidence}
-                freshness={q.freshness}
-                oneLiner={q.one_liner}
-                snapshotPublishedAt={q.snapshot_published_at}
-                variant="compact"
-                staggerIndex={0}
-              />
-            </AnimateOnScroll>
+            <QuestionCard
+              key={q.topic_id}
+              questionText={q.question_text}
+              slug={q.slug}
+              category={q.category}
+              direction={q.direction}
+              confidence={q.confidence}
+              freshness={q.freshness}
+              oneLiner={q.one_liner}
+              snapshotPublishedAt={q.snapshot_published_at}
+              variant="compact"
+              staggerIndex={i}
+            />
           ))}
         </section>
       )}

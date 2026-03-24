@@ -208,16 +208,16 @@ export function SignalCard({ signal, className }: SignalCardProps) {
   const isHighWeight = signal.weight >= 0.7;
 
   return (
-    <div className={`rounded-2xl p-4 border-l-2 ${config.accentClass} ${config.darkAccent}
-      bg-card
-      ${isHighWeight ? "editorial-shadow dark:shadow-none" : ""}
+    <div className={`rounded-2xl p-4 border-l-[3px] ${config.accentClass} ${config.darkAccent}
+      bg-card card-shadow-rich
+      dark:border dark:border-white/5 dark:border-l-[3px]
       animate-fade-in ${className ?? ""}`}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           {/* Source label */}
           <div className="flex items-center gap-2 mb-1.5">
-            <span className={`h-1.5 w-1.5 rounded-full flex-shrink-0 ${config.dotColor}`} />
+            <span className={`h-2 w-2 rounded-full flex-shrink-0 ${config.dotColor}`} />
             <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
               {HUMAN_SOURCE_NAMES[signal.source_name] ?? signal.source_name}
             </span>
@@ -239,13 +239,13 @@ export function SignalCard({ signal, className }: SignalCardProps) {
           )}
         </div>
 
-        {/* Value + delta */}
+        {/* Value + delta — visually prominent */}
         <div className="flex flex-col items-end flex-shrink-0">
-          <span className={`${isHighWeight ? "text-lg" : "text-sm"} font-bold font-mono text-foreground dark:text-primary`}>
+          <span className={`${isHighWeight ? "text-xl" : "text-base"} font-black font-mono text-foreground dark:text-primary`}>
             {formattedValue}
           </span>
           {formattedDelta && (
-            <span className={`text-xs font-mono font-semibold ${deltaColor}`}>
+            <span className={`text-xs font-mono font-bold mt-0.5 ${deltaColor}`}>
               {formattedDelta}
             </span>
           )}

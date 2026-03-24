@@ -1,17 +1,17 @@
-export { createSupabaseClient } from "./client";
-export type { TypedSupabaseClient } from "./client";
-export type { Database, Json } from "./types";
+export { createSupabaseClient } from "./client.js";
+export type { TypedSupabaseClient } from "./client.js";
+export type { Database, Json } from "./types.js";
 export {
   TopicSchema,
   TopicAliasSchema,
   TopicSeedSchema,
   SearchResultSchema,
   SearchResponseSchema,
-} from "./schema";
+} from "./schema.js";
 export type {
   Topic,
   TopicAlias,
   TopicSeed,
   SearchResult,
   SearchResponse,
-} from "./schema";
+} from "./schema.js";

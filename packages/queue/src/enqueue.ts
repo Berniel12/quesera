@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { DEFAULT_MAX_ATTEMPTS, DEFAULT_PRIORITY } from "./constants";
-import type { EnqueueOptions } from "./types";
+import { DEFAULT_MAX_ATTEMPTS, DEFAULT_PRIORITY } from "./constants.js";
+import type { EnqueueOptions } from "./types.js";
 
 export async function enqueue(
   client: SupabaseClient,

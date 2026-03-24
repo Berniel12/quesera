@@ -154,21 +154,6 @@ export function QuestionCard({
                 {questionText}
               </h2>
 
-              {/* Confidence bar */}
-              {confidence !== null && (
-                <div className="flex items-center gap-4 mb-8 animate-fade-in delay-400" style={{ opacity: 0 }}>
-                  <div className="flex-1 h-1.5 bg-secondary dark:bg-[#2D3449] rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-foreground dark:bg-primary rounded-full animate-bar-fill dark:neon-bar"
-                      style={{ transform: "scaleX(0)", transformOrigin: "left" }}
-                    />
-                  </div>
-                  <span className="text-sm font-bold text-foreground dark:text-primary whitespace-nowrap animate-number-reveal delay-600" style={{ opacity: 0 }}>
-                    {pct}% Confidence
-                  </span>
-                </div>
-              )}
-
               {/* Answer block */}
               {answerState && oneLiner && (
                 <div
@@ -184,35 +169,7 @@ export function QuestionCard({
                 </div>
               )}
 
-              {/* Status row */}
-              <div
-                className="mt-6 flex items-center justify-between animate-status-fade delay-800"
-                style={{ opacity: 0 }}
-              >
-                {snapshotPublishedAt && (
-                  <span className="text-xs text-muted-foreground">
-                    Updated {timeAgo(snapshotPublishedAt)}
-                  </span>
-                )}
-                {answerState && (
-                  <span className="flex items-center gap-1.5 text-sm font-bold text-foreground dark:text-primary">
-                    <span>{status.icon}</span>
-                    {status.label}
-                  </span>
-                )}
-              </div>
             </div>
-
-            {/* Right: probability gauge (desktop) */}
-            {confidence !== null && answerState && (
-              <div className="hidden md:flex flex-shrink-0 items-center justify-center">
-                <ProbabilityGauge
-                  confidence={confidence}
-                  label={answerState.label}
-                  size="lg"
-                />
-              </div>
-            )}
           </div>
         </div>
       </Link>
@@ -264,16 +221,6 @@ export function QuestionCard({
             )}
           </div>
 
-          {/* Mini gauge */}
-          {confidence !== null && answerState && (
-            <div className="flex-shrink-0 pt-1">
-              <ProbabilityGauge
-                confidence={confidence}
-                label=""
-                size="sm"
-              />
-            </div>
-          )}
         </div>
       </div>
     </Link>

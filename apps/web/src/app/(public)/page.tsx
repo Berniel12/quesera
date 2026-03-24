@@ -110,24 +110,32 @@ export default async function LandingPage() {
     });
   }
 
-  // Sort: location-relevant first, then by confidence descending
-  allQuestions.sort((a, b) => {
+  // Filter: only show questions with alive topics (not dead/stale)
+  const aliveQuestions = allQuestions.filter((q) =>
+    q.freshness === "fresh" || q.freshness === "aging",
+  );
+
+  // Sort: movement first (up/down > stable > unknown), then location, then confidence
+  aliveQuestions.sort((a, b) => {
+    const aMoving = (a.direction === "up" || a.direction === "down") ? 1 : 0;
+    const bMoving = (b.direction === "up" || b.direction === "down") ? 1 : 0;
+    if (bMoving !== aMoving) return bMoving - aMoving;
     const aRelevant = suggestedSlugs.has(a.slug) ? 1 : 0;
     const bRelevant = suggestedSlugs.has(b.slug) ? 1 : 0;
     if (bRelevant !== aRelevant) return bRelevant - aRelevant;
     return (b.confidence ?? 0) - (a.confidence ?? 0);
   });
 
-  const heroQ = allQuestions[0];
-  const feedQuestions = allQuestions.slice(1);
+  const heroQ = aliveQuestions[0];
+  const feedQuestions = aliveQuestions.slice(1);
 
   return (
     <div className="mx-auto max-w-3xl px-6 dark:horizon-glow">
 
-      {/* Hero — editorial scale */}
+      {/* Hero — daily briefing */}
       <section className="pt-10 pb-6 sm:pt-14 animate-slide-up">
         <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-4 block animate-fade-in">
-          Live Predictions
+          {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
         </span>
         <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-foreground leading-[1.05]">
           What do you want

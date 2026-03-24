@@ -2,10 +2,6 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { getAnswerState } from "@/lib/answer-state";
-import { DirectionBadge } from "@/components/direction-badge";
-import { FreshnessBadge } from "@/components/freshness-badge";
-import { ConfidenceBar } from "@/components/confidence-bar";
-import { DisagreementIndicator } from "@/components/disagreement-indicator";
 import { SignalGroup } from "@/components/signal-card";
 import { ConfidenceTimeline } from "@/components/confidence-timeline";
 import { FollowButton } from "@/components/follow-button";
@@ -238,51 +234,22 @@ export default async function TopicPage({ params }: TopicPageProps) {
           {headline}
         </h1>
 
-        {/* Answer state — the emotional hook */}
+        {/* Answer state */}
         {answerState && (
           <div className="mt-3 animate-fade-in delay-75">
             <span className={`text-xl sm:text-2xl font-semibold ${answerState.colorClass}`}>
               {answerState.label}
             </span>
-            {answerState.intensity === "strong" && snapshot && (
-              <span className="ml-3 text-sm text-muted-foreground font-mono">
-                {Math.round(snapshot.confidence * 100)}% confidence
-              </span>
-            )}
           </div>
         )}
 
-        {/* Signal synthesis badge */}
-        {signals.length > 0 && (
-          <p className="mt-3 text-xs text-muted-foreground animate-fade-in delay-150">
-            Synthesized from {signals.length} signals across {new Set(signals.map((s) => s.source_family)).size} source types
-          </p>
-        )}
-
-        {/* Subject name as subtle breadcrumb (when question is primary) */}
-        {primaryQuestion && (
-          <p className="mt-1 text-[10px] text-muted-foreground/60">
-            Tracking: {t.canonical_name}
-          </p>
-        )}
       </section>
 
       {snapshot ? (
         <>
-          {/* Signal Vitals */}
-          <div className="flex flex-wrap items-center gap-3 mb-6 animate-slide-up delay-75">
-            <DirectionBadge direction={snapshot.direction} size="md" />
-            <ConfidenceBar confidence={snapshot.confidence} />
-            <FreshnessBadge freshness={snapshot.freshness} />
-            <DisagreementIndicator disagreement={snapshot.disagreement} />
-          </div>
-
-          {/* Current Picture */}
+          {/* Current Picture — answer first, no system metrics */}
           <Card className="rounded-3xl border-border/40 mb-6 animate-scale-in delay-150">
             <CardContent className="p-6 sm:p-8">
-              <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-3">
-                Current Picture
-              </h2>
               <p className="text-base sm:text-lg leading-relaxed text-foreground">
                 {hasProse
                   ? snapshot.current_picture_text
@@ -343,7 +310,7 @@ export default async function TopicPage({ params }: TopicPageProps) {
               <AnimateOnScroll>
                 <div className="mb-6">
                   <h2 className="text-[11px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-4">
-                    Signal Intelligence
+                    Why we think this
                   </h2>
                   {sortedKeys.map((key) => (
                     <SignalGroup key={key} familyKey={key} signals={grouped.get(key) ?? []} />
@@ -352,45 +319,6 @@ export default async function TopicPage({ params }: TopicPageProps) {
               </AnimateOnScroll>
             );
           })()}
-
-          {/* Sources being tracked — shows breadth even for thin signal topics */}
-          <AnimateOnScroll>
-            <div className="mb-6 p-5 rounded-2xl bg-card dark:border dark:border-white/5">
-              <h3 className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-3">
-                Intelligence Sources
-              </h3>
-              <div className="flex flex-wrap gap-2">
-                {(() => {
-                  const activeFamilies = new Set(signals.map((s) => s.source_family));
-                  const ALL_FAMILIES = [
-                    { key: "prediction_market", label: "Prediction Markets" },
-                    { key: "macro_official", label: "Government Data" },
-                    { key: "crypto_market", label: "Crypto Markets" },
-                    { key: "forecasting", label: "Forecaster Consensus" },
-                    { key: "political_official", label: "Legislative Tracking" },
-                    { key: "hazard_weather", label: "Hazard Monitoring" },
-                    { key: "news_evidence", label: "News Analysis" },
-                  ];
-                  return ALL_FAMILIES.map((f) => {
-                    const active = activeFamilies.has(f.key);
-                    return (
-                      <span
-                        key={f.key}
-                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-semibold uppercase tracking-wide ${
-                          active
-                            ? "bg-primary/10 text-primary dark:bg-[#00DAF3]/10 dark:text-[#00DAF3]"
-                            : "bg-secondary/50 text-muted-foreground/50"
-                        }`}
-                      >
-                        <span className={`h-1.5 w-1.5 rounded-full ${active ? "bg-primary dark:bg-[#00DAF3]" : "bg-muted-foreground/30"}`} />
-                        {f.label}
-                      </span>
-                    );
-                  });
-                })()}
-              </div>
-            </div>
-          </AnimateOnScroll>
 
           {/* Confidence Timeline */}
           {history.length >= 2 && (
@@ -405,27 +333,6 @@ export default async function TopicPage({ params }: TopicPageProps) {
                   <ConfidenceTimeline history={history} />
                 </CardContent>
               </Card>
-            </AnimateOnScroll>
-          )}
-
-          {/* Other question framings */}
-          {wrappers.length > 1 && (
-            <AnimateOnScroll>
-              <div className="mb-6">
-                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
-                  People also ask
-                </h3>
-                <div className="flex flex-wrap gap-2">
-                  {wrappers.slice(1).map((w) => (
-                    <span
-                      key={w.question_text}
-                      className="rounded-2xl border border-border/60 bg-card px-4 py-2 text-sm text-navy font-medium"
-                    >
-                      {w.question_text}
-                    </span>
-                  ))}
-                </div>
-              </div>
             </AnimateOnScroll>
           )}
 

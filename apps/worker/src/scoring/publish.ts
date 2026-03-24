@@ -132,92 +132,117 @@ export async function publishSnapshot(
 }
 
 // ── Deterministic One-Liner Generation ──
+// These must read like a smart friend answering a question, NOT like a data report.
+// The one-liner IS the product for 80% of users. They scan it and leave.
 
-/** Macro series labels for human-readable one-liners (FRED + BLS + EIA) */
-const SERIES_LABELS: Record<string, string> = {
-  MORTGAGE30US: "30-year fixed",
-  CPIAUCSL: "CPI",
-  UNRATE: "Unemployment",
-  FEDFUNDS: "Fed funds rate",
-  DGS10: "10-year Treasury",
-  GDP: "GDP",
-  CES0000000001: "Nonfarm payrolls",
-  LNS14000000: "Unemployment rate",
-  "CUSR0000SA0": "CPI-U",
-  "CUUR0000SA0": "CPI-U (unadjusted)",
-  "PET.RWTC.W": "WTI crude oil",
+/** Human-readable context for macro data series */
+const MACRO_CONTEXT: Record<string, { name: string; unit: string; context: string }> = {
+  MORTGAGE30US: { name: "mortgage rates", unit: "%", context: "The 30-year fixed rate" },
+  CPIAUCSL: { name: "consumer prices", unit: "", context: "The consumer price index" },
+  UNRATE: { name: "unemployment", unit: "%", context: "The unemployment rate" },
+  FEDFUNDS: { name: "the Fed rate", unit: "%", context: "The federal funds rate" },
+  DGS10: { name: "Treasury yields", unit: "%", context: "The 10-year Treasury yield" },
+  GDP: { name: "economic growth", unit: "", context: "GDP" },
+  CES0000000001: { name: "job creation", unit: "", context: "Nonfarm payrolls" },
+  LNS14000000: { name: "unemployment", unit: "%", context: "The unemployment rate" },
+  "CUSR0000SA0": { name: "consumer prices", unit: "", context: "The consumer price index" },
+  "CUUR0000SA0": { name: "consumer prices", unit: "", context: "The consumer price index" },
+  "PET.RWTC.W": { name: "oil prices", unit: "", context: "Crude oil" },
 };
 
-/** Period labels for macro series cadences */
-const SERIES_PERIOD: Record<string, string> = {
-  MORTGAGE30US: "from last week",
-  DGS10: "from yesterday",
-  FEDFUNDS: "from prior reading",
-  CPIAUCSL: "from last month",
-  UNRATE: "from last month",
-  GDP: "from last quarter",
-  CES0000000001: "from last month",
-  LNS14000000: "from last month",
-  "CUSR0000SA0": "from last month",
-  "CUUR0000SA0": "from last month",
-  "PET.RWTC.W": "from last week",
-};
-
-/**
- * Generate a meaningful deterministic one-liner from scored signals.
- * For macro_official sources with numeric values, produces something like:
- *   "30-year fixed at 6.65%, down 0.07% from last week."
- * Falls back to direction + confidence summary for other source families.
- */
 function generateDeterministicOneLiner(
   state: ScoredState,
   signals: ScoredSignal[],
 ): string {
-  // Find the primary signal (highest weight)
   const primary = signals
     .filter((s) => s.currentValue !== null && s.currentValue !== undefined)
     .sort((a, b) => b.weight - a.weight)[0];
 
+  const signalCount = signals.length;
+  const dir = state.direction;
+
+  // ── Macro official: translate data into plain language ──
   if (primary && primary.sourceFamily === "macro_official") {
     const seriesId = String(primary.metadata?.series_id ?? "");
-    const label = SERIES_LABELS[seriesId] ?? seriesId;
+    const ctx = MACRO_CONTEXT[seriesId];
     const value = Number(primary.currentValue);
     const delta = primary.delta !== null ? Number(primary.delta) : null;
-    const period = SERIES_PERIOD[seriesId] ?? "from prior reading";
 
-    // Format value based on typical range
-    const valueStr = value > 10 ? value.toFixed(1) : value.toFixed(2);
+    if (ctx) {
+      const valueStr = ctx.unit === "%" ? `${value > 10 ? value.toFixed(1) : value.toFixed(2)}%` : value.toLocaleString("en-US");
 
-    if (delta !== null && delta !== 0) {
-      const deltaDir = delta > 0 ? "up" : "down";
-      const deltaStr = Math.abs(delta) > 10
-        ? Math.abs(delta).toFixed(1)
-        : Math.abs(delta).toFixed(2);
-      return `${label} at ${valueStr}%, ${deltaDir} ${deltaStr}% ${period}.`;
+      if (delta !== null && Math.abs(delta) > 0.01) {
+        const movement = delta > 0 ? "edged higher" : "moved lower";
+        return `${ctx.context} is at ${valueStr} and has ${movement} recently. ${signalCount > 1 ? `Tracking ${signalCount} data points.` : ""}`.trim();
+      }
+      return `${ctx.context} is holding at ${valueStr} with no significant movement. Conditions appear stable for now.`;
     }
-
-    return `${label} at ${valueStr}%, unchanged ${period}.`;
   }
 
-  // Crypto assets: price-based one-liner
+  // ── Crypto: price + momentum ──
   if (primary && primary.sourceFamily === "crypto_market") {
-    const name = String(primary.metadata?.name ?? primary.metadata?.symbol ?? "Asset");
+    const name = String(primary.metadata?.name ?? "This asset");
     const price = Number(primary.currentValue);
-    const delta = primary.delta !== null ? Number(primary.delta) : null;
+    const priceStr = price >= 1 ? `$${price.toLocaleString("en-US", { maximumFractionDigits: 0 })}` : `$${price.toFixed(4)}`;
 
-    const priceStr = price >= 1 ? `$${price.toLocaleString("en-US", { maximumFractionDigits: 2 })}` : `$${price.toFixed(4)}`;
-
-    if (delta !== null && delta !== 0) {
-      const pct = primary.previousValue ? ((delta / Number(primary.previousValue)) * 100) : 0;
-      const deltaDir = delta > 0 ? "up" : "down";
-      return `${name} at ${priceStr}, ${deltaDir} ${Math.abs(pct).toFixed(1)}% in 24h.`;
-    }
-
-    return `${name} at ${priceStr}, unchanged in 24h.`;
+    if (dir === "up") return `${name} is trading at ${priceStr} and showing upward momentum. Market sentiment is leaning positive.`;
+    if (dir === "down") return `${name} is at ${priceStr} and under pressure. Sellers are currently in control.`;
+    return `${name} is trading around ${priceStr}. No clear direction right now — the market is in wait-and-see mode.`;
   }
 
-  // Fallback: descriptive direction + confidence
-  const dirLabel = state.direction === "up" ? "Rising" : state.direction === "down" ? "Falling" : "Stable";
-  const confPct = Math.round(state.confidence * 100);
-  return `${dirLabel}. ${confPct}% confidence based on ${signals.length} signal${signals.length === 1 ? "" : "s"}.`;
+  // ── Prediction markets: probability as outlook ──
+  if (primary && (primary.sourceFamily === "prediction_market" || primary.sourceFamily === "forecast_aggregator")) {
+    const prob = Number(primary.currentValue);
+    const pct = Math.round(prob * 100);
+    const question = String(primary.metadata?.question ?? "");
+
+    if (pct >= 70) return `Markets are pricing this at ${pct}% likely. The consensus is leaning strongly toward yes.`;
+    if (pct >= 50) return `Trading at ${pct}% probability. Slight lean toward yes, but far from certain.`;
+    if (pct >= 30) return `Only ${pct}% probability in prediction markets. The consensus leans toward no.`;
+    return `Markets see this as unlikely — just ${pct}% probability. Very few are betting on it.`;
+  }
+
+  // ── Sports odds: implied probability ──
+  if (primary && primary.sourceFamily === "sports_odds") {
+    const prob = Number(primary.currentValue);
+    const pct = Math.round(prob * 100);
+    if (pct >= 60) return `Bookmakers give this a ${pct}% chance. The odds are clearly in favor.`;
+    if (pct >= 40) return `Bookmakers see this as a toss-up — roughly ${pct}% implied probability.`;
+    return `The betting odds suggest this is unlikely at ${pct}%. The field is wide open.`;
+  }
+
+  // ── Hazard/weather: situation description ──
+  if (primary && primary.sourceFamily === "hazard_weather") {
+    if (primary.signalType === "earthquake_magnitude") {
+      const mag = Number(primary.currentValue);
+      if (mag >= 5) return `A significant earthquake (M${mag.toFixed(1)}) was recently recorded. Elevated seismic activity this week.`;
+      if (signalCount > 50) return `${signalCount} earthquakes recorded recently. Activity levels appear normal — no unusual patterns detected.`;
+      return `Moderate seismic activity this week with ${signalCount} events recorded. Nothing out of the ordinary.`;
+    }
+    if (primary.signalType === "weather_severity") {
+      const severity = Number(primary.currentValue);
+      if (severity >= 3) return `Severe weather alerts are active. Conditions may be dangerous in affected areas.`;
+      return `Weather alerts are active but conditions are manageable. Stay informed if you're in an affected area.`;
+    }
+  }
+
+  // ── Political/legislative: action description ──
+  if (primary && primary.sourceFamily === "political_official") {
+    if (signalCount >= 3) return `Multiple legislative actions detected recently. Congress is actively working on this issue.`;
+    return `Limited legislative activity right now. This issue is not seeing much movement in Congress.`;
+  }
+
+  // ── DeFi: TVL as market health ──
+  if (primary && primary.sourceFamily === "defi_signal") {
+    const tvl = Number(primary.currentValue);
+    const tvlStr = tvl >= 1e9 ? `$${(tvl / 1e9).toFixed(1)}B` : `$${(tvl / 1e6).toFixed(0)}M`;
+    return `Total value locked is at ${tvlStr}. ${dir === "up" ? "Capital is flowing in — a positive signal." : dir === "down" ? "Capital is flowing out — a cautious signal." : "Holding steady for now."}`;
+  }
+
+  // ── Universal fallback: direction as a story, not a metric ──
+  if (dir === "up") return `Signals are pointing upward. Multiple indicators suggest this is trending in a positive direction.`;
+  if (dir === "down") return `Signals are trending downward. The data suggests this is moving in a negative direction.`;
+  if (signalCount > 10) return `We're tracking ${signalCount} data points on this. The picture is stable — no significant movement detected.`;
+  if (signalCount > 0) return `Early signals are coming in but no clear trend has emerged yet. We're watching closely.`;
+  return `We're gathering signals on this. Check back soon for a clearer picture.`;
 }

@@ -2,16 +2,19 @@ interface FreshnessBadgeProps {
   freshness: string;
 }
 
-const config: Record<string, { label: string; dotClass: string }> = {
-  fresh: { label: "Fresh", dotClass: "bg-positive" },
-  aging: { label: "Aging", dotClass: "bg-[#FFB84D]" },
-  stale: { label: "Stale", dotClass: "bg-warning" },
-  dead: { label: "Dead", dotClass: "bg-destructive" },
-  unknown: { label: "Unknown", dotClass: "bg-muted-foreground" },
+const config: Record<string, { label: string; dotClass: string; show: boolean }> = {
+  fresh: { label: "Live", dotClass: "bg-positive", show: true },
+  aging: { label: "Recent", dotClass: "bg-[#FFB84D]", show: true },
+  stale: { label: "Updating", dotClass: "bg-warning", show: false },
+  dead: { label: "Updating", dotClass: "bg-muted-foreground", show: false },
+  unknown: { label: "", dotClass: "bg-muted-foreground", show: false },
 };
 
 export function FreshnessBadge({ freshness }: FreshnessBadgeProps) {
-  const { label, dotClass } = config[freshness] ?? config.unknown;
+  const entry = config[freshness] ?? config.unknown;
+
+  // Don't show badge for stale/dead/unknown — if it's not fresh, hide it
+  if (!entry.show) return null;
 
   const isFresh = freshness === "fresh";
 
@@ -24,11 +27,11 @@ export function FreshnessBadge({ freshness }: FreshnessBadgeProps) {
         </span>
       ) : (
         <span
-          className={`h-1.5 w-1.5 rounded-full ${dotClass}`}
+          className={`h-1.5 w-1.5 rounded-full ${entry.dotClass}`}
           aria-hidden="true"
         />
       )}
-      <span>{label}</span>
+      <span>{entry.label}</span>
     </span>
   );
 }

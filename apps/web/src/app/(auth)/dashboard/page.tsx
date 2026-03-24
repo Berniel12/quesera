@@ -96,7 +96,7 @@ export default async function DashboardPage() {
       </Suspense>
 
       <h1 className="text-2xl font-bold tracking-tight text-navy mb-6">
-        Your Topics
+        Your Questions
       </h1>
 
       {followedCards.length > 0 ? (
@@ -127,7 +127,7 @@ export default async function DashboardPage() {
       ) : (
         <div className="py-12 text-center">
           <p className="text-lg text-muted-foreground mb-8">
-            Follow topics to build your personal dashboard.
+            You&apos;re not tracking any questions yet.
           </p>
 
           {trendingCards.length > 0 && (

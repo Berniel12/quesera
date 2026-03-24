@@ -359,6 +359,17 @@ export default async function TopicPage({ params }: TopicPageProps) {
               <p className="text-base sm:text-lg leading-relaxed text-foreground">
                 {hasProse ? snapshot.current_picture_text : `We're tracking this topic. ${signals.length > 0 ? `Based on ${signals.length} data points, conditions appear ${snapshot.direction === "stable" ? "steady" : snapshot.direction}.` : "Check back soon for a fuller picture."}`}
               </p>
+              {snapshot.published_at && (
+                <p className="text-xs text-muted-foreground mt-3">
+                  Updated {(() => {
+                    const mins = Math.round((Date.now() - new Date(snapshot.published_at).getTime()) / 60000);
+                    if (mins < 60) return `${mins} minutes ago`;
+                    const hours = Math.round(mins / 60);
+                    if (hours < 24) return `${hours} hours ago`;
+                    return `${Math.round(hours / 24)} days ago`;
+                  })()}
+                </p>
+              )}
             </CardContent>
           </Card>
 
@@ -401,7 +412,7 @@ export default async function TopicPage({ params }: TopicPageProps) {
             return (
               <AnimateOnScroll>
                 <div className="mb-6">
-                  <h2 className="text-[11px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-4">Why we think this</h2>
+                  <h2 className="text-[11px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-4">What the data shows</h2>
                   {sortedKeys.map((key) => (
                     <SignalGroup key={key} familyKey={key} signals={grouped.get(key) ?? []} />
                   ))}

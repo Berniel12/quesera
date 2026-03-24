@@ -25,7 +25,7 @@ export function LocationStrip({ displayText, isConfirmed }: LocationStripProps) 
     setDismissed(true);
   }
 
-  const prefix = isConfirmed ? "Personalized for" : "Showing subjects relevant to";
+  const prefix = isConfirmed ? "Personalized for" : "Showing questions relevant to";
 
   return (
     <div className="flex items-center justify-between gap-3 py-2 mb-4 animate-fade-in">

@@ -46,11 +46,11 @@ export function EvidenceDrawer({ topicId }: EvidenceDrawerProps) {
   return (
     <Sheet onOpenChange={(open) => { if (open) loadEvidence(); }}>
       <SheetTrigger className="inline-flex items-center justify-center rounded-full border border-border bg-background px-5 py-2 text-sm font-medium transition-colors hover:bg-secondary">
-        View Source Evidence
+        See all news and data
       </SheetTrigger>
       <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
         <SheetHeader>
-          <SheetTitle>Source Evidence</SheetTitle>
+          <SheetTitle>Recent News and Data</SheetTitle>
         </SheetHeader>
         <div className="mt-6 space-y-4">
           {loading && (

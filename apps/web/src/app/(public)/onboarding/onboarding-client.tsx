@@ -215,7 +215,7 @@ export default function OnboardingClient({ questions }: Props) {
         {step === 2 && (
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-navy text-center mb-1">
-              Tap the questions you care about
+              Pick the questions you care about
             </h1>
             <p className="text-muted-foreground text-center mb-6">
               <span className="font-mono tabular-nums">{selectedSlugs.size}</span> selected
@@ -289,7 +289,7 @@ export default function OnboardingClient({ questions }: Props) {
           <div>
             <div className="text-center mb-8">
               <h1 className="text-2xl font-bold tracking-tight text-navy mb-1">
-                Your questions are being tracked
+                You&apos;re now tracking these questions
               </h1>
               <p className="text-muted-foreground">
                 <span className="font-mono tabular-nums">{selectedSlugs.size}</span> questions followed
@@ -329,7 +329,7 @@ export default function OnboardingClient({ questions }: Props) {
                     onClick={finish}
                     disabled={saveStatus !== "idle"}
                   >
-                    {saveStatus === "saving" ? "Saving..." : saveStatus === "redirecting" ? "Redirecting to sign in..." : "Save My Questions"}
+                    {saveStatus === "saving" ? "Saving..." : saveStatus === "redirecting" ? "Sign in to save your questions..." : "Save My Questions"}
                   </Button>
                   <Button variant="ghost" className="rounded-full h-10 text-muted-foreground" onClick={() => router.push("/")}>Just browsing for now</Button>
                 </div>

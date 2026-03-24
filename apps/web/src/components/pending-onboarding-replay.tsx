@@ -52,7 +52,7 @@ export function PendingOnboardingReplay() {
   if (status === "partial") {
     return (
       <div className="mb-6 rounded-2xl border border-warning/40 bg-warning/5 p-4 text-sm text-foreground">
-        {failedCount} subject{failedCount > 1 ? "s" : ""} couldn't be followed. They'll be retried on your next visit.
+        {failedCount} question{failedCount > 1 ? "s" : ""} couldn&apos;t be followed. They&apos;ll be retried on your next visit.
       </div>
     );
   }

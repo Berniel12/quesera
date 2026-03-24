@@ -88,7 +88,7 @@ export default async function AlertsPage() {
         </div>
       ) : (
         <p className="text-muted-foreground text-center py-12">
-          No notifications yet. Follow topics and enable alerts to get started.
+          No notifications yet. Follow questions and enable alerts to get started.
         </p>
       )}
     </div>

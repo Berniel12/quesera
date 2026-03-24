@@ -54,12 +54,12 @@ export default function SearchPage() {
   return (
     <div className="mx-auto max-w-4xl px-6 py-12">
       <h1 className="text-2xl font-bold tracking-tight text-navy mb-6">
-        Ask a Question
+        Find a Question
       </h1>
 
       <Input
         type="text"
-        placeholder="What do you want to know?"
+        placeholder="Search for mortgage rates, Bitcoin, elections..."
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         className="h-12 rounded-full border-border bg-card px-6 text-base focus-visible:ring-navy"
@@ -79,7 +79,7 @@ export default function SearchPage() {
             <p className="text-muted-foreground mb-8">
               We don&apos;t have signals on this yet, but we can start watching.
             </p>
-            <SubjectRequest query={query} />
+            <QuestionRequest query={query} />
           </div>
         )}
 
@@ -110,7 +110,7 @@ export default function SearchPage() {
   );
 }
 
-function SubjectRequest({ query }: { query: string }) {
+function QuestionRequest({ query }: { query: string }) {
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [category, setCategory] = useState("");
@@ -135,9 +135,9 @@ function SubjectRequest({ query }: { query: string }) {
   if (submitted) {
     return (
       <div className="rounded-3xl border border-positive/30 bg-positive/5 p-6 max-w-md mx-auto animate-scale-in">
-        <p className="font-medium text-navy mb-1">We heard you.</p>
+        <p className="font-medium text-navy mb-1">Thanks for asking.</p>
         <p className="text-sm text-muted-foreground">
-          We&apos;re building signals for &ldquo;{query}&rdquo;. We&apos;ll let you know when it&apos;s ready.
+          We&apos;ll consider adding &ldquo;{query}&rdquo; to our tracking. This may take some time as we find the right sources.
         </p>
       </div>
     );

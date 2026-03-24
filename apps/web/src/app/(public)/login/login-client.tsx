@@ -95,7 +95,7 @@ export default function LoginPage() {
         <p className="text-sm text-muted-foreground mt-1">
           {mode === "signin"
             ? "Sign in to access your personal signal feed"
-            : "Start tracking the subjects that matter to you"}
+            : "Start tracking the questions that matter to you"}
         </p>
       </div>
 
@@ -154,6 +154,24 @@ export default function LoginPage() {
             <Button type="submit" className="w-full rounded-full h-11" disabled={loading}>
               {loading ? "..." : mode === "signin" ? "Sign In" : "Create Account"}
             </Button>
+            {mode === "signin" && (
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!email) { setError("Enter your email first"); return; }
+                  setLoading(true);
+                  const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+                    redirectTo: `${window.location.origin}/api/auth/callback`,
+                  });
+                  setLoading(false);
+                  if (resetError) setError(resetError.message);
+                  else setMessage("Check your email for a password reset link.");
+                }}
+                className="text-xs text-muted-foreground hover:text-navy hover:underline mt-2 block text-center w-full"
+              >
+                Forgot password?
+              </button>
+            )}
           </form>
         </CardContent>
       </Card>

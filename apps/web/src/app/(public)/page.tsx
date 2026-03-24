@@ -155,9 +155,16 @@ export default async function LandingPage() {
             bg-card shadow-[0_10px_40px_rgba(11,19,38,0.04)] hover:shadow-[0_10px_40px_rgba(11,19,38,0.08)]
             dark:border dark:border-white/5 dark:hover:border-[#00DAF3]/20"
         >
-          Ask anything...
+          Search questions...
         </Link>
       </section>
+
+      {/* Empty state when no alive questions */}
+      {aliveQuestions.length === 0 && (
+        <section className="pb-8 text-center py-12 animate-fade-in">
+          <p className="text-lg text-muted-foreground">We&apos;re updating our signals. Check back in a few hours.</p>
+        </section>
+      )}
 
       {/* Hero question card — the one big answer */}
       {heroQ && (

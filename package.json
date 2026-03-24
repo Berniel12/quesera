@@ -9,6 +9,9 @@
     "lint": "turbo lint",
     "db:generate-types": "turbo db:generate-types"
   },
+  "dependencies": {
+    "tsx": "^4.19.0"
+  },
   "devDependencies": {
     "turbo": "^2.4.0",
     "typescript": "^5.7.0",

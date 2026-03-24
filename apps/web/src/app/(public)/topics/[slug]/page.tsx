@@ -40,7 +40,7 @@ const CATEGORY_IMAGES: Record<string, string> = {
   crypto: "https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=1200&q=60&auto=format",
   politics: "https://images.unsplash.com/photo-1541872703-74c5e44368f9?w=1200&q=60&auto=format",
   geopolitics: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1200&q=60&auto=format",
-  sports: "https://images.unsplash.com/photo-1461896836934-bd45ba416857?w=1200&q=60&auto=format",
+  sports: "https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=1200&q=60&auto=format",
   disasters: "https://images.unsplash.com/photo-1527482797697-8795b05a13fe?w=1200&q=60&auto=format",
   tech: "https://images.unsplash.com/photo-1518770660439-4636190af475?w=1200&q=60&auto=format",
   entertainment: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=1200&q=60&auto=format",

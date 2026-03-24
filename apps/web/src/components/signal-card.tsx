@@ -278,6 +278,7 @@ export function SignalGroup({ familyKey, signals }: SignalGroupProps) {
       <div className="flex flex-col gap-2">
         {signals
           .sort((a, b) => b.weight - a.weight)
+          .slice(0, 5)
           .map((s, i) => (
             <SignalCard
               key={`${s.source_name}-${i}`}
@@ -285,6 +286,11 @@ export function SignalGroup({ familyKey, signals }: SignalGroupProps) {
               className={i === 0 ? "" : `delay-${Math.min(i * 50, 300)}`}
             />
           ))}
+        {signals.length > 5 && (
+          <p className="text-xs text-muted-foreground text-center py-2">
+            and {signals.length - 5} more {signals.length - 5 === 1 ? "signal" : "signals"}
+          </p>
+        )}
       </div>
     </div>
   );

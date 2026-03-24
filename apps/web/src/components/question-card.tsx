@@ -20,7 +20,7 @@ const CATEGORY_IMAGES: Record<string, string> = {
   crypto: "https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=800&q=60&auto=format", // bitcoin/crypto
   politics: "https://images.unsplash.com/photo-1541872703-74c5e44368f9?w=800&q=60&auto=format", // capitol building
   geopolitics: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=800&q=60&auto=format", // globe/world
-  sports: "https://images.unsplash.com/photo-1461896836934-bd45ba416857?w=800&q=60&auto=format", // stadium
+  sports: "https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=800&q=60&auto=format", // stadium
   disasters: "https://images.unsplash.com/photo-1527482797697-8795b05a13fe?w=800&q=60&auto=format", // storm/weather
   tech: "https://images.unsplash.com/photo-1518770660439-4636190af475?w=800&q=60&auto=format", // technology/circuits
   entertainment: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800&q=60&auto=format", // concert/entertainment
@@ -217,6 +217,12 @@ export function QuestionCard({
             {oneLiner && (
               <p className="text-xs text-muted-foreground mt-1.5 line-clamp-2 leading-relaxed">
                 {oneLiner}
+              </p>
+            )}
+
+            {snapshotPublishedAt && (
+              <p className="text-[10px] text-muted-foreground/70 mt-2">
+                Updated {timeAgo(snapshotPublishedAt)}
               </p>
             )}
           </div>

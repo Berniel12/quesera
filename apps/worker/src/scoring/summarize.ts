@@ -56,18 +56,31 @@ export async function summarizeTopic(
       ? `\nPrevious: direction was ${input.priorDirection}, confidence was ${Math.round((input.priorConfidence ?? 0) * 100)}%`
       : "";
 
-  const prompt = `You are summarizing "${input.topicName}" for a public signal intelligence dashboard.
+  const prompt = `You are writing a brief update about "${input.topicName}" for a consumer app that answers prediction questions in plain language. Write like a smart, knowledgeable friend explaining things over coffee — short sentences, no jargon, no government-report language.
 
-Current signals:
+Current data:
 ${signalsList}
 
-Direction: ${input.direction} | Confidence: ${Math.round(input.confidence * 100)}% | Disagreement: ${Math.round(input.disagreement * 100)}%
+Overall direction: ${input.direction} | How sure we are: ${Math.round(input.confidence * 100)}%
 ${priorContext}
 
 Respond with valid JSON only:
 {"current_picture": "...", "what_changed": "...", "what_next": "..."}
 
-Rules: max 150 chars each. Factual, concise, plain language. No speculation.`;
+Rules:
+- Max 150 chars each field
+- Start with the answer, not the data
+- Use plain words a teenager would understand
+- No acronyms like CPI, BLS, GDP without saying what they mean
+- No raw numbers like "31098.027" — translate into meaning
+- Say what matters for a person asking the question, not what the data technically shows
+- Example good: "No real signs of recession right now. The economy is holding steady."
+- Example bad: "Macroeconomic indicator 31098.027 remains flat, showing no movement."
+- Example good: "Bitcoin is quiet around $68K. No strong signal either way."
+- Example bad: "Mixed crypto market data shows high-cap assets ranging from $0.09 to $68,147."
+- If nothing changed, say so plainly: "Nothing new here. We'll keep watching."
+- If something shifted, lead with that: "This moved — mortgage rates edged lower this week."
+`;
 
   try {
     const result = await model.generateContent(prompt);

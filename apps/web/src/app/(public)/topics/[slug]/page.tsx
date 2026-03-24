@@ -34,52 +34,8 @@ const SOURCE_LABELS: Record<string, string> = {
   defillama: "DeFi Llama",
 };
 
-// Category hero images — high-res, dramatic compositions
-const CATEGORY_IMAGES: Record<string, string[]> = {
-  macro: [
-    "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=1400&q=75&auto=format",
-    "https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?w=1400&q=75&auto=format",
-  ],
-  crypto: [
-    "https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=1400&q=75&auto=format",
-    "https://images.unsplash.com/photo-1622630998477-20aa696ecb05?w=1400&q=75&auto=format",
-  ],
-  politics: [
-    "https://images.unsplash.com/photo-1541872703-74c5e44368f9?w=1400&q=75&auto=format",
-    "https://images.unsplash.com/photo-1529107386315-e1a2ed48a620?w=1400&q=75&auto=format",
-  ],
-  geopolitics: [
-    "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1400&q=75&auto=format",
-    "https://images.unsplash.com/photo-1526778548025-fa2f459cd5c1?w=1400&q=75&auto=format",
-  ],
-  sports: [
-    "https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=1400&q=75&auto=format",
-    "https://images.unsplash.com/photo-1461896836934-bd45ba8fcb39?w=1400&q=75&auto=format",
-  ],
-  disasters: [
-    "https://images.unsplash.com/photo-1527482797697-8795b05a13fe?w=1400&q=75&auto=format",
-    "https://images.unsplash.com/photo-1509803874385-db7c23652552?w=1400&q=75&auto=format",
-  ],
-  tech: [
-    "https://images.unsplash.com/photo-1518770660439-4636190af475?w=1400&q=75&auto=format",
-    "https://images.unsplash.com/photo-1677442136019-21780ecad995?w=1400&q=75&auto=format",
-  ],
-  entertainment: [
-    "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=1400&q=75&auto=format",
-    "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=1400&q=75&auto=format",
-  ],
-};
-
-function pickCategoryImage(category: string | null, slug: string): string | null {
-  if (!category) return null;
-  const pool = CATEGORY_IMAGES[category];
-  if (!pool || pool.length === 0) return null;
-  let hash = 0;
-  for (let i = 0; i < slug.length; i++) {
-    hash = ((hash << 5) - hash + slug.charCodeAt(i)) | 0;
-  }
-  return pool[Math.abs(hash) % pool.length];
-}
+// No hero images on question pages — answer-first design
+// The answer IS the visual. No decorative stock photos.
 
 // Category accent colors for key metric background
 const CATEGORY_METRIC_BG: Record<string, string> = {
@@ -352,59 +308,71 @@ export default async function TopicPage({ params }: TopicPageProps) {
     }
   }
 
-  const categoryImage = pickCategoryImage(t.category, t.slug);
   const metricBg = t.category ? (CATEGORY_METRIC_BG[t.category] ?? "from-muted to-transparent dark:from-primary/10 dark:to-transparent") : "from-muted to-transparent";
 
   return (
     <div className="mx-auto max-w-4xl px-6 py-8">
 
-      {/* Category banner — dramatic, full-bleed image */}
-      {categoryImage && (
-        <div className="relative -mx-6 -mt-8 mb-0 h-48 sm:h-64 md:h-72 overflow-hidden animate-fade-in">
-          <img
-            src={categoryImage}
-            alt=""
-            className="absolute inset-0 w-full h-full object-cover dark:brightness-[0.4]"
-            loading="eager"
-          />
-          {/* Strong bottom gradient so text below is readable */}
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background" />
-          <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-b from-transparent to-background" />
-        </div>
-      )}
-      {!categoryImage && <div className="mb-8" />}
-
-      {/* ── HERO: Question + Answer + Follow ── */}
-      <section className={`mb-8 animate-slide-up ${categoryImage ? "-mt-16 relative z-10" : ""}`}>
+      {/* ── ANSWER FIRST: Question + Verdict + Follow — no hero image bloat ── */}
+      <section className="mb-6 pt-2 animate-slide-up">
         {t.category && (
           <span className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">{t.category}</span>
         )}
-        <h1 className="mt-2 text-3xl font-bold tracking-tight text-foreground sm:text-4xl md:text-5xl leading-tight">{headline}</h1>
+        <h1 className="mt-2 text-2xl font-bold tracking-tight text-foreground sm:text-3xl leading-tight">{headline}</h1>
 
         {answerState && (
-          <div className="mt-3 flex items-center gap-4 flex-wrap animate-fade-in delay-75">
+          <div className="mt-4 flex items-center gap-4 flex-wrap animate-fade-in delay-75">
             <span className={`text-3xl sm:text-4xl font-black ${answerState.colorClass}`}>{answerState.label}</span>
             <FollowButton topicSlug={t.slug} isAuthenticated={user !== null} initialFollowing={isFollowing} />
           </div>
         )}
 
+        {/* One-sentence explanation right under the verdict */}
+        {hasProse && snapshot?.current_picture_text && (
+          <p className="mt-3 text-base text-foreground leading-relaxed animate-fade-in delay-150">
+            {snapshot.current_picture_text}
+          </p>
+        )}
+
         {/* What changed delta */}
         {changeText && (
-          <p className="mt-2 text-sm text-muted-foreground animate-fade-in delay-150">{changeText}</p>
+          <p className="mt-2 text-sm font-medium text-muted-foreground animate-fade-in delay-200">{changeText}</p>
         )}
         {!changeText && snapshot && (
-          <p className="mt-2 text-xs text-muted-foreground/60 animate-fade-in delay-150">No change since last update</p>
+          <p className="mt-2 text-xs text-muted-foreground/60 animate-fade-in delay-200">No change since last update</p>
+        )}
+
+        {snapshot?.published_at && (
+          <p className="text-xs text-muted-foreground/60 mt-1">
+            Updated {(() => {
+              const mins = Math.round((Date.now() - new Date(snapshot.published_at).getTime()) / 60000);
+              if (mins < 60) return `${mins} minutes ago`;
+              const hours = Math.round(mins / 60);
+              if (hours < 24) return `${hours} hours ago`;
+              return `${Math.round(hours / 24)} days ago`;
+            })()}
+          </p>
         )}
       </section>
 
       {snapshot ? (
         <>
-          {/* ── KEY METRIC — dramatic number display ── */}
+          {/* ── KEY METRIC — with context ── */}
           {keyMetric && (
             <div className="mb-6 animate-scale-in delay-150">
-              <div className={`text-center py-8 px-6 rounded-3xl bg-gradient-to-br ${metricBg} border border-border/30 dark:border-white/5 card-shadow-rich`}>
-                <p className="text-5xl sm:text-6xl font-black tracking-tight text-foreground dark:text-primary metric-glow">{keyMetric.value}</p>
-                <p className="text-sm text-muted-foreground mt-2 font-medium">{keyMetric.label}</p>
+              <div className={`flex items-center gap-4 py-4 px-5 rounded-2xl bg-gradient-to-br ${metricBg} border border-border/30 dark:border-white/5`}>
+                <span className="text-3xl sm:text-4xl font-black tracking-tight text-foreground dark:text-primary metric-glow">{keyMetric.value}</span>
+                <div className="flex flex-col">
+                  <span className="text-sm font-medium text-foreground">{keyMetric.label}</span>
+                  {primarySignal && primarySignal.delta !== null && Math.abs(primarySignal.delta) > 0.001 && (
+                    <span className={`text-xs font-semibold ${primarySignal.delta > 0 ? "text-positive dark:text-[#4EDEA3]" : "text-destructive"}`}>
+                      {primarySignal.delta > 0 ? "\u2191" : "\u2193"} {Math.abs(primarySignal.delta).toFixed(2)} since last update
+                    </span>
+                  )}
+                  {primarySignal && (primarySignal.delta === null || Math.abs(primarySignal.delta) <= 0.001) && (
+                    <span className="text-xs text-muted-foreground">Holding steady</span>
+                  )}
+                </div>
               </div>
             </div>
           )}
@@ -412,43 +380,23 @@ export default async function TopicPage({ params }: TopicPageProps) {
           {/* ── Section divider ── */}
           <div className="section-line mb-6" />
 
-          {/* ── CURRENT PICTURE ── */}
-          <Card className="rounded-3xl border-border/40 mb-6 animate-fade-in delay-200 card-shadow-rich">
-            <CardContent className="p-6 sm:p-8">
-              <p className="text-base sm:text-lg leading-relaxed text-foreground">
-                {hasProse ? snapshot.current_picture_text : `We're tracking this topic. ${signals.length > 0 ? `Based on ${signals.length} data points, conditions appear ${snapshot.direction === "stable" ? "steady" : snapshot.direction}.` : "Check back soon for a fuller picture."}`}
-              </p>
-              {snapshot.published_at && (
-                <p className="text-xs text-muted-foreground mt-3">
-                  Updated {(() => {
-                    const mins = Math.round((Date.now() - new Date(snapshot.published_at).getTime()) / 60000);
-                    if (mins < 60) return `${mins} minutes ago`;
-                    const hours = Math.round(mins / 60);
-                    if (hours < 24) return `${hours} hours ago`;
-                    return `${Math.round(hours / 24)} days ago`;
-                  })()}
-                </p>
-              )}
-            </CardContent>
-          </Card>
-
           {/* ── WHAT CHANGED / WHAT TO WATCH ── */}
           <AnimateOnScroll>
             <div className="grid gap-4 sm:grid-cols-2 mb-6">
-              <Card className="rounded-3xl border-border/40 card-shadow-rich">
+              <Card className="rounded-2xl border-border/40">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wide">What Changed</CardTitle>
+                  <CardTitle className="text-xs font-bold text-muted-foreground uppercase tracking-wide">What Changed</CardTitle>
                 </CardHeader>
-                <CardContent className="pb-6">
-                  <p className="text-sm leading-relaxed">{snapshot.what_changed_text ?? "No material changes detected recently."}</p>
+                <CardContent className="pb-5">
+                  <p className="text-sm leading-relaxed text-foreground">{snapshot.what_changed_text ?? "No material changes detected recently."}</p>
                 </CardContent>
               </Card>
-              <Card className="rounded-3xl border-border/40 card-shadow-rich">
+              <Card className="rounded-2xl border-border/40">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wide">What to Watch</CardTitle>
+                  <CardTitle className="text-xs font-bold text-muted-foreground uppercase tracking-wide">What to Watch</CardTitle>
                 </CardHeader>
-                <CardContent className="pb-6">
-                  <p className="text-sm leading-relaxed">{snapshot.what_next_text ?? "We'll keep monitoring for changes."}</p>
+                <CardContent className="pb-5">
+                  <p className="text-sm leading-relaxed text-foreground">{snapshot.what_next_text ?? "We'll keep monitoring for changes."}</p>
                 </CardContent>
               </Card>
             </div>
@@ -532,23 +480,13 @@ export default async function TopicPage({ params }: TopicPageProps) {
                     const rqState = rq.direction && rq.confidence !== null
                       ? getAnswerState({ direction: rq.direction, confidence: rq.confidence, category: t.category, disagreement: 0 })
                       : null;
-                    const rqImage = pickCategoryImage(t.category, rq.slug);
                     return (
                       <Link key={rq.slug} href={`/topics/${rq.slug}`}>
-                        <div className="relative overflow-hidden p-4 rounded-2xl bg-card dark:border dark:border-white/5 card-shadow-rich hover-lift-sm">
-                          {/* Subtle background image */}
-                          {rqImage && (
-                            <div className="absolute inset-0 z-0">
-                              <img src={rqImage} alt="" className="absolute inset-0 w-full h-full object-cover opacity-[0.06] dark:opacity-[0.1]" loading="lazy" />
-                              <div className="absolute inset-0 bg-gradient-to-r from-card via-card/95 to-card/80" />
-                            </div>
+                        <div className="p-4 rounded-2xl bg-card dark:border dark:border-white/5 hover-lift-sm">
+                          <p className="text-sm font-semibold text-foreground leading-snug">{rq.question_text}</p>
+                          {rqState && (
+                            <p className={`text-xs font-bold mt-1.5 ${rqState.colorClass}`}>{rqState.label}</p>
                           )}
-                          <div className="relative z-10">
-                            <p className="text-sm font-semibold text-foreground leading-snug">{rq.question_text}</p>
-                            {rqState && (
-                              <p className={`text-xs font-bold mt-1.5 ${rqState.colorClass}`}>{rqState.label}</p>
-                            )}
-                          </div>
                         </div>
                       </Link>
                     );

@@ -135,28 +135,26 @@ export default async function LandingPage() {
   return (
     <div className="mx-auto max-w-3xl px-6 dark:horizon-glow">
 
-      {/* Hero — daily briefing with atmospheric image */}
-      <section className="relative pt-10 pb-6 sm:pt-14 animate-slide-up">
-        <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-4 block animate-fade-in">
-          {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
-        </span>
-        <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-foreground leading-[1.05]">
-          What do you want
-          <br />
-          <span className="text-muted-foreground">to know?</span>
-        </h1>
-      </section>
-
-      {/* Search bar */}
-      <section className="pb-10 animate-fade-in delay-200">
-        <Link
-          href="/search"
-          className="flex h-14 items-center rounded-3xl px-6 text-base text-muted-foreground transition-shadow duration-300
-            bg-card shadow-[0_10px_40px_rgba(11,19,38,0.04)] hover:shadow-[0_10px_40px_rgba(11,19,38,0.08)]
-            dark:border dark:border-white/5 dark:hover:border-[#00DAF3]/20"
-        >
-          Search questions...
-        </Link>
+      {/* Compact header — get to content fast */}
+      <section className="pt-6 pb-3 sm:pt-8 animate-slide-up">
+        <div className="flex items-end justify-between gap-4">
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground block">
+              {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
+            </span>
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground leading-tight mt-1">
+              Today&apos;s questions
+            </h1>
+          </div>
+          <Link
+            href="/search"
+            className="flex h-10 items-center rounded-full px-5 text-sm text-muted-foreground
+              bg-card border border-border/50 hover:border-border transition-colors
+              dark:border-white/10 dark:hover:border-[#00DAF3]/30 flex-shrink-0"
+          >
+            Search
+          </Link>
+        </div>
       </section>
 
       {/* Empty state when no alive questions */}

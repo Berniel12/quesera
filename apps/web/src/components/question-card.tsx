@@ -1,69 +1,34 @@
 import Link from "next/link";
 import { getAnswerState } from "@/lib/answer-state";
 
-// Multiple images per category — rotated by slug hash for variety
-const CATEGORY_IMAGE_POOL: Record<string, string[]> = {
-  macro: [
-    "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=900&q=70&auto=format", // trading floor charts
-    "https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?w=900&q=70&auto=format", // dollar bills
-    "https://images.unsplash.com/photo-1526304640581-d334cdbbf45e?w=900&q=70&auto=format", // stock ticker
-    "https://images.unsplash.com/photo-1579532537598-459ecdaf39cc?w=900&q=70&auto=format", // financial district
-  ],
-  crypto: [
-    "https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=900&q=70&auto=format", // bitcoin gold
-    "https://images.unsplash.com/photo-1622630998477-20aa696ecb05?w=900&q=70&auto=format", // ethereum
-    "https://images.unsplash.com/photo-1518546305927-5a555bb7020d?w=900&q=70&auto=format", // crypto coins
-    "https://images.unsplash.com/photo-1640340434855-6084b1f4901c?w=900&q=70&auto=format", // blockchain concept
-  ],
-  politics: [
-    "https://images.unsplash.com/photo-1541872703-74c5e44368f9?w=900&q=70&auto=format", // capitol building
-    "https://images.unsplash.com/photo-1523995462485-3d171b5c8fa9?w=900&q=70&auto=format", // american flag
-    "https://images.unsplash.com/photo-1529107386315-e1a2ed48a620?w=900&q=70&auto=format", // white house
-    "https://images.unsplash.com/photo-1575320181282-9afab399332c?w=900&q=70&auto=format", // voting
-  ],
-  geopolitics: [
-    "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=900&q=70&auto=format", // earth from space
-    "https://images.unsplash.com/photo-1526778548025-fa2f459cd5c1?w=900&q=70&auto=format", // world map
-    "https://images.unsplash.com/photo-1589519160732-57fc498494f8?w=900&q=70&auto=format", // UN flags
-    "https://images.unsplash.com/photo-1521295121783-8a321d551ad2?w=900&q=70&auto=format", // globe
-  ],
-  sports: [
-    "https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=900&q=70&auto=format", // stadium lights
-    "https://images.unsplash.com/photo-1461896836934-bd45ba8fcb39?w=900&q=70&auto=format", // basketball
-    "https://images.unsplash.com/photo-1508098682722-e99c643e7f0b?w=900&q=70&auto=format", // soccer
-    "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=900&q=70&auto=format", // athlete
-  ],
-  disasters: [
-    "https://images.unsplash.com/photo-1527482797697-8795b05a13fe?w=900&q=70&auto=format", // storm clouds
-    "https://images.unsplash.com/photo-1559060017-445fb9722f2a?w=900&q=70&auto=format", // wildfire
-    "https://images.unsplash.com/photo-1509803874385-db7c23652552?w=900&q=70&auto=format", // lightning
-    "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=900&q=70&auto=format", // dramatic sky
-  ],
-  tech: [
-    "https://images.unsplash.com/photo-1518770660439-4636190af475?w=900&q=70&auto=format", // circuits
-    "https://images.unsplash.com/photo-1677442136019-21780ecad995?w=900&q=70&auto=format", // AI concept
-    "https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?w=900&q=70&auto=format", // laptop code
-    "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=900&q=70&auto=format", // cybersecurity
-  ],
-  entertainment: [
-    "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=900&q=70&auto=format", // concert lights
-    "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=900&q=70&auto=format", // live performance
-    "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=900&q=70&auto=format", // stage
-    "https://images.unsplash.com/photo-1478147427282-58a87a120781?w=900&q=70&auto=format", // cinema
-  ],
-};
+// Abstract, diverse, beautiful imagery — each card looks unique
+// NOT literal category photos. Atmospheric, editorial, varied.
+const CARD_IMAGE_POOL: string[] = [
+  "https://images.unsplash.com/photo-1557683316-973673baf926?w=600&q=70&auto=format", // abstract blue gradient
+  "https://images.unsplash.com/photo-1558591710-4b4a1ae0f04d?w=600&q=70&auto=format", // marble texture pink
+  "https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=600&q=70&auto=format", // colorful gradient
+  "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&q=70&auto=format", // abstract 3D shapes
+  "https://images.unsplash.com/photo-1620121692029-d088224ddc74?w=600&q=70&auto=format", // purple abstract waves
+  "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=600&q=70&auto=format", // geometric abstract
+  "https://images.unsplash.com/photo-1614850523296-d8c1af93d400?w=600&q=70&auto=format", // abstract liquid art
+  "https://images.unsplash.com/photo-1614851099175-e5b30eb6f696?w=600&q=70&auto=format", // 3D abstract blobs
+  "https://images.unsplash.com/photo-1553356084-58ef4a67b2a7?w=600&q=70&auto=format", // paint swirls
+  "https://images.unsplash.com/photo-1604076913837-52ab5f7c1ac2?w=600&q=70&auto=format", // dark abstract texture
+  "https://images.unsplash.com/photo-1550684376-efcbd6e3f031?w=600&q=70&auto=format", // neon blue abstract
+  "https://images.unsplash.com/photo-1567359781514-3b964e2b04d6?w=600&q=70&auto=format", // warm gradient
+  "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&q=70&auto=format", // abstract architecture
+  "https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=600&q=70&auto=format", // abstract mesh gradient
+  "https://images.unsplash.com/photo-1557672172-298e090bd0f1?w=600&q=70&auto=format", // watercolor abstract
+  "https://images.unsplash.com/photo-1633186223985-73bd2ce6e868?w=600&q=70&auto=format", // 3D abstract dark
+];
 
-// Pick image from pool based on slug for consistent variety
-function getCategoryImage(category: string | null, slug: string): string | null {
-  if (!category) return null;
-  const pool = CATEGORY_IMAGE_POOL[category];
-  if (!pool || pool.length === 0) return null;
-  // Simple hash from slug to pick consistent image
+// Pick unique image per card from abstract pool — each card looks different
+function getCardImage(slug: string): string {
   let hash = 0;
   for (let i = 0; i < slug.length; i++) {
     hash = ((hash << 5) - hash + slug.charCodeAt(i)) | 0;
   }
-  return pool[Math.abs(hash) % pool.length];
+  return CARD_IMAGE_POOL[Math.abs(hash) % CARD_IMAGE_POOL.length];
 }
 
 // Category accent stripe color
@@ -169,7 +134,7 @@ export function QuestionCard({
   const isFresh = freshness === "fresh";
   const catGradient = category ? (CATEGORY_GRADIENT[category] ?? "") : "";
   const catBorder = category ? (CATEGORY_BORDER[category] ?? "") : "";
-  const heroImage = getCategoryImage(category, slug);
+  const heroImage = getCardImage(slug);
 
   const answerBorderColor = answerState?.colorClass.includes("destructive")
     ? "border-destructive"
@@ -271,7 +236,7 @@ export function QuestionCard({
 
   // ── Compact variant — rich with image thumbnail, category accent, confidence ring ──
   const compactDelay = staggerIndex * 150;
-  const compactImage = getCategoryImage(category, slug);
+  const compactImage = getCardImage(slug);
 
   return (
     <Link href={`/topics/${slug}`}>

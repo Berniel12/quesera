@@ -52,23 +52,23 @@ export function getAnswerState(input: AnswerStateInput): AnswerState {
   if (confidence >= 0.65) {
     if (direction === "up") return { label: "Probably yes", colorClass, intensity: "strong" };
     if (direction === "down") return { label: "Probably not", colorClass, intensity: "strong" };
-    // Stable or unknown with strong confidence = we're watching, it's steady
-    return { label: "Not right now", colorClass: "text-warning", intensity: "strong" };
+    // Stable with strong confidence = reassuring, things are steady
+    return { label: "Not right now", colorClass: "text-positive dark:text-[#4EDEA3]", intensity: "strong" };
   }
 
   // ── MODERATE confidence (0.3 - 0.65) ──
   if (direction === "up") return { label: "Looks like it", colorClass, intensity: "moderate" };
   if (direction === "down") return { label: "Doesn't look like it", colorClass, intensity: "moderate" };
 
-  // Unknown direction = genuinely can't determine, different from stable
+  // Unknown direction = genuinely uncertain
   if (direction === "unknown") {
-    return { label: "Too close to call", colorClass: "text-warning", intensity: "moderate" };
+    return { label: "Too close to call", colorClass: "text-muted-foreground", intensity: "moderate" };
   }
 
-  // Stable with moderate confidence = things aren't moving
+  // Stable with moderate confidence = things aren't moving, that's ok
   if (confidence >= 0.5) {
-    return { label: "Not right now", colorClass: "text-warning", intensity: "moderate" };
+    return { label: "Not right now", colorClass: "text-positive dark:text-[#4EDEA3]", intensity: "moderate" };
   }
 
-  return { label: "We're watching", colorClass: "text-warning", intensity: "moderate" };
+  return { label: "We're watching", colorClass: "text-muted-foreground", intensity: "moderate" };
 }

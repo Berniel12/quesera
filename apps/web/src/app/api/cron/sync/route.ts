@@ -25,6 +25,23 @@ export async function GET(request: Request) {
     );
   }
 
+  // Check queue depth -- don't flood if already backed up
+  const { data: pendingCount } = await supabase
+    .from("job_queue")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "pending")
+    .eq("job_type", "source_sync");
+
+  const queueDepth = (pendingCount as unknown as number) ?? 0;
+  if (typeof queueDepth === "number" && queueDepth > 50) {
+    return NextResponse.json({
+      enqueued: [],
+      skipped: ["queue_backed_up"],
+      queueDepth,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
   const enqueued: string[] = [];
   const skipped: string[] = [];
   const now = new Date();

@@ -75,15 +75,52 @@ export const FRED_SERIES_SEED_MAP: Record<string, SeedMapEntry[]> = {
   // EIA series
   "PET.RWTC.W": [
     { slug: "global-oil-prices", confidence: 1.0 },
-    { slug: "us-inflation-rate", confidence: 0.5 },      // oil prices drive inflation
-    { slug: "global-recession-risk", confidence: 0.4 },   // oil shocks can trigger recessions
+    { slug: "us-gas-prices", confidence: 0.7 },           // crude drives gas prices
+    { slug: "us-inflation-rate", confidence: 0.5 },
+    { slug: "global-recession-risk", confidence: 0.4 },
   ],
+
+  // Gold & dollar
+  GOLDAMGBD228NLBM: [{ slug: "gold-price", confidence: 1.0 }],
+  DTWEXBGS: [{ slug: "us-dollar-strength", confidence: 1.0 }],
+
+  // Housing
+  CSUSHPISA: [{ slug: "us-housing-market", confidence: 1.0 }],
+  MSPUS: [{ slug: "us-housing-market", confidence: 0.8 }],
+
+  // Stock market
+  SP500: [{ slug: "us-stock-market", confidence: 1.0 }],
+
+  // Gas prices
+  GASREGW: [{ slug: "us-gas-prices", confidence: 1.0 }],
+
+  // Consumer confidence
+  UMCSENT: [{ slug: "us-consumer-confidence", confidence: 1.0 }],
+
+  // Global food prices
+  PFOODINDEXM: [{ slug: "global-food-prices", confidence: 0.9 }],
 };
 
 // CoinGecko coin_id -> topic slugs (deterministic seed map)
+// All major coins also feed the crypto-market rollup topic
 export const COINGECKO_SEED_MAP: Record<string, SeedMapEntry[]> = {
-  bitcoin: [{ slug: "bitcoin-price", confidence: 1.0 }],
-  ethereum: [{ slug: "ethereum-price", confidence: 1.0 }],
+  bitcoin: [
+    { slug: "bitcoin-price", confidence: 1.0 },
+    { slug: "crypto-market", confidence: 0.8 },
+  ],
+  ethereum: [
+    { slug: "ethereum-price", confidence: 1.0 },
+    { slug: "crypto-market", confidence: 0.8 },
+  ],
+  // Additional coins feed the crypto-market rollup
+  solana: [{ slug: "crypto-market", confidence: 0.7 }],
+  cardano: [{ slug: "crypto-market", confidence: 0.6 }],
+  dogecoin: [{ slug: "crypto-market", confidence: 0.6 }],
+  "avalanche-2": [{ slug: "crypto-market", confidence: 0.5 }],
+  chainlink: [{ slug: "crypto-market", confidence: 0.5 }],
+  polkadot: [{ slug: "crypto-market", confidence: 0.5 }],
+  uniswap: [{ slug: "crypto-market", confidence: 0.5 }],
+  ripple: [{ slug: "crypto-market", confidence: 0.6 }],
 };
 
 // USGS: all earthquake items → earthquake-activity topic
@@ -114,14 +151,57 @@ export const POLYMARKET_SLUG_RULES: Array<{ pattern: string; entries: SeedMapEnt
   { pattern: "fed-decrease", entries: [{ slug: "us-federal-reserve-interest-rates", confidence: 0.8 }] },
   { pattern: "recession", entries: [{ slug: "global-recession-risk", confidence: 0.8 }] },
 
-  // Geopolitics (specific patterns, not broad person names)
+  // Geopolitics
   { pattern: "iran-ceasefire", entries: [{ slug: "iran-us-tensions", confidence: 0.8 }] },
   { pattern: "us-iran", entries: [{ slug: "iran-us-tensions", confidence: 0.8 }] },
   { pattern: "iran-regime", entries: [{ slug: "iran-us-tensions", confidence: 0.7 }] },
-  { pattern: "israel-lebanon", entries: [{ slug: "israel-palestine-conflict", confidence: 0.7 }] },
+  { pattern: "iran-nuclear", entries: [{ slug: "iran-nuclear-program", confidence: 0.9 }] },
+  { pattern: "israel-lebanon", entries: [{ slug: "lebanon-war-2026", confidence: 0.8 }] },
   { pattern: "israel-ground-offensive", entries: [{ slug: "israel-palestine-conflict", confidence: 0.8 }] },
+  { pattern: "israel-ceasefire", entries: [{ slug: "israel-palestine-conflict", confidence: 0.8 }] },
+  { pattern: "gaza", entries: [{ slug: "israel-palestine-conflict", confidence: 0.8 }] },
   { pattern: "ukraine-ceasefire", entries: [{ slug: "russia-ukraine-war", confidence: 0.8 }] },
   { pattern: "russia-ukraine", entries: [{ slug: "russia-ukraine-war", confidence: 0.8 }] },
+  { pattern: "nato", entries: [{ slug: "nato-alliance", confidence: 0.7 }] },
+  { pattern: "north-korea", entries: [{ slug: "north-korea", confidence: 0.8 }] },
+  { pattern: "china-taiwan", entries: [{ slug: "china-taiwan-relations", confidence: 0.9 }] },
+  { pattern: "taiwan-invasion", entries: [{ slug: "china-taiwan-relations", confidence: 0.9 }] },
+  { pattern: "sudan", entries: [{ slug: "sudan-conflict", confidence: 0.7 }] },
+  { pattern: "venezuela", entries: [{ slug: "venezuela-crisis", confidence: 0.7 }] },
+
+  // Tech
+  { pattern: "tiktok-ban", entries: [{ slug: "tiktok-ban", confidence: 0.9 }] },
+  { pattern: "tiktok", entries: [{ slug: "tiktok-ban", confidence: 0.7 }] },
+  { pattern: "tesla-stock", entries: [{ slug: "tesla", confidence: 0.8 }] },
+  { pattern: "tesla", entries: [{ slug: "tesla", confidence: 0.6 }] },
+  { pattern: "spacex", entries: [{ slug: "spacex-starship", confidence: 0.8 }] },
+  { pattern: "starship", entries: [{ slug: "spacex-starship", confidence: 0.9 }] },
+  { pattern: "apple", entries: [{ slug: "apple", confidence: 0.5 }] },
+  { pattern: "openai", entries: [{ slug: "ai-industry", confidence: 0.8 }] },
+  { pattern: "gpt", entries: [{ slug: "ai-industry", confidence: 0.7 }] },
+
+  // US politics
+  { pattern: "midterm", entries: [{ slug: "2026-us-midterm-elections", confidence: 0.9 }] },
+  { pattern: "congress", entries: [{ slug: "us-congress-legislation", confidence: 0.6 }] },
+  { pattern: "supreme-court", entries: [{ slug: "us-supreme-court", confidence: 0.8 }] },
+  { pattern: "debt-ceiling", entries: [{ slug: "us-debt-ceiling", confidence: 0.9 }] },
+  { pattern: "immigration", entries: [{ slug: "us-immigration-policy", confidence: 0.8 }] },
+
+  // Entertainment
+  { pattern: "oscar", entries: [{ slug: "oscar-awards-2026", confidence: 0.9 }] },
+  { pattern: "academy-award", entries: [{ slug: "oscar-awards-2026", confidence: 0.9 }] },
+  { pattern: "taylor-swift", entries: [{ slug: "taylor-swift", confidence: 0.9 }] },
+  { pattern: "marvel", entries: [{ slug: "marvel-cinematic-universe", confidence: 0.8 }] },
+
+  // Macro extras
+  { pattern: "gold-price", entries: [{ slug: "gold-price", confidence: 0.9 }] },
+  { pattern: "dollar", entries: [{ slug: "us-dollar-strength", confidence: 0.6 }] },
+  { pattern: "oil-price", entries: [{ slug: "global-oil-prices", confidence: 0.8 }] },
+  { pattern: "housing", entries: [{ slug: "us-housing-market", confidence: 0.7 }] },
+  { pattern: "stock-market", entries: [{ slug: "us-stock-market", confidence: 0.7 }] },
+  { pattern: "sp500", entries: [{ slug: "us-stock-market", confidence: 0.8 }] },
+  { pattern: "s-p-500", entries: [{ slug: "us-stock-market", confidence: 0.8 }] },
+  { pattern: "gas-price", entries: [{ slug: "us-gas-prices", confidence: 0.8 }] },
 ];
 
 // Manifold Markets question keyword → topic mappings
@@ -154,14 +234,63 @@ export const MANIFOLD_QUESTION_RULES: Array<{ pattern: string; entries: SeedMapE
   { pattern: "ukraine ceasefire", entries: [{ slug: "russia-ukraine-war", confidence: 0.8 }] },
   { pattern: "russia ukraine", entries: [{ slug: "russia-ukraine-war", confidence: 0.8 }] },
 
-  // Sports (question-text)
+  // Sports
   { pattern: "premier league", entries: [{ slug: "premier-league", confidence: 0.8 }] },
   { pattern: "nba finals", entries: [{ slug: "nba-season-2025-26", confidence: 0.9 }] },
+  { pattern: "nba champion", entries: [{ slug: "nba-season-2025-26", confidence: 0.9 }] },
   { pattern: "world cup", entries: [{ slug: "fifa-world-cup-2026", confidence: 0.9 }] },
+  { pattern: "champions league", entries: [{ slug: "champions-league", confidence: 0.8 }] },
+  { pattern: "super bowl", entries: [{ slug: "nfl-2026-season", confidence: 0.9 }] },
+  { pattern: "nfl", entries: [{ slug: "nfl-2026-season", confidence: 0.6 }] },
+  { pattern: "world series", entries: [{ slug: "mlb-season-2026", confidence: 0.8 }] },
+  { pattern: "ufc ", entries: [{ slug: "ufc-mma", confidence: 0.8 }] },
+  { pattern: "formula 1", entries: [{ slug: "formula-1-2026", confidence: 0.8 }] },
 
-  // Fed/macro (question-text)
+  // Fed/macro
   { pattern: "fed decrease interest", entries: [{ slug: "us-federal-reserve-interest-rates", confidence: 0.9 }] },
   { pattern: "fed cut", entries: [{ slug: "us-federal-reserve-interest-rates", confidence: 0.8 }] },
+  { pattern: "gold price", entries: [{ slug: "gold-price", confidence: 0.8 }] },
+  { pattern: "oil price", entries: [{ slug: "global-oil-prices", confidence: 0.8 }] },
+  { pattern: "gas price", entries: [{ slug: "us-gas-prices", confidence: 0.7 }] },
+  { pattern: "stock market", entries: [{ slug: "us-stock-market", confidence: 0.7 }] },
+  { pattern: "s&p 500", entries: [{ slug: "us-stock-market", confidence: 0.8 }] },
+  { pattern: "housing market", entries: [{ slug: "us-housing-market", confidence: 0.8 }] },
+  { pattern: "home price", entries: [{ slug: "us-housing-market", confidence: 0.7 }] },
+  { pattern: "food price", entries: [{ slug: "global-food-prices", confidence: 0.7 }] },
+  { pattern: "dollar strength", entries: [{ slug: "us-dollar-strength", confidence: 0.8 }] },
+
+  // Geopolitics
+  { pattern: "china taiwan", entries: [{ slug: "china-taiwan-relations", confidence: 0.9 }] },
+  { pattern: "north korea", entries: [{ slug: "north-korea", confidence: 0.8 }] },
+  { pattern: "sudan", entries: [{ slug: "sudan-conflict", confidence: 0.7 }] },
+  { pattern: "venezuela", entries: [{ slug: "venezuela-crisis", confidence: 0.7 }] },
+  { pattern: "nato", entries: [{ slug: "nato-alliance", confidence: 0.7 }] },
+  { pattern: "european union", entries: [{ slug: "european-union", confidence: 0.6 }] },
+  { pattern: "lebanon", entries: [{ slug: "lebanon-war-2026", confidence: 0.7 }] },
+  { pattern: "hezbollah", entries: [{ slug: "lebanon-war-2026", confidence: 0.8 }] },
+  { pattern: "cuba", entries: [{ slug: "us-cuba-relations", confidence: 0.6 }] },
+  { pattern: "climate change", entries: [{ slug: "climate-change", confidence: 0.7 }] },
+  { pattern: "global warming", entries: [{ slug: "climate-change", confidence: 0.7 }] },
+
+  // Tech
+  { pattern: "tiktok ban", entries: [{ slug: "tiktok-ban", confidence: 0.9 }] },
+  { pattern: "tiktok", entries: [{ slug: "tiktok-ban", confidence: 0.6 }] },
+  { pattern: "tesla", entries: [{ slug: "tesla", confidence: 0.6 }] },
+  { pattern: "spacex", entries: [{ slug: "spacex-starship", confidence: 0.7 }] },
+  { pattern: "starship", entries: [{ slug: "spacex-starship", confidence: 0.8 }] },
+  { pattern: "openai", entries: [{ slug: "ai-industry", confidence: 0.8 }] },
+  { pattern: "apple ", entries: [{ slug: "apple", confidence: 0.5 }] },
+
+  // Entertainment
+  { pattern: "oscar", entries: [{ slug: "oscar-awards-2026", confidence: 0.9 }] },
+  { pattern: "taylor swift", entries: [{ slug: "taylor-swift", confidence: 0.9 }] },
+  { pattern: "marvel", entries: [{ slug: "marvel-cinematic-universe", confidence: 0.8 }] },
+
+  // US politics
+  { pattern: "midterm", entries: [{ slug: "2026-us-midterm-elections", confidence: 0.9 }] },
+  { pattern: "supreme court", entries: [{ slug: "us-supreme-court", confidence: 0.8 }] },
+  { pattern: "debt ceiling", entries: [{ slug: "us-debt-ceiling", confidence: 0.9 }] },
+  { pattern: "healthcare", entries: [{ slug: "us-healthcare-policy", confidence: 0.6 }] },
 ];
 
 // Congress.gov title keyword → topic mappings (conservative, policy-specific only)
@@ -173,6 +302,17 @@ export const CONGRESS_TITLE_RULES: Array<{ pattern: string; entries: SeedMapEntr
   { pattern: "border security", entries: [{ slug: "us-immigration-policy", confidence: 0.8 }] },
   { pattern: "debt ceiling", entries: [{ slug: "us-debt-ceiling", confidence: 1.0 }] },
   { pattern: "debt limit", entries: [{ slug: "us-debt-ceiling", confidence: 1.0 }] },
+  { pattern: "healthcare", entries: [{ slug: "us-healthcare-policy", confidence: 0.8 }] },
+  { pattern: "health insurance", entries: [{ slug: "us-healthcare-policy", confidence: 0.7 }] },
+  { pattern: "medicare", entries: [{ slug: "us-healthcare-policy", confidence: 0.8 }] },
+  { pattern: "medicaid", entries: [{ slug: "us-healthcare-policy", confidence: 0.8 }] },
+  { pattern: "climate", entries: [{ slug: "climate-change", confidence: 0.7 }] },
+  { pattern: "environment", entries: [{ slug: "climate-change", confidence: 0.5 }] },
+  { pattern: "tiktok", entries: [{ slug: "tiktok-ban", confidence: 0.9 }] },
+  { pattern: "social media", entries: [{ slug: "tiktok-ban", confidence: 0.5 }] },
+  { pattern: "cuba", entries: [{ slug: "us-cuba-relations", confidence: 0.8 }] },
+  { pattern: "iran", entries: [{ slug: "iran-nuclear-program", confidence: 0.6 }] },
+  { pattern: "supreme court", entries: [{ slug: "us-supreme-court", confidence: 0.9 }] },
 ];
 
 // Allowed match_method values (code-constrained, not DB enum)

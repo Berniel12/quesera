@@ -110,13 +110,15 @@ export default async function LandingPage() {
     });
   }
 
-  // Filter: only show questions with alive topics (not dead/stale)
-  const aliveQuestions = allQuestions.filter((q) =>
-    q.freshness === "fresh" || q.freshness === "aging",
-  );
+  // Show all questions with snapshots — fresh first, then stale
+  // Don't hide stale cards — a stale answer is better than no answer
+  const aliveQuestions = allQuestions;
 
-  // Sort: movement first (up/down > stable > unknown), then location, then confidence
+  // Sort: fresh/aging first, then movement, then location, then confidence
   aliveQuestions.sort((a, b) => {
+    const aFresh = (a.freshness === "fresh" || a.freshness === "aging") ? 1 : 0;
+    const bFresh = (b.freshness === "fresh" || b.freshness === "aging") ? 1 : 0;
+    if (bFresh !== aFresh) return bFresh - aFresh;
     const aMoving = (a.direction === "up" || a.direction === "down") ? 1 : 0;
     const bMoving = (b.direction === "up" || b.direction === "down") ? 1 : 0;
     if (bMoving !== aMoving) return bMoving - aMoving;

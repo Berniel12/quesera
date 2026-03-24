@@ -44,28 +44,54 @@ function timeAgo(dateStr: string | null): string {
 }
 
 // Curated photos by category (user-selected Unsplash)
+// Curated photo pools — 4-6 per category for variety
 const CATEGORY_PHOTOS: Record<string, string[]> = {
   crypto: [
     "https://images.unsplash.com/photo-1621504450181-5d356f61d307?w=800&q=70&auto=format",
     "https://images.unsplash.com/photo-1622630998477-20aa696ecb05?w=800&q=70&auto=format",
+    "https://images.unsplash.com/photo-1518546305927-5a555bb7020d?w=800&q=70&auto=format",
+    "https://images.unsplash.com/photo-1640340434855-6084b1f4901c?w=800&q=70&auto=format",
+    "https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=800&q=70&auto=format",
   ],
   sports: [
     "https://images.unsplash.com/photo-1508098682722-e99c643e7f0b?w=800&q=70&auto=format",
     "https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=800&q=70&auto=format",
+    "https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?w=800&q=70&auto=format",
+    "https://images.unsplash.com/photo-1461896836934-bd45ba8fcb39?w=800&q=70&auto=format",
+    "https://images.unsplash.com/photo-1560272564-c83b66b1ad12?w=800&q=70&auto=format",
   ],
   macro: [
     "https://images.unsplash.com/photo-1526304640581-d334cdbbf45e?w=800&q=70&auto=format",
     "https://images.unsplash.com/photo-1579532537598-459ecdaf39cc?w=800&q=70&auto=format",
+    "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=800&q=70&auto=format",
+    "https://images.unsplash.com/photo-1604594849809-dfedbc827105?w=800&q=70&auto=format",
+    "https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?w=800&q=70&auto=format",
   ],
   disasters: [
     "https://images.unsplash.com/photo-1527482797697-8795b05a13fe?w=800&q=70&auto=format",
     "https://images.unsplash.com/photo-1509803874385-db7c23652552?w=800&q=70&auto=format",
+    "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=800&q=70&auto=format",
+    "https://images.unsplash.com/photo-1559060017-445fb9722f2a?w=800&q=70&auto=format",
   ],
   geopolitics: [
     "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=800&q=70&auto=format",
+    "https://images.unsplash.com/photo-1526778548025-fa2f459cd5c1?w=800&q=70&auto=format",
+    "https://images.unsplash.com/photo-1521295121783-8a321d551ad2?w=800&q=70&auto=format",
   ],
   tech: [
     "https://images.unsplash.com/photo-1677442136019-21780ecad995?w=800&q=70&auto=format",
+    "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=800&q=70&auto=format",
+    "https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?w=800&q=70&auto=format",
+  ],
+  politics: [
+    "https://images.unsplash.com/photo-1541872703-74c5e44368f9?w=800&q=70&auto=format",
+    "https://images.unsplash.com/photo-1529107386315-e1a2ed48a620?w=800&q=70&auto=format",
+    "https://images.unsplash.com/photo-1575320181282-9afab399332c?w=800&q=70&auto=format",
+  ],
+  entertainment: [
+    "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800&q=70&auto=format",
+    "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800&q=70&auto=format",
+    "https://images.unsplash.com/photo-1478147427282-58a87a120781?w=800&q=70&auto=format",
   ],
 };
 
@@ -163,14 +189,22 @@ export default async function LandingPage() {
         const ans = heroQ.direction && heroQ.confidence !== null
           ? getAnswerState({ direction: heroQ.direction, confidence: heroQ.confidence, category: heroQ.category, disagreement: 0 }) : null;
 
+        const heroPhoto = getCatPhoto(heroQ.category, heroQ.slug);
         return (
           <section className="grid grid-cols-1 lg:grid-cols-12 gap-6 pt-6 pb-8 animate-slide-up">
             {/* Main hero */}
             <Link href={`/topics/${heroQ.slug}`} className="lg:col-span-8">
               <div className="relative overflow-hidden rounded-[2rem] p-8 sm:p-10 min-h-[320px] sm:min-h-[400px] flex flex-col justify-end
-                bg-card dark:bg-[#131B2E] dark:glass-panel card-shadow-rich dark:border dark:border-white/5 group hover-lift">
+                bg-card dark:bg-[#131B2E] card-shadow-rich dark:border dark:border-white/5 group hover-lift">
+                {/* Background photo */}
+                {heroPhoto && (
+                  <div className="absolute inset-0 z-0">
+                    <img src={heroPhoto} alt="" className="w-full h-full object-cover opacity-20 dark:opacity-25 dark:brightness-50 grayscale group-hover:grayscale-0 group-hover:scale-105 transition-all duration-700" loading="eager" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-card dark:from-[#131B2E] via-card/70 dark:via-[#131B2E]/70 to-card/30 dark:to-[#131B2E]/30" />
+                  </div>
+                )}
                 {/* Glow */}
-                <div className="absolute top-0 right-0 w-80 h-80 bg-primary/10 blur-[120px] hidden dark:block" />
+                <div className="absolute top-0 right-0 w-80 h-80 bg-primary/10 blur-[120px] hidden dark:block z-0" />
                 <div>
                   <div className="flex items-center gap-2 mb-4">
                     <span className="h-2 w-2 rounded-full bg-positive dark:bg-[#4EDEA3] animate-pulse-live" />
@@ -315,26 +349,29 @@ export default async function LandingPage() {
                 <div
                   className={`h-full rounded-[2rem] p-6 flex ${isWide ? "flex-row items-center gap-6" : "flex-col justify-between"} min-h-[160px]
                     bg-card dark:bg-[#131B2E] card-shadow-rich dark:border dark:border-white/5 hover-lift-sm animate-card-enter
-                    ${isWide && photo ? "relative overflow-hidden" : ""}`}
+                    relative overflow-hidden`}
                   style={{ animationDelay: `${(i + 2) * 80}ms`, opacity: 0 }}
                 >
-                  {/* Wide cards get a background image */}
-                  {isWide && photo && (
+                  {/* Background photo on all cards */}
+                  {photo && (
                     <div className="absolute inset-0 z-0">
-                      <img src={photo} alt="" className="w-full h-full object-cover opacity-10 dark:opacity-15 dark:brightness-50 group-hover:scale-105 transition-transform duration-700" loading="lazy" />
-                      <div className="absolute inset-0 bg-gradient-to-r from-card dark:from-[#131B2E] via-card/90 dark:via-[#131B2E]/90 to-card/60 dark:to-[#131B2E]/60" />
+                      <img src={photo} alt="" className={`w-full h-full object-cover ${isWide ? "opacity-15 dark:opacity-20" : "opacity-10 dark:opacity-15"} dark:brightness-50 grayscale group-hover:grayscale-0 group-hover:scale-105 transition-all duration-700`} loading="lazy" />
+                      <div className={`absolute inset-0 ${isWide
+                        ? "bg-gradient-to-r from-card dark:from-[#131B2E] via-card/85 dark:via-[#131B2E]/85 to-card/50 dark:to-[#131B2E]/50"
+                        : "bg-gradient-to-t from-card dark:from-[#131B2E] via-card/80 dark:via-[#131B2E]/80 to-card/40 dark:to-[#131B2E]/40"
+                      }`} />
                     </div>
                   )}
 
-                  <div className={`${isWide ? "flex-1 relative z-10" : ""}`}>
+                  <div className={`${isWide ? "flex-1" : ""} relative z-10`}>
                     <span className={`text-[10px] font-bold uppercase tracking-[0.2em] ${a.text} block mb-2`}>{a.label}</span>
                     <h3 className={`${isWide ? "text-xl sm:text-2xl" : "text-lg"} font-bold text-foreground tracking-tight leading-tight mb-2`}>{q.question_text}</h3>
                     {ans && <span className={`text-sm font-bold ${ans.colorClass}`}>{ans.label}</span>}
                     {q.snapshot_published_at && <p className="text-[10px] text-muted-foreground/50 mt-1">{timeAgo(q.snapshot_published_at)}</p>}
                   </div>
 
-                  {/* Visual element on right for wide, bottom for narrow */}
-                  <div className={`${isWide ? "flex-shrink-0 relative z-10 text-right" : "mt-4"}`}>
+                  {/* Visual element */}
+                  <div className={`${isWide ? "flex-shrink-0 text-right" : "mt-4"} relative z-10`}>
                     <span className={`${isWide ? "text-4xl" : "text-3xl"} font-black font-mono ${a.text}`}>{pct}%</span>
                     <p className="text-[9px] text-muted-foreground uppercase tracking-widest font-bold">Confidence</p>
                   </div>

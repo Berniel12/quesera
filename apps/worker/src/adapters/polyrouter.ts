@@ -3,32 +3,51 @@ import { fetchWithRetry } from "../utils/fetch-with-retry.js";
 
 // PolyRouter: aggregates 7 prediction markets via one API
 // Covers: Polymarket, Kalshi, Manifold, Limitless, ProphetX, Novig, SX.bet
-// No auth required (open beta)
+// Base URL: https://api-v2.polyrouter.io
+// Auth: X-API-Key header (free tier available)
+
+const PLATFORMS = ["polymarket", "kalshi", "manifold", "limitless"];
 
 export class PolyRouterAdapter extends BaseAdapter {
   async fetch(): Promise<FetchResult> {
     const config = this.sourceDefinition.config as { base_url: string };
-    const url = `${config.base_url}/markets?limit=100&sort=volume&order=desc`;
-    const response = await fetchWithRetry({ url, logger: this.logger });
-    const data = (await response.json()) as PolyRouterMarket[];
+    const apiKey = process.env.POLYROUTER_API_KEY ?? "";
 
-    const items: RawItem[] = (Array.isArray(data) ? data : []).map((m) => ({
-      externalId: m.id ?? m.slug ?? String(m.title).slice(0, 50),
-      payload: {
-        title: m.title,
-        question: m.title,
-        platform: m.platform,
-        probability: m.probability,
-        volume: m.volume,
-        liquidity: m.liquidity,
-        close_date: m.close_date,
-        category: m.category,
-        url: m.url,
-        slug: m.slug,
-        outcome_prices: m.probability != null ? [String(m.probability)] : null,
-      },
-      occurredAt: m.close_date ? new Date(m.close_date) : undefined,
-    }));
+    const headers: Record<string, string> = {};
+    if (apiKey) {
+      headers["X-API-Key"] = apiKey;
+    }
+
+    const items: RawItem[] = [];
+
+    for (const platform of PLATFORMS) {
+      try {
+        const url = `${config.base_url}/markets?platform=${platform}&limit=50`;
+        const response = await fetchWithRetry({ url, headers, logger: this.logger });
+        const body = (await response.json()) as { markets?: PolyRouterMarket[] };
+        const markets = body.markets ?? (Array.isArray(body) ? body as PolyRouterMarket[] : []);
+
+        for (const m of markets) {
+          const yesPrice = m.current_prices?.yes?.price ?? null;
+
+          items.push({
+            externalId: m.id ?? String(m.title).slice(0, 50),
+            payload: {
+              title: m.title,
+              question: m.title,
+              platform: m.platform ?? platform,
+              probability: yesPrice,
+              volume_24hr: m.volume_24h ?? 0,
+              status: m.status,
+              outcome_prices: yesPrice !== null ? [String(yesPrice)] : null,
+              slug: m.id,
+            },
+          });
+        }
+      } catch (err) {
+        this.logger.warn({ platform, err: String(err) }, "Failed to fetch PolyRouter platform");
+      }
+    }
 
     return { items };
   }
@@ -44,27 +63,24 @@ export class PolyRouterAdapter extends BaseAdapter {
         question: p.title,
         platform: p.platform,
         outcome_prices: p.outcome_prices,
-        volume_24hr: p.volume,
-        liquidity: p.liquidity,
-        category: p.category,
-        url: p.url,
+        volume_24hr: p.volume_24hr,
+        status: p.status,
         slug: p.slug,
       },
       content_hash: this.hashPayload({ id: raw.externalId, probability: String(p.probability) }),
-      occurred_at: raw.occurredAt?.toISOString() ?? null,
+      occurred_at: null,
     };
   }
 }
 
 interface PolyRouterMarket {
   id?: string;
-  slug?: string;
   title: string;
-  platform: string;
-  probability: number | null;
-  volume: number;
-  liquidity: number;
-  close_date?: string;
-  category?: string;
-  url?: string;
+  platform?: string;
+  current_prices?: {
+    yes?: { price: number };
+    no?: { price: number };
+  };
+  volume_24h?: number;
+  status?: string;
 }

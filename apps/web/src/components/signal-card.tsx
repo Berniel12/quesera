@@ -261,34 +261,66 @@ interface SignalGroupProps {
   signals: SignalData[];
 }
 
+function getFamilySummary(familyKey: string, signals: SignalData[]): string | null {
+  if (familyKey === "prediction_market" || familyKey === "forecast_aggregator") {
+    const probSignals = signals.filter((s) => s.signal_type === "market_probability" || s.signal_type === "forecast_probability");
+    if (probSignals.length > 0) {
+      const avg = probSignals.reduce((sum, s) => sum + s.current_value, 0) / probSignals.length;
+      return `${probSignals.length} ${probSignals.length === 1 ? "market" : "markets"} tracked, consensus at ${Math.round(avg * 100)}%`;
+    }
+  }
+  if (familyKey === "macro_official") {
+    const dirs = signals.map((s) => s.direction);
+    const allStable = dirs.every((d) => d === "stable");
+    return allStable
+      ? `${signals.length} indicators tracked, all holding steady`
+      : `${signals.length} indicators tracked, some showing movement`;
+  }
+  if (familyKey === "hazard_weather") {
+    if (signals[0]?.signal_type === "earthquake_magnitude") {
+      const strongest = Math.max(...signals.map((s) => s.current_value));
+      return `${signals.length} earthquakes recorded, strongest M${strongest.toFixed(1)}`;
+    }
+    return `${signals.length} weather alerts active`;
+  }
+  if (familyKey === "crypto_market") {
+    return `${signals.length} ${signals.length === 1 ? "asset" : "assets"} tracked`;
+  }
+  return null;
+}
+
 export function SignalGroup({ familyKey, signals }: SignalGroupProps) {
   const config = FAMILY_CONFIG[familyKey] ?? DEFAULT_CONFIG;
+  const summary = getFamilySummary(familyKey, signals);
+  const sorted = [...signals].sort((a, b) => b.weight - a.weight);
+
+  // For hazard_weather with many identical signals, show aggregated view
+  const isHazardDump = familyKey === "hazard_weather" && signals.length > 5;
+  const displaySignals = isHazardDump ? sorted.slice(0, 3) : sorted.slice(0, 5);
+  const hiddenCount = signals.length - displaySignals.length;
 
   return (
     <div className="mb-6">
-      <div className="flex items-center gap-2 mb-3">
+      <div className="flex items-center gap-2 mb-2">
         <span className={`h-2 w-2 rounded-full ${config.dotColor}`} />
         <h3 className="text-[11px] font-bold uppercase tracking-[0.15em] text-muted-foreground">
           {config.label}
         </h3>
-        <span className="text-[10px] font-mono text-muted-foreground/60">
-          {signals.length} {signals.length === 1 ? "signal" : "signals"}
-        </span>
       </div>
+      {summary && (
+        <p className="text-xs text-muted-foreground mb-3 ml-4">{summary}</p>
+      )}
       <div className="flex flex-col gap-2">
-        {signals
-          .sort((a, b) => b.weight - a.weight)
-          .slice(0, 5)
-          .map((s, i) => (
-            <SignalCard
-              key={`${s.source_name}-${i}`}
-              signal={s}
-              className={i === 0 ? "" : `delay-${Math.min(i * 50, 300)}`}
-            />
-          ))}
-        {signals.length > 5 && (
+        {displaySignals.map((s, i) => (
+          <SignalCard
+            key={`${s.source_name}-${i}`}
+            signal={s}
+            className={i === 0 ? "" : `delay-${Math.min(i * 50, 300)}`}
+          />
+        ))}
+        {hiddenCount > 0 && (
           <p className="text-xs text-muted-foreground text-center py-2">
-            and {signals.length - 5} more {signals.length - 5 === 1 ? "signal" : "signals"}
+            and {hiddenCount} more {hiddenCount === 1 ? "signal" : "signals"}
           </p>
         )}
       </div>

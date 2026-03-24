@@ -319,6 +319,9 @@ export default async function TopicPage({ params }: TopicPageProps) {
           <span className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">{t.category}</span>
         )}
         <h1 className="mt-2 text-2xl font-bold tracking-tight text-foreground sm:text-3xl leading-tight">{headline}</h1>
+        {t.description && (
+          <p className="mt-1 text-xs text-muted-foreground">{t.description}</p>
+        )}
 
         {answerState && (
           <div className="mt-4 flex items-center gap-4 flex-wrap animate-fade-in delay-75">
@@ -380,27 +383,33 @@ export default async function TopicPage({ params }: TopicPageProps) {
           {/* ── Section divider ── */}
           <div className="section-line mb-6" />
 
-          {/* ── WHAT CHANGED / WHAT TO WATCH ── */}
-          <AnimateOnScroll>
-            <div className="grid gap-4 sm:grid-cols-2 mb-6">
-              <Card className="rounded-2xl border-border/40">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-xs font-bold text-muted-foreground uppercase tracking-wide">What Changed</CardTitle>
-                </CardHeader>
-                <CardContent className="pb-5">
-                  <p className="text-sm leading-relaxed text-foreground">{snapshot.what_changed_text ?? "No material changes detected recently."}</p>
-                </CardContent>
-              </Card>
-              <Card className="rounded-2xl border-border/40">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-xs font-bold text-muted-foreground uppercase tracking-wide">What to Watch</CardTitle>
-                </CardHeader>
-                <CardContent className="pb-5">
-                  <p className="text-sm leading-relaxed text-foreground">{snapshot.what_next_text ?? "We'll keep monitoring for changes."}</p>
-                </CardContent>
-              </Card>
-            </div>
-          </AnimateOnScroll>
+          {/* ── WHAT CHANGED / WHAT TO WATCH — only if LLM prose exists ── */}
+          {(snapshot.what_changed_text || snapshot.what_next_text) && (
+            <AnimateOnScroll>
+              <div className="grid gap-4 sm:grid-cols-2 mb-6">
+                {snapshot.what_changed_text && (
+                  <Card className="rounded-2xl border-border/40">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-xs font-bold text-muted-foreground uppercase tracking-wide">What Changed</CardTitle>
+                    </CardHeader>
+                    <CardContent className="pb-5">
+                      <p className="text-sm leading-relaxed text-foreground">{snapshot.what_changed_text}</p>
+                    </CardContent>
+                  </Card>
+                )}
+                {snapshot.what_next_text && (
+                  <Card className="rounded-2xl border-border/40">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-xs font-bold text-muted-foreground uppercase tracking-wide">What to Watch</CardTitle>
+                    </CardHeader>
+                    <CardContent className="pb-5">
+                      <p className="text-sm leading-relaxed text-foreground">{snapshot.what_next_text}</p>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            </AnimateOnScroll>
+          )}
 
           {/* ── WHY WE THINK THIS — Signals ── */}
           {signals.length > 0 && (() => {

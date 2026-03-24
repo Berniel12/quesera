@@ -187,8 +187,11 @@ export default async function LandingPage() {
   const heroIndex = heroPool.length > 0 ? Math.abs(seed) % heroPool.length : 0;
   const heroQ = heroPool[heroIndex] ?? allQuestions[0];
 
-  // Rest of feed: shuffled, excluding hero
-  const feed = shuffled.filter((q) => q.topic_id !== heroQ?.topic_id);
+  // Rest of feed: shuffled, excluding hero (by both topic_id and question text)
+  const heroText = heroQ?.question_text?.toLowerCase() ?? "";
+  const feed = shuffled.filter((q) =>
+    q.topic_id !== heroQ?.topic_id && q.question_text.toLowerCase() !== heroText,
+  );
 
   // Split feed into grid positions — show up to 20 in the bento, rest in ticker
   const featured = feed.slice(0, 2);   // Two featured cards
@@ -221,7 +224,7 @@ export default async function LandingPage() {
                 )}
                 {/* Glow */}
                 <div className="absolute top-0 right-0 w-80 h-80 bg-primary/10 blur-[120px] hidden dark:block z-0" />
-                <div>
+                <div className="relative z-10">
                   <div className="flex items-center gap-2 mb-4">
                     <span className="h-2 w-2 rounded-full bg-positive dark:bg-[#4EDEA3] animate-pulse-live" />
                     <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-positive dark:text-[#4EDEA3]">Live Projection</span>
@@ -237,7 +240,7 @@ export default async function LandingPage() {
                       </span>
                     </div>
                     <div className="flex-1 h-2 mb-4 rounded-full overflow-hidden bg-border/30 dark:bg-white/10">
-                      <div className={`h-full bg-primary dark:${a.glow} animate-bar-fill`} style={{ width: `${pct}%` }} />
+                      <div className={`h-full bg-primary animate-bar-fill`} style={{ width: `${pct}%` }} />
                     </div>
                   </div>
                 </div>

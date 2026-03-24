@@ -13,6 +13,7 @@ export async function handleTopicMatching(
   const payload = job.payload as {
     source_id: string;
     source_item_ids?: string[];
+    full_scan?: boolean;
   };
 
   const startTime = Date.now();
@@ -48,6 +49,16 @@ export async function handleTopicMatching(
       .from("source_items")
       .select("id, source_key, source_item_type, normalized_payload")
       .in("id", payload.source_item_ids)
+      .limit(BATCH_SIZE);
+
+    items = (data ?? []) as typeof items;
+  } else if (payload.full_scan) {
+    // Full scan: process ALL items for this source (used for re-matching after seed map changes)
+    const { data } = await supabase
+      .from("source_items")
+      .select("id, source_key, source_item_type, normalized_payload")
+      .eq("source_id", payload.source_id)
+      .order("updated_at", { ascending: false })
       .limit(BATCH_SIZE);
 
     items = (data ?? []) as typeof items;

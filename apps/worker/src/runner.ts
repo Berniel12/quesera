@@ -12,7 +12,9 @@ interface RunnerOptions {
   logger: Logger;
 }
 
-// Process a single job from claim to completion/failure
+const JOB_TIMEOUT_MS = Number(process.env.JOB_TIMEOUT_MS ?? "120000"); // 2 minutes default
+
+// Process a single job with timeout protection
 async function processJob(
   job: Job,
   supabase: SupabaseClient,
@@ -21,7 +23,13 @@ async function processJob(
   try {
     await markRunning(supabase, job.id);
     const handler = getHandler(job.job_type);
-    await handler(job, logger, supabase);
+
+    // Race the handler against a timeout
+    const timeout = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error(`Job timed out after ${JOB_TIMEOUT_MS}ms`)), JOB_TIMEOUT_MS),
+    );
+    await Promise.race([handler(job, logger, supabase), timeout]);
+
     await completeJob(supabase, job.id);
     logger.info({ jobId: job.id, jobType: job.job_type }, "Job completed");
   } catch (err) {

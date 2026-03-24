@@ -366,7 +366,7 @@ export default async function TopicPage({ params }: TopicPageProps) {
                   <span className="text-sm font-medium text-foreground">{keyMetric.label}</span>
                   {primarySignal && primarySignal.delta !== null && Math.abs(primarySignal.delta) > 0.001 && (
                     <span className={`text-xs font-semibold ${primarySignal.delta > 0 ? "text-positive dark:text-[#4EDEA3]" : "text-destructive"}`}>
-                      {primarySignal.delta > 0 ? "\u2191" : "\u2193"} {Math.abs(primarySignal.delta).toFixed(2)} since last update
+                      {primarySignal.delta > 0 ? "+" : "-"}{Math.abs(primarySignal.delta).toFixed(2)} since last update
                     </span>
                   )}
                   {primarySignal && (primarySignal.delta === null || Math.abs(primarySignal.delta) <= 0.001) && (

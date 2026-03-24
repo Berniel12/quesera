@@ -267,14 +267,16 @@ export function QuestionCard({
           <div className="flex items-start gap-4">
             {/* Direction arrow */}
             <div className={`flex-shrink-0 h-12 w-12 rounded-xl flex items-center justify-center ${isUp ? "bg-positive/10 dark:bg-[#4EDEA3]/10" : "bg-destructive/10"}`}>
-              <span className={`text-2xl ${arrowColor}`}>{isUp ? "\u2197" : "\u2198"}</span>
+              <svg viewBox="0 0 24 24" className={`h-6 w-6 ${arrowColor}`} fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                {isUp ? <path d="M7 17L17 7M17 7H7M17 7V17" /> : <path d="M7 7L17 17M17 17H7M17 17V7" />}
+              </svg>
             </div>
 
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
                 <span className={`h-1.5 w-1.5 rounded-full ${dotColor}`} />
                 <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.12em]">{category ?? "Signal"}</span>
-                <span className={`text-[10px] font-bold ${arrowColor}`}>{isUp ? "Moving Up" : "Moving Down"}</span>
+                <span className={`text-[10px] font-bold ${arrowColor}`}>Moving {isUp ? "up" : "down"}</span>
               </div>
               <p className="font-semibold text-base text-foreground leading-snug mb-2">{questionText}</p>
               {answerState && (
@@ -305,7 +307,7 @@ export function QuestionCard({
         >
           {/* Alert top bar */}
           <div className="bg-destructive/10 dark:bg-destructive/20 px-5 py-2 flex items-center gap-2">
-            <span className="text-destructive text-sm">{"\u26A0"}</span>
+            <span className="h-2 w-2 rounded-full bg-destructive animate-pulse-live" />
             <span className="text-[10px] font-bold text-destructive uppercase tracking-[0.12em]">{category ?? "Alert"}</span>
             {snapshotPublishedAt && (
               <span className="text-[10px] text-destructive/60 ml-auto">{timeAgo(snapshotPublishedAt)}</span>

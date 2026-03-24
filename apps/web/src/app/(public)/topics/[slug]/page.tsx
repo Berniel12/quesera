@@ -224,7 +224,7 @@ export default async function TopicPage({ params }: TopicPageProps) {
       const rtopic = Array.isArray(rt.topics) ? rt.topics[0] : rt.topics;
       if (!rtopic || rtopic.category !== t.category || rtopic.status !== "active" || !rtopic.is_public) continue;
       const card = cardMap.get(rtopic.slug);
-      if (!card || card.freshness === "dead" || card.freshness === "stale") continue;
+      if (!card) continue;
       relatedQuestions.push({
         question_text: rt.question_text,
         slug: rtopic.slug,
@@ -273,6 +273,14 @@ export default async function TopicPage({ params }: TopicPageProps) {
       .maybeSingle();
     isFollowing = follow !== null;
   }
+
+  // 10. Load one_liner from public card (fallback when no LLM prose)
+  const { data: publicCard } = await supabase
+    .from("public_topic_cards")
+    .select("one_liner")
+    .eq("topic_id", t.id)
+    .maybeSingle();
+  const oneLiner = (publicCard as { one_liner: string | null } | null)?.one_liner ?? null;
 
   // Compute answer state
   const answerState = snapshot ? getAnswerState({ direction: snapshot.direction, confidence: snapshot.confidence, category: t.category, disagreement: snapshot.disagreement }) : null;
@@ -336,6 +344,11 @@ export default async function TopicPage({ params }: TopicPageProps) {
             {snapshot.current_picture_text}
           </p>
         )}
+        {!hasProse && oneLiner && (
+          <p className="mt-3 text-sm text-muted-foreground leading-relaxed animate-fade-in delay-150">
+            {oneLiner}
+          </p>
+        )}
 
         {/* What changed delta */}
         {changeText && (
@@ -380,8 +393,23 @@ export default async function TopicPage({ params }: TopicPageProps) {
             </div>
           )}
 
-          {/* ── Section divider ── */}
-          <div className="section-line mb-6" />
+          {/* ── Gathering data notice for sparse topics ── */}
+          {signals.length === 0 && !hasProse && (
+            <div className="mb-8 p-6 rounded-2xl bg-muted/30 dark:bg-white/[0.03] border border-border/30 dark:border-white/5 text-center animate-fade-in">
+              <p className="text-sm font-medium text-foreground mb-2">We are gathering data on this question</p>
+              <p className="text-xs text-muted-foreground max-w-md mx-auto leading-relaxed">
+                When enough signals come in from prediction markets, news sources, and official data, you will see a full analysis here. Follow this question to get notified when the picture becomes clearer.
+              </p>
+              <div className="mt-4">
+                <FollowButton topicSlug={t.slug} isAuthenticated={user !== null} initialFollowing={isFollowing} />
+              </div>
+            </div>
+          )}
+
+          {/* ── Section divider (only if there's content below) ── */}
+          {(snapshot.what_changed_text || snapshot.what_next_text || signals.length > 0) && (
+            <div className="section-line mb-6" />
+          )}
 
           {/* ── WHAT CHANGED / WHAT TO WATCH — only if LLM prose exists ── */}
           {(snapshot.what_changed_text || snapshot.what_next_text) && (

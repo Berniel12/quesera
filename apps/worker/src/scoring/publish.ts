@@ -108,7 +108,7 @@ export async function publishSnapshot(
   }
 
   // Step 5: UPSERT public_topic_cards (deterministic, no LLM dependency)
-  const oneLiner = generateDeterministicOneLiner(state, signals);
+  const oneLiner = generateDeterministicOneLiner(state, signals, topic.canonical_name);
 
   const { error: cardError } = await supabase
     .from("public_topic_cards")
@@ -153,6 +153,7 @@ const MACRO_CONTEXT: Record<string, { name: string; unit: string; context: strin
 function generateDeterministicOneLiner(
   state: ScoredState,
   signals: ScoredSignal[],
+  topicName: string = "",
 ): string {
   const primary = signals
     .filter((s) => s.currentValue !== null && s.currentValue !== undefined)
@@ -239,10 +240,11 @@ function generateDeterministicOneLiner(
     return `Total value locked is at ${tvlStr}. ${dir === "up" ? "Capital is flowing in — a positive signal." : dir === "down" ? "Capital is flowing out — a cautious signal." : "Holding steady for now."}`;
   }
 
-  // ── Universal fallback: direction as a story, not a metric ──
-  if (dir === "up") return `Signals are pointing upward. Multiple indicators suggest this is trending in a positive direction.`;
-  if (dir === "down") return `Signals are trending downward. The data suggests this is moving in a negative direction.`;
-  if (signalCount > 10) return `We're tracking ${signalCount} data points on this. The picture is stable — no significant movement detected.`;
-  if (signalCount > 0) return `Early signals are coming in but no clear trend has emerged yet. We're watching closely.`;
-  return `We're gathering signals on this. Check back soon for a clearer picture.`;
+  // ── Universal fallback: topic-aware, not generic ──
+  const topicLabel = topicName ? topicName.toLowerCase() : "this topic";
+  if (dir === "up") return `Signals are pointing upward on ${topicLabel}. Multiple indicators suggest positive momentum.`;
+  if (dir === "down") return `Signals are trending downward on ${topicLabel}. The data suggests a negative direction.`;
+  if (signalCount > 10) return `Tracking ${signalCount} data points on ${topicLabel}. The picture is stable with no significant movement.`;
+  if (signalCount > 0) return `Early signals are coming in on ${topicLabel} but no clear trend has emerged yet.`;
+  return `We're watching ${topicLabel} across multiple sources. No strong signals yet, but we're tracking this.`;
 }

@@ -13,12 +13,24 @@ export function computeDirection(signals: ScoredSignal[]): SignalDirection {
     return "unknown";
   }
 
+  // For probability-based signals (prediction markets, forecasts):
+  // If the absolute probability is very low (< 10%), the answer is "no"
+  // regardless of which direction the probability moved.
+  const probSignals = directional.filter(
+    (s) => s.signalType === "market_probability" || s.signalType === "forecast_probability" || s.signalType === "odds_probability",
+  );
+  if (probSignals.length > 0 && probSignals.length === directional.length) {
+    // All signals are probability-based
+    const avgProb = probSignals.reduce((sum, s) => sum + (s.currentValue ?? 0), 0) / probSignals.length;
+    if (avgProb < 0.1) return "stable"; // < 10% = very unlikely, not "up"
+    if (avgProb > 0.9) return "up";     // > 90% = very likely
+  }
+
   let weightedSum = 0;
   let totalWeight = 0;
 
   for (const s of directional) {
-    const delta = s.delta as number; // safe: filtered to non-null above
-    // Normalize delta as percentage change from previous value
+    const delta = s.delta as number;
     const normalizedDelta =
       s.previousValue !== null && s.previousValue !== 0
         ? delta / Math.abs(s.previousValue)

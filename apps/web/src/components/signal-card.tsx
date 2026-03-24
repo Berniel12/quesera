@@ -150,10 +150,54 @@ function getSubtext(signal: SignalData): string | null {
   return null;
 }
 
+// Translate raw value into human meaning — what does this number tell us?
+function getSignalMeaning(signal: SignalData): string | null {
+  const v = signal.current_value;
+  const delta = signal.delta;
+
+  if (signal.signal_type === "market_probability" || signal.signal_type === "forecast_probability") {
+    const pct = Math.round(v * 100);
+    if (pct >= 70) return `${pct}% of forecasters think yes`;
+    if (pct >= 50) return `Slight lean toward yes at ${pct}%`;
+    if (pct >= 30) return `Leaning no at ${pct}%`;
+    return `Only ${pct}% think yes — unlikely`;
+  }
+
+  if (signal.signal_type === "asset_price") {
+    if (delta !== null && Math.abs(delta) > 0) {
+      const pct = signal.previous_value ? ((delta / Number(signal.previous_value)) * 100).toFixed(1) : "?";
+      return delta > 0 ? `Up ${pct}% recently` : `Down ${Math.abs(Number(pct))}% recently`;
+    }
+    return "Holding steady";
+  }
+
+  if (signal.signal_type === "earthquake_magnitude") {
+    if (v >= 6) return "Major event — significant potential for damage";
+    if (v >= 5) return "Moderate event — noticeable shaking likely";
+    if (v >= 4) return "Light event — felt but unlikely to cause damage";
+    return "Minor event — barely noticeable";
+  }
+
+  if (signal.signal_type === "weather_severity") {
+    const levels = ["", "Minor conditions", "Moderate conditions", "Severe — take precautions", "Extreme — stay alert"];
+    return levels[Math.min(Math.round(v), 4)] ?? null;
+  }
+
+  if (signal.source_family === "macro_official") {
+    if (delta !== null && Math.abs(delta) > 0.01) {
+      return delta > 0 ? "Edged higher recently" : "Moved lower recently";
+    }
+    return "Holding steady — no significant change";
+  }
+
+  return null;
+}
+
 export function SignalCard({ signal, className }: SignalCardProps) {
   const config = FAMILY_CONFIG[signal.source_family] ?? DEFAULT_CONFIG;
   const semanticLabel = getSemanticLabel(signal);
   const subtext = getSubtext(signal);
+  const meaning = getSignalMeaning(signal);
   const formattedValue = formatValue(signal.current_value, signal.signal_type, signal.source_family);
   const formattedDelta = signal.delta !== null ? formatDelta(signal.delta, signal.signal_type) : null;
 
@@ -184,8 +228,13 @@ export function SignalCard({ signal, className }: SignalCardProps) {
             {semanticLabel}
           </p>
 
+          {/* Signal meaning — what this number tells us */}
+          {meaning && (
+            <p className="text-[11px] text-muted-foreground mt-1 font-medium">{meaning}</p>
+          )}
+
           {/* Subtext (metadata context) */}
-          {subtext && (
+          {subtext && !meaning && (
             <p className="text-[11px] text-muted-foreground mt-1">{subtext}</p>
           )}
         </div>

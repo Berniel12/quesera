@@ -64,10 +64,10 @@ export function ConfidenceTimeline({ history }: ConfidenceTimelineProps) {
         <line x1={PAD_X} y1={H / 2} x2={W - PAD_X} y2={H / 2} stroke="hsl(var(--border))" strokeWidth="0.5" strokeDasharray="4 4" />
         <line x1={PAD_X} y1={H - PAD_Y} x2={W - PAD_X} y2={H - PAD_Y} stroke="hsl(var(--border))" strokeWidth="0.5" strokeDasharray="4 4" />
 
-        {/* Confidence labels */}
-        <text x={PAD_X - 2} y={PAD_Y + 3} fontSize="6" fill="hsl(var(--muted-foreground))" textAnchor="end" opacity="0.6">100%</text>
-        <text x={PAD_X - 2} y={H / 2 + 2} fontSize="6" fill="hsl(var(--muted-foreground))" textAnchor="end" opacity="0.6">50%</text>
-        <text x={PAD_X - 2} y={H - PAD_Y + 3} fontSize="6" fill="hsl(var(--muted-foreground))" textAnchor="end" opacity="0.6">0%</text>
+        {/* Confidence labels — human readable */}
+        <text x={PAD_X - 2} y={PAD_Y + 3} fontSize="6" fill="hsl(var(--muted-foreground))" textAnchor="end" opacity="0.7">High</text>
+        <text x={PAD_X - 2} y={H / 2 + 2} fontSize="6" fill="hsl(var(--muted-foreground))" textAnchor="end" opacity="0.5">Mid</text>
+        <text x={PAD_X - 2} y={H - PAD_Y + 3} fontSize="6" fill="hsl(var(--muted-foreground))" textAnchor="end" opacity="0.5">Low</text>
 
         {/* Connecting line */}
         <polyline

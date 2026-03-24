@@ -327,7 +327,7 @@ export default async function TopicPage({ params }: TopicPageProps) {
 
         {answerState && (
           <div className="mt-3 flex items-center gap-4 flex-wrap animate-fade-in delay-75">
-            <span className={`text-xl sm:text-2xl font-semibold ${answerState.colorClass}`}>{answerState.label}</span>
+            <span className={`text-3xl sm:text-4xl font-black ${answerState.colorClass}`}>{answerState.label}</span>
             <FollowButton topicSlug={t.slug} isAuthenticated={user !== null} initialFollowing={isFollowing} />
           </div>
         )}

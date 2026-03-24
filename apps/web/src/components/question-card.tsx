@@ -207,9 +207,9 @@ export function QuestionCard({
               {questionText}
             </p>
 
-            {/* Answer state */}
+            {/* Answer state — colored by sentiment */}
             {answerState && (
-              <p className="text-sm font-bold text-foreground dark:text-primary">
+              <p className={`text-sm font-bold ${answerState.colorClass}`}>
                 {answerState.label}
               </p>
             )}

@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Job } from "./types";
+import type { Job } from "./types.js";
 import type { JobType } from "@signal-map/shared";
 
 export async function dequeue(

@@ -187,11 +187,17 @@ export default async function LandingPage() {
   const heroIndex = heroPool.length > 0 ? Math.abs(seed) % heroPool.length : 0;
   const heroQ = heroPool[heroIndex] ?? allQuestions[0];
 
-  // Rest of feed: shuffled, excluding hero (by both topic_id and question text)
-  const heroText = heroQ?.question_text?.toLowerCase() ?? "";
-  const feed = shuffled.filter((q) =>
-    q.topic_id !== heroQ?.topic_id && q.question_text.toLowerCase() !== heroText,
-  );
+  // Rest of feed: shuffled, deduplicated, excluding hero topic
+  const heroTopicId = heroQ?.topic_id ?? "";
+  const heroSlug = heroQ?.slug ?? "";
+  const seenFeedSlugs = new Set([heroSlug]);
+  const feed: QuestionWithCard[] = [];
+  for (const q of shuffled) {
+    if (q.topic_id === heroTopicId || q.slug === heroSlug) continue;
+    if (seenFeedSlugs.has(q.slug)) continue;
+    seenFeedSlugs.add(q.slug);
+    feed.push(q);
+  }
 
   // Split feed into grid positions — show up to 20 in the bento, rest in ticker
   const featured = feed.slice(0, 2);   // Two featured cards

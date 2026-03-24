@@ -60,9 +60,14 @@ export function getAnswerState(input: AnswerStateInput): AnswerState {
   if (direction === "up") return { label: "Looks like it", colorClass, intensity: "moderate" };
   if (direction === "down") return { label: "Doesn't look like it", colorClass, intensity: "moderate" };
 
-  // Stable or unknown with moderate confidence
+  // Unknown direction = genuinely can't determine, different from stable
+  if (direction === "unknown") {
+    return { label: "Too close to call", colorClass: "text-navy", intensity: "moderate" };
+  }
+
+  // Stable with moderate confidence = things aren't moving
   if (confidence >= 0.5) {
-    return { label: "Signs point to no", colorClass: "text-navy", intensity: "moderate" };
+    return { label: "Not right now", colorClass: "text-navy", intensity: "moderate" };
   }
 
   return { label: "We're watching", colorClass: "text-navy", intensity: "moderate" };

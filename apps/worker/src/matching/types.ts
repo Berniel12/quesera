@@ -89,20 +89,39 @@ export const COINGECKO_SEED_MAP: Record<string, SeedMapEntry[]> = {
 // USGS: all earthquake items → earthquake-activity topic
 export const USGS_TOPIC_SLUG = "earthquake-activity";
 
-// Polymarket slug keyword → topic mappings (conservative, explicit patterns only)
+// Polymarket slug/question keyword → topic mappings
+// These match on both slug AND question text (the matching function checks both)
+// Conservative: exact patterns only, no broad political/person-name hacks
 export const POLYMARKET_SLUG_RULES: Array<{ pattern: string; entries: SeedMapEntry[] }> = [
+  // Sports
   { pattern: "world-cup", entries: [{ slug: "fifa-world-cup-2026", confidence: 0.9 }] },
+  { pattern: "fifa-world-cup", entries: [{ slug: "fifa-world-cup-2026", confidence: 0.9 }] },
   { pattern: "f1-drivers", entries: [{ slug: "formula-1-2026", confidence: 0.9 }] },
-  { pattern: "bitcoin-price", entries: [{ slug: "bitcoin-price", confidence: 0.9 }] },
-  { pattern: "ethereum-price", entries: [{ slug: "ethereum-price", confidence: 0.9 }] },
-  { pattern: "fed-rate", entries: [{ slug: "us-federal-reserve-interest-rates", confidence: 0.8 }] },
-  { pattern: "interest-rate-cut", entries: [{ slug: "us-federal-reserve-interest-rates", confidence: 0.8 }] },
-  { pattern: "recession", entries: [{ slug: "global-recession-risk", confidence: 0.8 }] },
-  { pattern: "iran", entries: [{ slug: "iran-us-tensions", confidence: 0.7 }] },
   { pattern: "premier-league", entries: [{ slug: "premier-league", confidence: 0.9 }] },
   { pattern: "champions-league", entries: [{ slug: "champions-league", confidence: 0.9 }] },
   { pattern: "nba", entries: [{ slug: "nba-season-2025-26", confidence: 0.9 }] },
   { pattern: "nfl", entries: [{ slug: "nfl-2026-season", confidence: 0.9 }] },
+
+  // Crypto (price predictions, not 5-minute micro-bets)
+  { pattern: "bitcoin-150", entries: [{ slug: "bitcoin-price", confidence: 0.9 }] },
+  { pattern: "bitcoin-100", entries: [{ slug: "bitcoin-price", confidence: 0.9 }] },
+  { pattern: "bitcoin-price", entries: [{ slug: "bitcoin-price", confidence: 0.9 }] },
+  { pattern: "ethereum-price", entries: [{ slug: "ethereum-price", confidence: 0.9 }] },
+
+  // Macro/Fed
+  { pattern: "fed-rate", entries: [{ slug: "us-federal-reserve-interest-rates", confidence: 0.8 }] },
+  { pattern: "interest-rate", entries: [{ slug: "us-federal-reserve-interest-rates", confidence: 0.8 }] },
+  { pattern: "fed-decrease", entries: [{ slug: "us-federal-reserve-interest-rates", confidence: 0.8 }] },
+  { pattern: "recession", entries: [{ slug: "global-recession-risk", confidence: 0.8 }] },
+
+  // Geopolitics (specific patterns, not broad person names)
+  { pattern: "iran-ceasefire", entries: [{ slug: "iran-us-tensions", confidence: 0.8 }] },
+  { pattern: "us-iran", entries: [{ slug: "iran-us-tensions", confidence: 0.8 }] },
+  { pattern: "iran-regime", entries: [{ slug: "iran-us-tensions", confidence: 0.7 }] },
+  { pattern: "israel-lebanon", entries: [{ slug: "israel-palestine-conflict", confidence: 0.7 }] },
+  { pattern: "israel-ground-offensive", entries: [{ slug: "israel-palestine-conflict", confidence: 0.8 }] },
+  { pattern: "ukraine-ceasefire", entries: [{ slug: "russia-ukraine-war", confidence: 0.8 }] },
+  { pattern: "russia-ukraine", entries: [{ slug: "russia-ukraine-war", confidence: 0.8 }] },
 ];
 
 // Manifold Markets question keyword → topic mappings
@@ -124,6 +143,25 @@ export const MANIFOLD_QUESTION_RULES: Array<{ pattern: string; entries: SeedMapE
   { pattern: "artificial intelligence", entries: [{ slug: "artificial-intelligence-policy", confidence: 0.7 }] },
   { pattern: "formula 1", entries: [{ slug: "formula-1-2026", confidence: 0.8 }] },
   { pattern: "f1 ", entries: [{ slug: "formula-1-2026", confidence: 0.7 }] },
+
+  // Geopolitics (question-text matching for Polymarket + Manifold)
+  { pattern: "iran ceasefire", entries: [{ slug: "iran-us-tensions", confidence: 0.8 }] },
+  { pattern: "iran regime", entries: [{ slug: "iran-us-tensions", confidence: 0.7 }] },
+  { pattern: "us forces enter iran", entries: [{ slug: "iran-us-tensions", confidence: 0.9 }] },
+  { pattern: "israel launch", entries: [{ slug: "israel-palestine-conflict", confidence: 0.8 }] },
+  { pattern: "israel lebanon", entries: [{ slug: "israel-palestine-conflict", confidence: 0.7 }] },
+  { pattern: "netanyahu", entries: [{ slug: "israel-palestine-conflict", confidence: 0.6 }] },
+  { pattern: "ukraine ceasefire", entries: [{ slug: "russia-ukraine-war", confidence: 0.8 }] },
+  { pattern: "russia ukraine", entries: [{ slug: "russia-ukraine-war", confidence: 0.8 }] },
+
+  // Sports (question-text)
+  { pattern: "premier league", entries: [{ slug: "premier-league", confidence: 0.8 }] },
+  { pattern: "nba finals", entries: [{ slug: "nba-season-2025-26", confidence: 0.9 }] },
+  { pattern: "world cup", entries: [{ slug: "fifa-world-cup-2026", confidence: 0.9 }] },
+
+  // Fed/macro (question-text)
+  { pattern: "fed decrease interest", entries: [{ slug: "us-federal-reserve-interest-rates", confidence: 0.9 }] },
+  { pattern: "fed cut", entries: [{ slug: "us-federal-reserve-interest-rates", confidence: 0.8 }] },
 ];
 
 // Congress.gov title keyword → topic mappings (conservative, policy-specific only)

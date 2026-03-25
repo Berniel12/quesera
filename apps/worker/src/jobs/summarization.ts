@@ -19,7 +19,7 @@ export async function handleSummarization(
   };
   const startTime = Date.now();
 
-  // 1. Load topic
+  // 1. Load topic + question text
   const { data: topic } = await supabase
     .from("topics")
     .select("canonical_name")
@@ -32,6 +32,16 @@ export async function handleSummarization(
   }
 
   const topicName = (topic as { canonical_name: string }).canonical_name;
+
+  // Load the question wrapper for better prompting
+  const { data: wrapperRows } = await supabase
+    .from("question_wrappers")
+    .select("question_text")
+    .eq("topic_id", payload.topic_id)
+    .eq("is_featured", true)
+    .order("sort_order", { ascending: true })
+    .limit(1);
+  const questionText = (wrapperRows as Array<{ question_text: string }> | null)?.[0]?.question_text ?? topicName;
 
   // 2. Load snapshot
   const { data: snapshot } = await supabase
@@ -114,6 +124,7 @@ export async function handleSummarization(
   const prose = await summarizeTopic(
     {
       topicName,
+      questionText,
       direction: snap.direction,
       confidence: snap.confidence,
       disagreement: snap.disagreement,

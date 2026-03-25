@@ -108,7 +108,28 @@ export async function publishSnapshot(
   }
 
   // Step 5: UPSERT public_topic_cards (deterministic, no LLM dependency)
-  const oneLiner = generateDeterministicOneLiner(state, signals, topic.canonical_name);
+  // Preserve hand-written one-liners: only overwrite if existing is a generic template
+  const computedOneLiner = generateDeterministicOneLiner(state, signals, topic.canonical_name);
+
+  const GENERIC_PREFIXES = [
+    "We're watching", "We're gathering", "We are tracking",
+    "Following industry", "Monitoring international", "Watching trends",
+    "Tracking odds", "Early signals", "Signals are",
+    "Markets see this as unlikely — just 0%",
+    "Markets are pricing this at 100%",
+  ];
+
+  const { data: existingCard } = await supabase
+    .from("public_topic_cards")
+    .select("one_liner")
+    .eq("topic_id", topic.id)
+    .maybeSingle();
+
+  const existingOneLiner = (existingCard as { one_liner: string | null } | null)?.one_liner;
+  const existingIsGeneric = !existingOneLiner || existingOneLiner.length < 40 ||
+    GENERIC_PREFIXES.some((p) => existingOneLiner.startsWith(p));
+
+  const oneLiner = existingIsGeneric ? computedOneLiner : existingOneLiner;
 
   const { error: cardError } = await supabase
     .from("public_topic_cards")

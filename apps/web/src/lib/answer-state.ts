@@ -1,6 +1,11 @@
-// Maps (direction, confidence, disagreement) to bold, sensational answer labels
-// ALWAYS pick a side. People want "Probably yes" or "Probably no" -- not hedging.
-// Even at 30% confidence, commit to an answer. Be a smart friend who has an opinion.
+// Maps signal data to bold, entertaining verdicts.
+// The verdict MUST make sense when placed directly after the question:
+//   "Will Bitcoin keep going up?" -> "Probably yes"
+//   "Who will win the NBA title?" -> "Probably yes" (with named answer in one-liner)
+//   "Is NATO getting stronger?" -> "Probably yes"
+//   "Will the war end soon?" -> "Probably not"
+//
+// NEVER return "Not yet" -- it was causing nonsensical answers for most question types.
 
 interface AnswerStateInput {
   direction: string;
@@ -28,28 +33,29 @@ export function getAnswerState(input: AnswerStateInput): AnswerState {
   const { direction, confidence, category } = input;
   const colorClass = getDirectionColor(direction, category);
 
-  // ── HIGH confidence (>= 0.65) — strong commitment ──
-  if (confidence >= 0.65) {
+  // HIGH confidence (>= 0.6)
+  if (confidence >= 0.6) {
     if (direction === "up") return { label: "Probably yes", colorClass, intensity: "strong" };
     if (direction === "down") return { label: "Probably not", colorClass, intensity: "strong" };
-    return { label: "Not yet", colorClass: "text-positive dark:text-[#4EDEA3]", intensity: "strong" };
+    // Stable + high confidence = things are steady, lean toward "yes it's stable" / "probably not changing"
+    return { label: "Probably not", colorClass: "text-foreground", intensity: "strong" };
   }
 
-  // ── MODERATE confidence (>= 0.35) — still commit ──
+  // MODERATE confidence (0.35 - 0.6)
   if (confidence >= 0.35) {
     if (direction === "up") return { label: "Probably yes", colorClass, intensity: "moderate" };
     if (direction === "down") return { label: "Probably not", colorClass, intensity: "moderate" };
-    if (direction === "stable") return { label: "Not yet", colorClass: "text-positive dark:text-[#4EDEA3]", intensity: "moderate" };
-    return { label: "Probably not", colorClass: "text-muted-foreground", intensity: "moderate" };
+    if (direction === "stable") return { label: "Probably not", colorClass: "text-foreground", intensity: "moderate" };
+    // Unknown direction
+    return { label: "Hard to say", colorClass: "text-muted-foreground", intensity: "moderate" };
   }
 
-  // ── LOW confidence (< 0.35) — still give an answer based on category context ──
-  // Most questions with unknown direction and low confidence = "probably not happening"
+  // LOW confidence (< 0.35)
   if (direction === "up") return { label: "Probably yes", colorClass, intensity: "weak" };
   if (direction === "down") return { label: "Probably not", colorClass: "text-destructive", intensity: "weak" };
-  if (direction === "stable") return { label: "Not yet", colorClass: "text-foreground", intensity: "weak" };
+  if (direction === "stable") return { label: "Probably not", colorClass: "text-foreground", intensity: "weak" };
 
-  // Unknown direction -- use category to give sensible default
+  // Unknown direction -- category-specific
   if (category === "disasters" || category === "geopolitics") {
     return { label: "Situation developing", colorClass: "text-warning", intensity: "weak" };
   }
@@ -57,6 +63,5 @@ export function getAnswerState(input: AnswerStateInput): AnswerState {
     return { label: "Still wide open", colorClass: "text-foreground", intensity: "weak" };
   }
 
-  // Default: most questions with no data lean toward "probably not" -- it's more useful than "maybe"
-  return { label: "Probably not", colorClass: "text-foreground", intensity: "weak" };
+  return { label: "Hard to say", colorClass: "text-muted-foreground", intensity: "weak" };
 }

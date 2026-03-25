@@ -19,11 +19,9 @@ const SOURCE_LABELS: Record<string, string> = {
   kalshi: "Kalshi", metaculus: "Metaculus", manifold: "Manifold Markets",
   coingecko: "CoinGecko", usgs_earthquakes: "US Geological Survey",
   noaa_nws: "National Weather Service", congress_gov: "US Congress",
-  polyrouter: "Prediction Markets", the_odds_api: "Bookmaker Consensus",
-  metaforecast: "Forecaster Consensus", espn: "ESPN", defillama: "DeFi Llama",
+  the_odds_api: "Bookmaker Consensus", espn: "ESPN", defillama: "DeFi Llama",
 };
 
-// Category visual config
 const CAT_STYLE: Record<string, { accent: string; border: string; bg: string }> = {
   macro:         { accent: "text-blue-600 dark:text-blue-400",    border: "border-blue-500/20",    bg: "from-blue-500/5 to-transparent dark:from-blue-500/10 dark:to-transparent" },
   crypto:        { accent: "text-amber-600 dark:text-amber-400",  border: "border-amber-500/20",   bg: "from-amber-500/5 to-transparent dark:from-amber-500/10 dark:to-transparent" },
@@ -36,22 +34,34 @@ const CAT_STYLE: Record<string, { accent: string; border: string; bg: string }> 
 };
 const DEFAULT_STYLE = { accent: "text-muted-foreground", border: "border-border/20", bg: "from-muted/10 to-transparent" };
 
+const SOURCE_INFO: Record<string, { name: string; desc: string }> = {
+  prediction_market: { name: "Prediction Markets", desc: "Real-money bets from Polymarket and Kalshi. People put money where their mouth is." },
+  macro_official: { name: "Official Economic Data", desc: "Government statistics from the Federal Reserve, BLS, and other agencies." },
+  crypto_market: { name: "Crypto Exchange Data", desc: "Live prices and volume from major exchanges via CoinGecko." },
+  forecasting: { name: "Forecaster Consensus", desc: "Aggregated predictions from Metaculus and other platforms." },
+  political_official: { name: "Congressional Records", desc: "Bills, votes, and legislative activity from Congress.gov." },
+  hazard_weather: { name: "Weather & Geological Data", desc: "Official alerts from NOAA, NWS, and USGS." },
+  news_evidence: { name: "News Sources", desc: "Recent reporting from major news outlets." },
+  sports_odds: { name: "Sports Bookmakers", desc: "Odds from major sportsbooks." },
+  defi_signal: { name: "DeFi On-Chain Data", desc: "Protocol metrics from DeFi Llama." },
+};
+
 function formatKeyMetric(signal: { source_family: string; signal_type: string; current_value: number; metadata: Record<string, unknown> | null }): { value: string; label: string; context: string } | null {
   if (signal.source_family === "macro_official") {
     const v = signal.current_value;
     const seriesId = String(signal.metadata?.series_id ?? "");
     const info: Record<string, { label: string; context: string }> = {
-      MORTGAGE30US: { label: "30-year fixed mortgage rate", context: "This is the benchmark rate most homebuyers pay. Changes here directly affect monthly payments." },
-      FEDFUNDS: { label: "Federal funds rate", context: "The rate banks charge each other overnight. It influences everything from savings accounts to mortgage rates." },
-      UNRATE: { label: "Unemployment rate", context: "The percentage of people actively looking for work who can't find it. A key indicator of economic health." },
-      CPIAUCSL: { label: "Consumer price index", context: "Measures the average change in prices consumers pay. When this rises, your groceries and gas cost more." },
-      DGS10: { label: "10-year Treasury yield", context: "The return on a 10-year government bond. It's a barometer for investor confidence in the economy." },
-      GDP: { label: "GDP (billions)", context: "The total value of everything produced in the US. Two consecutive quarters of decline signals a recession." },
-      "PET.RWTC.W": { label: "Crude oil price per barrel", context: "The global benchmark for oil. Spikes here show up at the gas pump within days." },
-      SP500: { label: "S&P 500", context: "Tracks the 500 largest US companies. It's the single best measure of how the stock market is doing." },
-      GOLDAMGBD228NLBM: { label: "Gold price (per troy oz)", context: "Gold tends to rise when investors are nervous. It's a classic safe-haven asset." },
-      GASREGW: { label: "Regular gas price (per gallon)", context: "The national average price at the pump. This is what most Americans pay to fill up." },
-      UMCSENT: { label: "Consumer confidence index", context: "Measures how optimistic people feel about the economy. When it drops, spending usually follows." },
+      MORTGAGE30US: { label: "30-year fixed mortgage rate", context: "The benchmark rate most homebuyers pay." },
+      FEDFUNDS: { label: "Federal funds rate", context: "Influences everything from savings accounts to mortgage rates." },
+      UNRATE: { label: "Unemployment rate", context: "Key indicator of economic health." },
+      CPIAUCSL: { label: "Consumer price index", context: "When this rises, your groceries and gas cost more." },
+      DGS10: { label: "10-year Treasury yield", context: "A barometer for investor confidence." },
+      GDP: { label: "GDP (billions)", context: "Two consecutive quarters of decline signals a recession." },
+      "PET.RWTC.W": { label: "Crude oil price per barrel", context: "Spikes here show up at the gas pump within days." },
+      SP500: { label: "S&P 500", context: "The single best measure of how the stock market is doing." },
+      GOLDAMGBD228NLBM: { label: "Gold price (per troy oz)", context: "Gold tends to rise when investors are nervous." },
+      GASREGW: { label: "Regular gas price (per gallon)", context: "National average price at the pump." },
+      UMCSENT: { label: "Consumer confidence index", context: "When it drops, spending usually follows." },
     };
     const entry = info[seriesId];
     if (!entry) return null;
@@ -59,29 +69,34 @@ function formatKeyMetric(signal: { source_family: string; signal_type: string; c
   }
   if (signal.source_family === "crypto_market") {
     const price = signal.current_value;
-    const name = String(signal.metadata?.name ?? "This asset");
-    return {
-      value: price >= 1 ? `$${price.toLocaleString("en-US", { maximumFractionDigits: 0 })}` : `$${price.toFixed(4)}`,
-      label: name,
-      context: `Current trading price across major exchanges. This updates continuously as markets move.`,
-    };
+    return { value: price >= 1 ? `$${price.toLocaleString("en-US", { maximumFractionDigits: 0 })}` : `$${price.toFixed(4)}`, label: String(signal.metadata?.name ?? "Price"), context: "Current trading price across major exchanges." };
   }
   if (signal.signal_type === "market_probability" || signal.signal_type === "forecast_probability") {
     const pct = Math.round(signal.current_value * 100);
-    return { value: `${pct}%`, label: "Market probability", context: `This is what prediction markets think. ${pct}% of bets are on "yes." Real money is behind this number.` };
+    return { value: `${pct}%`, label: "Market probability", context: `Real money is behind this number.` };
   }
   if (signal.signal_type === "earthquake_magnitude") {
-    return { value: `M${signal.current_value.toFixed(1)}`, label: "Strongest recent earthquake", context: "Magnitude measures energy released. Each whole number is about 32x more energy than the one below it." };
+    return { value: `M${signal.current_value.toFixed(1)}`, label: "Strongest recent earthquake", context: "Each whole number is about 32x more energy." };
   }
   return null;
 }
 
 function timeAgo(dateStr: string): string {
   const mins = Math.round((Date.now() - new Date(dateStr).getTime()) / 60000);
-  if (mins < 60) return `${mins} minutes ago`;
+  if (mins < 60) return `${mins}m ago`;
   const hours = Math.round(mins / 60);
-  if (hours < 24) return `${hours} hours ago`;
-  return `${Math.round(hours / 24)} days ago`;
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.round(hours / 24)}d ago`;
+}
+
+function getFamilyDirection(sigs: Array<{ direction: string }>): { label: string; color: string } {
+  const ups = sigs.filter((s) => s.direction === "up").length;
+  const downs = sigs.filter((s) => s.direction === "down").length;
+  const stables = sigs.filter((s) => s.direction === "stable").length;
+  if (ups > downs && ups > stables) return { label: "Points toward yes", color: "text-positive dark:text-[#4EDEA3]" };
+  if (downs > ups && downs > stables) return { label: "Points toward no", color: "text-destructive" };
+  if (stables >= ups && stables >= downs) return { label: "Holding steady", color: "text-muted-foreground" };
+  return { label: "Mixed signals", color: "text-warning" };
 }
 
 export async function generateMetadata({ params }: TopicPageProps): Promise<Metadata> {
@@ -111,27 +126,16 @@ export default async function TopicPage({ params }: TopicPageProps) {
   const { data: latestPointer } = await supabase.from("topic_latest_snapshot").select("snapshot_id").eq("topic_id", t.id).single();
   const snapshotId = (latestPointer as { snapshot_id: string } | null)?.snapshot_id;
 
-  interface SnapshotView {
-    direction: string; confidence: number; disagreement: number; freshness: string;
-    staleness_seconds: number | null; current_picture_text: string | null;
-    what_changed_text: string | null; what_next_text: string | null;
-    structured_data: Record<string, unknown>; published_at: string; version: number;
-  }
+  interface SnapshotView { direction: string; confidence: number; disagreement: number; freshness: string; staleness_seconds: number | null; current_picture_text: string | null; what_changed_text: string | null; what_next_text: string | null; structured_data: Record<string, unknown>; published_at: string; version: number; }
   let snapshot: SnapshotView | null = null;
-  if (snapshotId) {
-    const { data: snapData } = await supabase.from("topic_snapshots").select("direction, confidence, disagreement, freshness, staleness_seconds, current_picture_text, what_changed_text, what_next_text, structured_data, published_at, version").eq("id", snapshotId).single();
-    snapshot = snapData as SnapshotView | null;
-  }
+  if (snapshotId) { const { data } = await supabase.from("topic_snapshots").select("direction, confidence, disagreement, freshness, staleness_seconds, current_picture_text, what_changed_text, what_next_text, structured_data, published_at, version").eq("id", snapshotId).single(); snapshot = data as SnapshotView | null; }
 
   let prevSnapshot: { direction: string; confidence: number } | null = null;
   const { data: prevArr } = await supabase.from("topic_snapshots").select("direction, confidence").eq("topic_id", t.id).order("version", { ascending: false }).range(1, 1).limit(1);
   if (prevArr && prevArr.length > 0) prevSnapshot = prevArr[0] as { direction: string; confidence: number };
 
   let signals: Array<{ source_name: string; source_family: string; signal_type: string; current_value: number; previous_value: number | null; delta: number | null; direction: string; freshness: string; weight: number; metadata: Record<string, unknown> | null }> = [];
-  if (snapshotId) {
-    const { data: sigData } = await supabase.from("topic_signals").select("source_name, source_family, signal_type, current_value, previous_value, delta, direction, freshness, weight, metadata").eq("snapshot_id", snapshotId).order("weight", { ascending: false }).limit(20);
-    signals = (sigData ?? []) as typeof signals;
-  }
+  if (snapshotId) { const { data } = await supabase.from("topic_signals").select("source_name, source_family, signal_type, current_value, previous_value, delta, direction, freshness, weight, metadata").eq("snapshot_id", snapshotId).order("weight", { ascending: false }).limit(20); signals = (data ?? []) as typeof signals; }
 
   const { data: histData } = await supabase.from("topic_snapshots").select("version, direction, confidence, published_at, current_picture_text").eq("topic_id", t.id).order("version", { ascending: false }).limit(10);
   const history = (histData ?? []) as Array<{ version: number; direction: string; confidence: number; published_at: string; current_picture_text: string | null }>;
@@ -169,10 +173,7 @@ export default async function TopicPage({ params }: TopicPageProps) {
 
   const { data: { user } } = await supabase.auth.getUser();
   let isFollowing = false;
-  if (user) {
-    const { data: follow } = await supabase.from("user_followed_topics").select("topic_id").eq("user_id", user.id).eq("topic_id", t.id).maybeSingle();
-    isFollowing = follow !== null;
-  }
+  if (user) { const { data: follow } = await supabase.from("user_followed_topics").select("topic_id").eq("user_id", user.id).eq("topic_id", t.id).maybeSingle(); isFollowing = follow !== null; }
 
   const { data: publicCard } = await supabase.from("public_topic_cards").select("one_liner").eq("topic_id", t.id).maybeSingle();
   const oneLiner = (publicCard as { one_liner: string | null } | null)?.one_liner ?? null;
@@ -199,56 +200,62 @@ export default async function TopicPage({ params }: TopicPageProps) {
   if (history.length >= 2) {
     const recent = history.slice(0, 5);
     const allSame = recent.every((h) => h.direction === recent[0].direction);
-    timelineNarrative = allSame
-      ? `The answer has been consistent for the last ${recent.length} updates.`
-      : `The outlook has shifted between updates recently.`;
+    timelineNarrative = allSame ? `The answer has been consistent for the last ${recent.length} updates.` : `The outlook has shifted between updates recently.`;
   }
 
   const metricBg = t.category ? (CAT_STYLE[t.category]?.bg ?? DEFAULT_STYLE.bg) : DEFAULT_STYLE.bg;
 
+  // Group signals by family for the intelligence briefing
+  const grouped = new Map<string, typeof signals>();
+  for (const s of signals) { const key = s.source_family ?? "unknown"; const arr = grouped.get(key) ?? []; arr.push(s); grouped.set(key, arr); }
+  const ORDER = ["prediction_market", "macro_official", "crypto_market", "forecasting", "political_official", "hazard_weather", "news_evidence", "sports_odds", "defi_signal"];
+  const sortedFamilies = [...grouped.keys()].sort((a, b) => { const ai = ORDER.indexOf(a); const bi = ORDER.indexOf(b); return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi); });
+  const familyDirections = sortedFamilies.map((k) => ({ key: k, ...getFamilyDirection(grouped.get(k) ?? []) }));
+  const allAgree = familyDirections.length > 1 && familyDirections.every((d) => d.label === familyDirections[0].label);
+
   return (
     <div className="mx-auto max-w-3xl px-6 py-8">
 
-      {/* ════════════════════════════════════════════
-          THE ANSWER — above the fold, always
-          ════════════════════════════════════════════ */}
-      <section className="mb-8 animate-slide-up">
+      {/* ================================================================
+          TIER 1: THE ANSWER -- above the fold, one cohesive block
+          Question + verdict + prose explanation + follow
+          ================================================================ */}
+      <section className="mb-10 animate-slide-up">
         <div className="flex items-center gap-2 mb-3">
           <span className={`h-2 w-2 rounded-full ${cat.accent.replace("text-", "bg-")}`} />
           <span className={`text-[10px] font-bold uppercase tracking-[0.2em] ${cat.accent}`}>{t.category ?? "Signal"}</span>
-          {snapshot?.published_at && (
-            <span className="text-[10px] text-muted-foreground/50 ml-auto">{timeAgo(snapshot.published_at)}</span>
-          )}
+          {snapshot?.published_at && <span className="text-[10px] text-muted-foreground/50 ml-auto">{timeAgo(snapshot.published_at)}</span>}
         </div>
 
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground leading-tight">{headline}</h1>
 
-        {t.description && (
-          <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">{t.description}</p>
-        )}
-
-        {/* Big verdict + confidence gauge */}
+        {/* Verdict card with gauge */}
         {answerState && (
-          <div className={`mt-5 p-5 rounded-2xl bg-gradient-to-br ${metricBg} border ${cat.border} animate-fade-in delay-75`}>
+          <div className={`mt-5 p-5 rounded-2xl bg-gradient-to-br ${metricBg} border ${cat.border}`}>
             <div className="flex items-center justify-between gap-4">
               <div>
                 <span className={`text-2xl sm:text-3xl font-black ${answerState.colorClass} block`}>{answerState.label}</span>
                 {changeText && <p className="text-xs font-medium text-muted-foreground mt-1">{changeText}</p>}
               </div>
-              {/* Confidence gauge */}
               <div className="flex-shrink-0 relative h-16 w-16">
                 <svg viewBox="0 0 36 36" className="h-16 w-16 -rotate-90">
                   <circle cx="18" cy="18" r="14" fill="none" strokeWidth="3" className="stroke-border/20 dark:stroke-white/10" />
-                  <circle cx="18" cy="18" r="14" fill="none" strokeWidth="3" strokeLinecap="round"
-                    strokeDasharray={`${(pct / 100) * 88} 88`}
-                    className={`${cat.accent.replace("text-", "stroke-")}`} />
+                  <circle cx="18" cy="18" r="14" fill="none" strokeWidth="3" strokeLinecap="round" strokeDasharray={`${(pct / 100) * 88} 88`} className={`${cat.accent.replace("text-", "stroke-")}`} />
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
                   <span className="text-sm font-black font-mono text-foreground">{pct}%</span>
                 </div>
               </div>
             </div>
-            <div className="mt-3 flex items-center gap-3">
+
+            {/* Prose explanation -- part of the verdict, not a separate section */}
+            <p className="mt-4 text-sm leading-relaxed text-foreground/90">
+              {hasProse
+                ? snapshot?.current_picture_text
+                : oneLiner ?? `We are tracking this question across multiple sources.`}
+            </p>
+
+            <div className="mt-4 flex items-center gap-3">
               <FollowButton topicSlug={t.slug} isAuthenticated={user !== null} initialFollowing={isFollowing} />
               {signals.length > 0 && (
                 <span className="text-[10px] text-muted-foreground">
@@ -262,254 +269,184 @@ export default async function TopicPage({ params }: TopicPageProps) {
 
       {snapshot ? (
         <>
-          {/* ════════════════════════════════════════════
-              THE EXPLANATION — like a friend walking you through it
-              ════════════════════════════════════════════ */}
-          <section className="mb-8 animate-fade-in delay-150">
-            <h2 className={`text-[10px] font-bold uppercase tracking-[0.2em] ${cat.accent} mb-3`}>The short version</h2>
-            <div className="rounded-2xl p-5 bg-card dark:bg-[#131B2E] card-shadow-rich dark:border dark:border-white/5">
-              <p className="text-base leading-relaxed text-foreground">
-                {hasProse
-                  ? snapshot.current_picture_text
-                  : oneLiner ?? `We're tracking this question across multiple sources. The data so far points to "${answerState?.label ?? "developing"}." We'll update this as new signals come in.`}
-              </p>
-            </div>
-          </section>
-
-          {/* ════════════════════════════════════════════
-              KEY NUMBER — the one metric that matters most
-              ════════════════════════════════════════════ */}
-          {keyMetric && (
+          {/* ================================================================
+              TIER 2: INTELLIGENCE BRIEFING -- one card, the full "why"
+              Key metric + sources + what changed + what to watch
+              ================================================================ */}
+          {(signals.length > 0 || snapshot.what_changed_text || snapshot.what_next_text) && (
             <AnimateOnScroll>
-              <section className="mb-8">
-                <h2 className={`text-[10px] font-bold uppercase tracking-[0.2em] ${cat.accent} mb-3`}>Key number</h2>
-                <div className={`rounded-2xl p-5 border ${cat.border} bg-gradient-to-br ${metricBg}`}>
-                  <div className="flex items-baseline gap-3">
-                    <span className="text-3xl sm:text-4xl font-black tracking-tight text-foreground dark:text-primary metric-glow">{keyMetric.value}</span>
-                    <span className="text-sm font-medium text-foreground">{keyMetric.label}</span>
-                  </div>
-                  {primarySignal && primarySignal.delta !== null && Math.abs(primarySignal.delta) > 0.001 && (
-                    <p className={`text-xs font-semibold mt-1 ${primarySignal.delta > 0 ? "text-positive dark:text-[#4EDEA3]" : "text-destructive"}`}>
-                      {primarySignal.delta > 0 ? "+" : ""}{primarySignal.delta.toFixed(2)} since last update
-                    </p>
-                  )}
-                  <p className="text-xs text-muted-foreground mt-2 leading-relaxed">{keyMetric.context}</p>
-                </div>
-              </section>
-            </AnimateOnScroll>
-          )}
+              <section className="mb-10">
+                <h2 className={`text-[10px] font-bold uppercase tracking-[0.2em] ${cat.accent} mb-3`}>Intelligence Briefing</h2>
+                <div className="rounded-2xl bg-card dark:bg-[#131B2E] card-shadow-rich dark:border dark:border-white/5 overflow-hidden">
 
-          {/* ════════════════════════════════════════════
-              WHAT CHANGED + WHAT TO WATCH — the briefing cards
-              ════════════════════════════════════════════ */}
-          {(snapshot.what_changed_text || snapshot.what_next_text) && (
-            <AnimateOnScroll>
-              <section className="mb-8 grid gap-4 sm:grid-cols-2">
-                {snapshot.what_changed_text && (
-                  <div className="rounded-2xl p-5 bg-card dark:bg-[#131B2E] card-shadow-rich dark:border dark:border-white/5">
-                    <h3 className={`text-[10px] font-bold uppercase tracking-[0.2em] ${cat.accent} mb-2`}>What changed</h3>
-                    <p className="text-sm leading-relaxed text-foreground">{snapshot.what_changed_text}</p>
-                  </div>
-                )}
-                {snapshot.what_next_text && (
-                  <div className="rounded-2xl p-5 bg-card dark:bg-[#131B2E] card-shadow-rich dark:border dark:border-white/5">
-                    <h3 className={`text-[10px] font-bold uppercase tracking-[0.2em] ${cat.accent} mb-2`}>What to watch</h3>
-                    <p className="text-sm leading-relaxed text-foreground">{snapshot.what_next_text}</p>
-                  </div>
-                )}
-              </section>
-            </AnimateOnScroll>
-          )}
-
-          {/* ════════════════════════════════════════════
-              SOURCE CONSENSUS — what each source says
-              ════════════════════════════════════════════ */}
-          {signals.length > 0 && (() => {
-            const grouped = new Map<string, typeof signals>();
-            for (const s of signals) {
-              const key = s.source_family ?? "unknown";
-              const existing = grouped.get(key) ?? [];
-              existing.push(s);
-              grouped.set(key, existing);
-            }
-            const ORDER = ["prediction_market", "macro_official", "crypto_market", "forecasting", "political_official", "hazard_weather", "news_evidence", "sports_odds", "defi_signal"];
-            const sortedKeys = [...grouped.keys()].sort((a, b) => {
-              const ai = ORDER.indexOf(a); const bi = ORDER.indexOf(b);
-              return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
-            });
-
-            // Compute per-family verdict for consensus view
-            const SOURCE_LABELS: Record<string, { name: string; description: string }> = {
-              prediction_market: { name: "Prediction Markets", description: "Real-money bets from Polymarket, Kalshi, and others. People put money where their mouth is." },
-              macro_official: { name: "Official Economic Data", description: "Government statistics from the Federal Reserve, BLS, and other agencies. The hardest numbers we have." },
-              crypto_market: { name: "Crypto Exchange Data", description: "Live prices and volume from major exchanges via CoinGecko." },
-              forecasting: { name: "Forecaster Consensus", description: "Aggregated predictions from Metaculus and other forecasting platforms." },
-              political_official: { name: "Congressional Records", description: "Bills, votes, and legislative activity from Congress.gov." },
-              hazard_weather: { name: "Weather & Geological Data", description: "Official alerts from NOAA, NWS, and USGS earthquake monitoring." },
-              news_evidence: { name: "News Sources", description: "Recent reporting from major news outlets and wire services." },
-              sports_odds: { name: "Sports Bookmakers", description: "Odds and lines from major sportsbooks, reflecting market consensus." },
-              defi_signal: { name: "DeFi On-Chain Data", description: "Total value locked and protocol metrics from DeFi Llama." },
-            };
-
-            function getFamilyDirection(sigs: typeof signals): { label: string; color: string } {
-              const ups = sigs.filter((s) => s.direction === "up").length;
-              const downs = sigs.filter((s) => s.direction === "down").length;
-              const stables = sigs.filter((s) => s.direction === "stable").length;
-              if (ups > downs && ups > stables) return { label: "Points toward yes", color: "text-positive dark:text-[#4EDEA3]" };
-              if (downs > ups && downs > stables) return { label: "Points toward no", color: "text-destructive" };
-              if (stables >= ups && stables >= downs) return { label: "Holding steady", color: "text-muted-foreground" };
-              return { label: "Mixed signals", color: "text-warning" };
-            }
-
-            // Check if sources agree
-            const familyDirections = sortedKeys.map((k) => getFamilyDirection(grouped.get(k) ?? []));
-            const allAgree = familyDirections.length > 1 && familyDirections.every((d) => d.label === familyDirections[0].label);
-            const consensusLabel = allAgree
-              ? `All ${sortedKeys.length} source types agree: ${familyDirections[0].label.toLowerCase()}`
-              : sortedKeys.length > 1
-                ? "Sources show different perspectives"
-                : null;
-
-            return (
-              <AnimateOnScroll>
-                <section className="mb-8">
-                  <h2 className={`text-[10px] font-bold uppercase tracking-[0.2em] ${cat.accent} mb-2`}>Where this comes from</h2>
-                  <p className="text-xs text-muted-foreground mb-4">
-                    {signals.length} data points from {sourceFamilies.length} {sourceFamilies.length === 1 ? "source type" : "independent source types"}
-                    {consensusLabel ? `. ${consensusLabel}.` : "."}
-                  </p>
-
-                  {/* Source consensus cards */}
-                  <div className="grid gap-3 sm:grid-cols-2 mb-6">
-                    {sortedKeys.map((key) => {
-                      const sigs = grouped.get(key) ?? [];
-                      const info = SOURCE_LABELS[key] ?? { name: key, description: "" };
-                      const dir = getFamilyDirection(sigs);
-                      return (
-                        <div key={key} className="rounded-2xl p-4 bg-card dark:bg-[#131B2E] dark:border dark:border-white/5 card-shadow-rich">
-                          <div className="flex items-start justify-between gap-2 mb-2">
-                            <h3 className="text-sm font-bold text-foreground">{info.name}</h3>
-                            <span className={`text-xs font-bold flex-shrink-0 ${dir.color}`}>{dir.label}</span>
-                          </div>
-                          <p className="text-[11px] text-muted-foreground leading-relaxed mb-2">{info.description}</p>
-                          <p className="text-xs text-foreground/70">
-                            {sigs.length} {sigs.length === 1 ? "signal" : "signals"} tracked
-                          </p>
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {/* Detailed signal breakdown */}
-                  <details className="group">
-                    <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors mb-4 flex items-center gap-1">
-                      <span>View detailed signal data</span>
-                      <svg className="h-3 w-3 transition-transform group-open:rotate-90" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 2l4 4-4 4" /></svg>
-                    </summary>
-                    {sortedKeys.map((key) => (
-                      <SignalGroup key={key} familyKey={key} signals={grouped.get(key) ?? []} />
-                    ))}
-                  </details>
-                </section>
-              </AnimateOnScroll>
-            );
-          })()}
-
-          {/* ════════════════════════════════════════════
-              EVIDENCE — recent news and data points
-              ════════════════════════════════════════════ */}
-          {evidencePreview.length > 0 && (
-            <AnimateOnScroll>
-              <section className="mb-8">
-                <h2 className={`text-[10px] font-bold uppercase tracking-[0.2em] ${cat.accent} mb-3`}>Recent evidence</h2>
-                <div className="space-y-2">
-                  {evidencePreview.map((ev, i) => (
-                    <div key={i} className="flex items-start gap-3 p-3 rounded-xl bg-card dark:bg-[#131B2E] dark:border dark:border-white/5">
-                      <span className={`h-1.5 w-1.5 rounded-full mt-2 flex-shrink-0 ${cat.accent.replace("text-", "bg-")}`} />
-                      <div className="min-w-0">
-                        <p className="text-sm text-foreground leading-snug">{ev.title}</p>
-                        <p className="text-[11px] text-muted-foreground mt-0.5">{ev.source}{ev.date ? ` -- ${ev.date}` : ""}</p>
+                  {/* Key metric -- compact row at top */}
+                  {keyMetric && (
+                    <div className={`flex items-center gap-4 p-5 border-b border-border/10 dark:border-white/5 bg-gradient-to-r ${metricBg}`}>
+                      <span className="text-2xl sm:text-3xl font-black tracking-tight text-foreground dark:text-primary">{keyMetric.value}</span>
+                      <div>
+                        <span className="text-sm font-medium text-foreground block">{keyMetric.label}</span>
+                        {primarySignal && primarySignal.delta !== null && Math.abs(primarySignal.delta) > 0.001 && (
+                          <span className={`text-xs font-semibold ${primarySignal.delta > 0 ? "text-positive dark:text-[#4EDEA3]" : "text-destructive"}`}>
+                            {primarySignal.delta > 0 ? "+" : ""}{primarySignal.delta.toFixed(2)} since last update
+                          </span>
+                        )}
+                        <span className="text-[11px] text-muted-foreground block mt-0.5">{keyMetric.context}</span>
                       </div>
                     </div>
-                  ))}
-                </div>
-                <div className="mt-3">
-                  <EvidenceDrawer topicId={t.id} />
-                </div>
-              </section>
-            </AnimateOnScroll>
-          )}
+                  )}
 
-          {/* ════════════════════════════════════════════
-              TIMELINE — how the answer has evolved
-              ════════════════════════════════════════════ */}
-          {history.length >= 2 && (
-            <AnimateOnScroll>
-              <section className="mb-8">
-                <h2 className={`text-[10px] font-bold uppercase tracking-[0.2em] ${cat.accent} mb-3`}>How this answer has changed</h2>
-                <div className="rounded-2xl p-5 bg-card dark:bg-[#131B2E] card-shadow-rich dark:border dark:border-white/5">
-                  <ConfidenceTimeline history={history} />
-                  {timelineNarrative && (
-                    <p className="text-xs text-muted-foreground mt-3">{timelineNarrative}</p>
+                  {/* Source consensus -- what each source says */}
+                  {sortedFamilies.length > 0 && (
+                    <div className="p-5 border-b border-border/10 dark:border-white/5">
+                      <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1">What the sources say</h3>
+                      <p className="text-[11px] text-muted-foreground mb-4">
+                        {sortedFamilies.length} {sortedFamilies.length === 1 ? "source type" : "independent source types"}
+                        {allAgree && familyDirections.length > 1 ? ` -- all agree: ${familyDirections[0].label.toLowerCase()}` : sortedFamilies.length > 1 ? " -- showing different perspectives" : ""}
+                      </p>
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        {familyDirections.map((fd) => {
+                          const info = SOURCE_INFO[fd.key] ?? { name: fd.key, desc: "" };
+                          const count = (grouped.get(fd.key) ?? []).length;
+                          return (
+                            <div key={fd.key} className="flex items-start gap-3 p-3 rounded-xl bg-muted/30 dark:bg-white/[0.03]">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className="text-xs font-bold text-foreground">{info.name}</span>
+                                  <span className={`text-[10px] font-bold flex-shrink-0 ${fd.color}`}>{fd.label}</span>
+                                </div>
+                                <p className="text-[10px] text-muted-foreground mt-0.5">{info.desc}</p>
+                                <p className="text-[10px] text-muted-foreground/60 mt-0.5">{count} {count === 1 ? "signal" : "signals"}</p>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* What changed + what to watch -- compact bottom row */}
+                  {(snapshot.what_changed_text || snapshot.what_next_text) && (
+                    <div className="grid sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-border/10 dark:divide-white/5">
+                      {snapshot.what_changed_text && (
+                        <div className="p-5">
+                          <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide mb-2">What changed</h3>
+                          <p className="text-sm leading-relaxed text-foreground">{snapshot.what_changed_text}</p>
+                        </div>
+                      )}
+                      {snapshot.what_next_text && (
+                        <div className="p-5">
+                          <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide mb-2">What to watch</h3>
+                          <p className="text-sm leading-relaxed text-foreground">{snapshot.what_next_text}</p>
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
+
+                {/* Detailed signal data -- collapsed */}
+                {signals.length > 0 && (
+                  <details className="group mt-4">
+                    <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors flex items-center gap-1">
+                      <span>View raw signal data ({signals.length} signals)</span>
+                      <svg className="h-3 w-3 transition-transform group-open:rotate-90" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 2l4 4-4 4" /></svg>
+                    </summary>
+                    <div className="mt-3">
+                      {sortedFamilies.map((key) => (
+                        <SignalGroup key={key} familyKey={key} signals={grouped.get(key) ?? []} />
+                      ))}
+                    </div>
+                  </details>
+                )}
               </section>
             </AnimateOnScroll>
           )}
 
-          {/* ════════════════════════════════════════════
-              SPARSE TOPIC — gathering data notice
-              ════════════════════════════════════════════ */}
+          {/* Gathering data notice for sparse topics */}
           {signals.length === 0 && !hasProse && (
-            <section className="mb-8 p-6 rounded-2xl bg-gradient-to-br ${metricBg} border ${cat.border} text-center animate-fade-in">
+            <section className="mb-10 p-6 rounded-2xl bg-muted/30 dark:bg-white/[0.03] border border-border/20 dark:border-white/5 text-center">
               <p className="text-sm font-medium text-foreground mb-2">We are building a full picture on this question</p>
               <p className="text-xs text-muted-foreground max-w-md mx-auto leading-relaxed mb-4">
-                Our system is connecting to prediction markets, official data sources, and news feeds to build a comprehensive analysis.
-                When the signals are strong enough, you will see the full breakdown here -- sources, evidence, and a confidence timeline.
+                Our system is connecting to prediction markets, official data, and news feeds. When the signals are strong enough, you will see the full breakdown here.
               </p>
               <FollowButton topicSlug={t.slug} isAuthenticated={user !== null} initialFollowing={isFollowing} />
             </section>
           )}
 
-          {/* ════════════════════════════════════════════
-              RELATED QUESTIONS — what else to explore
-              ════════════════════════════════════════════ */}
-          {relatedQuestions.length > 0 && (
-            <AnimateOnScroll>
-              <section className="mb-8">
-                <h2 className={`text-[10px] font-bold uppercase tracking-[0.2em] ${cat.accent} mb-4`}>People also wondering</h2>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {relatedQuestions.map((rq) => {
-                    const rqState = rq.direction && rq.confidence !== null
-                      ? getAnswerState({ direction: rq.direction, confidence: rq.confidence, category: t.category, disagreement: 0 }) : null;
-                    return (
-                      <Link key={rq.slug} href={`/topics/${rq.slug}`}>
-                        <div className="p-4 rounded-2xl bg-card dark:bg-[#131B2E] dark:border dark:border-white/5 hover-lift-sm">
-                          <p className="text-sm font-semibold text-foreground leading-snug">{rq.question_text}</p>
-                          {rqState && <p className={`text-xs font-bold mt-1.5 ${rqState.colorClass}`}>{rqState.label}</p>}
-                        </div>
-                      </Link>
-                    );
-                  })}
-                </div>
-              </section>
-            </AnimateOnScroll>
-          )}
+          {/* ================================================================
+              TIER 3: THE DETAILS -- supplementary, lighter visual weight
+              Evidence, timeline, related questions
+              ================================================================ */}
+          <div className="mt-4 space-y-8 opacity-90">
 
-          {/* ════════════════════════════════════════════
-              CTA — ask your own question
-              ════════════════════════════════════════════ */}
-          <section className="mb-8 p-6 rounded-2xl bg-card dark:bg-[#131B2E] dark:border dark:border-white/5 text-center">
-            <p className="text-sm font-medium text-foreground mb-3">Have a different question about this topic?</p>
-            <Link href="/search" className="inline-flex h-10 items-center rounded-full bg-secondary dark:bg-[#222A3E] px-6 text-sm text-foreground hover:bg-secondary/80 transition-colors">
-              Ask a question
-            </Link>
-          </section>
+            {/* Evidence */}
+            {evidencePreview.length > 0 && (
+              <AnimateOnScroll>
+                <section>
+                  <h2 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide mb-3">Recent evidence</h2>
+                  <div className="space-y-1.5">
+                    {evidencePreview.map((ev, i) => (
+                      <div key={i} className="flex items-start gap-3 p-3 rounded-xl bg-muted/20 dark:bg-white/[0.02]">
+                        <span className={`h-1.5 w-1.5 rounded-full mt-2 flex-shrink-0 ${cat.accent.replace("text-", "bg-")}`} />
+                        <div className="min-w-0">
+                          <p className="text-sm text-foreground leading-snug">{ev.title}</p>
+                          <p className="text-[11px] text-muted-foreground mt-0.5">{ev.source}{ev.date ? ` -- ${ev.date}` : ""}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-3"><EvidenceDrawer topicId={t.id} /></div>
+                </section>
+              </AnimateOnScroll>
+            )}
+
+            {/* Timeline */}
+            {history.length >= 2 && (
+              <AnimateOnScroll>
+                <section>
+                  <h2 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide mb-3">How this answer has changed</h2>
+                  <div className="rounded-2xl p-5 bg-muted/20 dark:bg-white/[0.02]">
+                    <ConfidenceTimeline history={history} />
+                    {timelineNarrative && <p className="text-xs text-muted-foreground mt-3">{timelineNarrative}</p>}
+                  </div>
+                </section>
+              </AnimateOnScroll>
+            )}
+
+            {/* Related questions */}
+            {relatedQuestions.length > 0 && (
+              <AnimateOnScroll>
+                <section>
+                  <h2 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide mb-3">People also wondering</h2>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {relatedQuestions.map((rq) => {
+                      const rqState = rq.direction && rq.confidence !== null ? getAnswerState({ direction: rq.direction, confidence: rq.confidence, category: t.category, disagreement: 0 }) : null;
+                      return (
+                        <Link key={rq.slug} href={`/topics/${rq.slug}`}>
+                          <div className="p-4 rounded-xl bg-muted/20 dark:bg-white/[0.02] hover:bg-muted/40 dark:hover:bg-white/[0.04] transition-colors">
+                            <p className="text-sm font-semibold text-foreground leading-snug">{rq.question_text}</p>
+                            {rqState && <p className={`text-xs font-bold mt-1 ${rqState.colorClass}`}>{rqState.label}</p>}
+                          </div>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </section>
+              </AnimateOnScroll>
+            )}
+
+            {/* Ask CTA */}
+            <section className="p-5 rounded-2xl bg-muted/20 dark:bg-white/[0.02] text-center">
+              <p className="text-sm font-medium text-foreground mb-3">Have a different question about this topic?</p>
+              <Link href="/search" className="inline-flex h-9 items-center rounded-full bg-secondary dark:bg-[#222A3E] px-5 text-sm text-foreground hover:bg-secondary/80 transition-colors">
+                Ask a question
+              </Link>
+            </section>
+          </div>
         </>
       ) : (
-        <div className="rounded-2xl p-8 bg-card dark:bg-[#131B2E] dark:border dark:border-white/5 text-center animate-fade-in">
+        <div className="rounded-2xl p-8 bg-card dark:bg-[#131B2E] dark:border dark:border-white/5 text-center">
           <p className="text-lg font-medium text-foreground mb-2">We are building this answer</p>
-          <p className="text-sm text-muted-foreground mb-4">Signal analysis is being prepared. Check back shortly for a living answer.</p>
+          <p className="text-sm text-muted-foreground mb-4">Signal analysis is being prepared.</p>
           <FollowButton topicSlug={t.slug} isAuthenticated={user !== null} initialFollowing={isFollowing} />
         </div>
       )}

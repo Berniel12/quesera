@@ -27,6 +27,25 @@ export async function publishSnapshot(
 ): Promise<PublishedSnapshot> {
   const now = new Date().toISOString();
 
+  // Step 0: Carry forward prose from previous snapshot (so it's never lost)
+  // Prose comes from LLM summarization (async) or manual seeding. Without this,
+  // every new snapshot would wipe the prose until summarization re-runs.
+  interface ProseFields { current_picture_text: string | null; what_changed_text: string | null; what_next_text: string | null }
+  let carryProse: ProseFields = { current_picture_text: null, what_changed_text: null, what_next_text: null };
+  const { data: prevPointer } = await supabase
+    .from("topic_latest_snapshot")
+    .select("snapshot_id")
+    .eq("topic_id", topic.id)
+    .maybeSingle();
+  if (prevPointer) {
+    const { data: prev } = await supabase
+      .from("topic_snapshots")
+      .select("current_picture_text, what_changed_text, what_next_text")
+      .eq("id", (prevPointer as { snapshot_id: string }).snapshot_id)
+      .single();
+    if (prev) carryProse = prev as ProseFields;
+  }
+
   // Step 1: Get next version (per-topic monotonic)
   const { data: maxVersionRow } = await supabase
     .from("topic_snapshots")
@@ -39,7 +58,7 @@ export async function publishSnapshot(
   const version =
     ((maxVersionRow as { version: number } | null)?.version ?? 0) + 1;
 
-  // Step 2: INSERT immutable snapshot row (prose fields null)
+  // Step 2: INSERT snapshot row (carrying forward prose from previous)
   const { data: snapshot, error: snapError } = await supabase
     .from("topic_snapshots")
     .insert({
@@ -54,6 +73,9 @@ export async function publishSnapshot(
       scoring_version: SCORING_VERSION,
       snapshot_at: now,
       published_at: now,
+      current_picture_text: carryProse.current_picture_text,
+      what_changed_text: carryProse.what_changed_text,
+      what_next_text: carryProse.what_next_text,
     })
     .select("id")
     .single();

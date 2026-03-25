@@ -322,7 +322,7 @@ export default async function TopicPage({ params }: TopicPageProps) {
           )}
 
           {/* ════════════════════════════════════════════
-              THE SIGNALS — where the answer comes from
+              SOURCE CONSENSUS — what each source says
               ════════════════════════════════════════════ */}
           {signals.length > 0 && (() => {
             const grouped = new Map<string, typeof signals>();
@@ -337,16 +337,79 @@ export default async function TopicPage({ params }: TopicPageProps) {
               const ai = ORDER.indexOf(a); const bi = ORDER.indexOf(b);
               return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
             });
+
+            // Compute per-family verdict for consensus view
+            const SOURCE_LABELS: Record<string, { name: string; description: string }> = {
+              prediction_market: { name: "Prediction Markets", description: "Real-money bets from Polymarket, Kalshi, and others. People put money where their mouth is." },
+              macro_official: { name: "Official Economic Data", description: "Government statistics from the Federal Reserve, BLS, and other agencies. The hardest numbers we have." },
+              crypto_market: { name: "Crypto Exchange Data", description: "Live prices and volume from major exchanges via CoinGecko." },
+              forecasting: { name: "Forecaster Consensus", description: "Aggregated predictions from Metaculus and other forecasting platforms." },
+              political_official: { name: "Congressional Records", description: "Bills, votes, and legislative activity from Congress.gov." },
+              hazard_weather: { name: "Weather & Geological Data", description: "Official alerts from NOAA, NWS, and USGS earthquake monitoring." },
+              news_evidence: { name: "News Sources", description: "Recent reporting from major news outlets and wire services." },
+              sports_odds: { name: "Sports Bookmakers", description: "Odds and lines from major sportsbooks, reflecting market consensus." },
+              defi_signal: { name: "DeFi On-Chain Data", description: "Total value locked and protocol metrics from DeFi Llama." },
+            };
+
+            function getFamilyDirection(sigs: typeof signals): { label: string; color: string } {
+              const ups = sigs.filter((s) => s.direction === "up").length;
+              const downs = sigs.filter((s) => s.direction === "down").length;
+              const stables = sigs.filter((s) => s.direction === "stable").length;
+              if (ups > downs && ups > stables) return { label: "Points toward yes", color: "text-positive dark:text-[#4EDEA3]" };
+              if (downs > ups && downs > stables) return { label: "Points toward no", color: "text-destructive" };
+              if (stables >= ups && stables >= downs) return { label: "Holding steady", color: "text-muted-foreground" };
+              return { label: "Mixed signals", color: "text-warning" };
+            }
+
+            // Check if sources agree
+            const familyDirections = sortedKeys.map((k) => getFamilyDirection(grouped.get(k) ?? []));
+            const allAgree = familyDirections.length > 1 && familyDirections.every((d) => d.label === familyDirections[0].label);
+            const consensusLabel = allAgree
+              ? `All ${sortedKeys.length} source types agree: ${familyDirections[0].label.toLowerCase()}`
+              : sortedKeys.length > 1
+                ? "Sources show different perspectives"
+                : null;
+
             return (
               <AnimateOnScroll>
                 <section className="mb-8">
-                  <div className="flex items-center gap-3 mb-4">
-                    <h2 className={`text-[10px] font-bold uppercase tracking-[0.2em] ${cat.accent}`}>Where this comes from</h2>
-                    <span className="text-[10px] text-muted-foreground/50">{signals.length} signals, {sourceFamilies.length} {sourceFamilies.length === 1 ? "source type" : "source types"}</span>
+                  <h2 className={`text-[10px] font-bold uppercase tracking-[0.2em] ${cat.accent} mb-2`}>Where this comes from</h2>
+                  <p className="text-xs text-muted-foreground mb-4">
+                    {signals.length} data points from {sourceFamilies.length} {sourceFamilies.length === 1 ? "source type" : "independent source types"}
+                    {consensusLabel ? `. ${consensusLabel}.` : "."}
+                  </p>
+
+                  {/* Source consensus cards */}
+                  <div className="grid gap-3 sm:grid-cols-2 mb-6">
+                    {sortedKeys.map((key) => {
+                      const sigs = grouped.get(key) ?? [];
+                      const info = SOURCE_LABELS[key] ?? { name: key, description: "" };
+                      const dir = getFamilyDirection(sigs);
+                      return (
+                        <div key={key} className="rounded-2xl p-4 bg-card dark:bg-[#131B2E] dark:border dark:border-white/5 card-shadow-rich">
+                          <div className="flex items-start justify-between gap-2 mb-2">
+                            <h3 className="text-sm font-bold text-foreground">{info.name}</h3>
+                            <span className={`text-xs font-bold flex-shrink-0 ${dir.color}`}>{dir.label}</span>
+                          </div>
+                          <p className="text-[11px] text-muted-foreground leading-relaxed mb-2">{info.description}</p>
+                          <p className="text-xs text-foreground/70">
+                            {sigs.length} {sigs.length === 1 ? "signal" : "signals"} tracked
+                          </p>
+                        </div>
+                      );
+                    })}
                   </div>
-                  {sortedKeys.map((key) => (
-                    <SignalGroup key={key} familyKey={key} signals={grouped.get(key) ?? []} />
-                  ))}
+
+                  {/* Detailed signal breakdown */}
+                  <details className="group">
+                    <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors mb-4 flex items-center gap-1">
+                      <span>View detailed signal data</span>
+                      <svg className="h-3 w-3 transition-transform group-open:rotate-90" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 2l4 4-4 4" /></svg>
+                    </summary>
+                    {sortedKeys.map((key) => (
+                      <SignalGroup key={key} familyKey={key} signals={grouped.get(key) ?? []} />
+                    ))}
+                  </details>
                 </section>
               </AnimateOnScroll>
             );

@@ -33,7 +33,7 @@ export async function GET(request: Request) {
     .eq("job_type", "source_sync");
 
   const queueDepth = (pendingCount as unknown as number) ?? 0;
-  if (typeof queueDepth === "number" && queueDepth > 50) {
+  if (typeof queueDepth === "number" && queueDepth > 20) {
     return NextResponse.json({
       enqueued: [],
       skipped: ["queue_backed_up"],

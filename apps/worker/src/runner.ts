@@ -47,7 +47,7 @@ async function processJob(
 
 export async function startRunner(options: RunnerOptions) {
   const { workerId, pollIntervalMs, supabase, logger } = options;
-  const concurrency = Number(process.env.WORKER_CONCURRENCY ?? "3");
+  const concurrency = Number(process.env.WORKER_CONCURRENCY ?? "1"); // Default 1 to be gentle on free-tier DB
   let running = true;
   let activeCount = 0;
 
@@ -89,7 +89,8 @@ export async function startRunner(options: RunnerOptions) {
             updateHealthState({ runningJobCount: activeCount });
           });
       } else {
-        await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
+        // No job found -- wait longer to reduce DB polling pressure
+        await new Promise((resolve) => setTimeout(resolve, Math.max(pollIntervalMs, 5000)));
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : String(err);

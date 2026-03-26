@@ -89,9 +89,20 @@ export async function summarizeTopic(
     ? `Previously the outlook was "${input.priorDirection}" with ${Math.round((input.priorConfidence ?? 0) * 100)}% confidence.`
     : "";
 
-  const prompt = `You are a senior analyst writing a briefing about the question: "${input.questionText ?? input.topicName}"
+  // Extract market probability for context if prediction markets are among signals
+  const marketSignals = input.signals.filter((s) => s.sourceFamily === "prediction_market" || s.sourceFamily === "forecasting");
+  const marketContext = marketSignals.length > 0
+    ? `\nMARKET/FORECAST SIGNAL: ${marketSignals.map((s) => {
+        const name = SOURCE_NAMES[s.sourceName] ?? s.sourceName;
+        const pct = s.currentValue !== null ? `${Math.round(s.currentValue * 100)}%` : "unknown";
+        return `${name} says ${pct} yes`;
+      }).join(", ")}.`
+    : "";
 
-Your job is to explain the current situation like a smart, knowledgeable friend -- connecting signals from ${sourceCount} different source types into a coherent picture. Reference specific sources by name. Explain where they agree and where they diverge.
+  const prompt = `You are writing about the prediction question: "${input.questionText ?? input.topicName}"
+
+Your job: explain the full picture like a sharp, opinionated friend who has done the research. Not a data analyst. Not a chatbot. A person who reads the signals, connects the dots, and tells you what they actually think.
+${marketContext}
 
 DATA FROM ${signalCount} SIGNALS ACROSS ${sourceCount} SOURCES:
 
@@ -103,22 +114,23 @@ ${priorContext}
 Write a JSON response with three fields:
 
 {
-  "current_picture": "A 3-5 sentence explanation of the current situation. Start with the bottom line answer. Then explain what the key signals show and why. Reference at least 2 specific sources by name. Connect the dots -- explain how different signals tell the same or different stories.",
+  "current_picture": "Start with your bold answer -- not 'it depends', but what the signals actually point to. Then explain why in 3-4 sentences. Reference specific sources by name. If prediction markets and official data disagree, say so and explain which side you'd trust more here.",
 
-  "what_changed": "2-3 sentences about what shifted recently. Reference specific data points that moved. If nothing meaningful changed, say so and explain what staying flat means in this context.",
+  "what_changed": "What moved recently? Be specific: name the data point, the direction, and why it matters. If nothing moved, say what it means that things are stuck.",
 
-  "what_next": "2-3 sentences about what to watch. Name specific indicators, dates, or events that would change the picture. Be specific -- not 'watch for developments' but 'watch the next Fed meeting on June 12' or 'if unemployment breaks above 4.5%, the recession narrative takes over'."
+  "what_next": "Name the specific dates, events, or data releases that will move this. Not 'watch for developments' but 'the next CPI print on April 10 is the one that matters' or 'if Polymarket breaks above 80%, the market has made up its mind'."
 }
 
 RULES:
-- Write like a smart friend explaining over coffee, not a financial report
-- 400-700 characters per field (about 3-5 sentences each)
-- Always reference specific source names (Federal Reserve data, Polymarket, CoinGecko, etc.)
-- Connect signals: "Prediction markets show X, while government data shows Y -- together this suggests Z"
-- No raw indicator codes (say "the unemployment rate" not "UNRATE")
-- No jargon without explanation
-- Be opinionated -- pick a side based on the data
-- If sources disagree, explain the disagreement honestly
+- Be bold. Pick a side. Say what you think the answer is.
+- Write like a smart friend at a dinner party, not a financial report
+- 400-700 characters per field
+- Always name your sources (Polymarket, Federal Reserve data, CoinGecko, bookmakers, etc.)
+- When prediction markets have a probability, lead with it: "Markets put this at 72%..."
+- Connect different signals: "Markets say X, but the official data tells a different story..."
+- No hedge words like "it remains to be seen" or "time will tell"
+- No indicator codes (say "unemployment rate" not "UNRATE")
+- No emojis
 - Respond with valid JSON only, no markdown fences
 `;
 

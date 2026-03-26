@@ -8,6 +8,10 @@ import { FollowButton } from "@/components/follow-button";
 import { EvidenceDrawer } from "@/components/evidence-drawer";
 import { AnimateOnScroll } from "@/components/animate-on-scroll";
 import Link from "next/link";
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function db(client: SupabaseClient<any>) { return client as SupabaseClient<any>; }
 
 interface TopicPageProps {
   params: Promise<{ slug: string }>;
@@ -33,6 +37,10 @@ const CAT_STYLE: Record<string, { accent: string; border: string; bg: string }> 
   entertainment: { accent: "text-pink-600 dark:text-pink-400",    border: "border-pink-500/20",    bg: "from-pink-500/5 to-transparent dark:from-pink-500/10 dark:to-transparent" },
 };
 const DEFAULT_STYLE = { accent: "text-muted-foreground", border: "border-border/20", bg: "from-muted/10 to-transparent" };
+
+const PLATFORM_DISPLAY: Record<string, string> = {
+  polymarket: "Polymarket", kalshi: "Kalshi", metaculus: "Metaculus", manifold: "Manifold",
+};
 
 const SOURCE_INFO: Record<string, { name: string; desc: string }> = {
   prediction_market: { name: "Prediction Markets", desc: "Real-money bets from Polymarket and Kalshi. People put money where their mouth is." },
@@ -119,8 +127,8 @@ export default async function TopicPage({ params }: TopicPageProps) {
   const t = topic as { id: string; canonical_name: string; slug: string; category: string | null; description: string | null };
   const cat = t.category ? (CAT_STYLE[t.category] ?? DEFAULT_STYLE) : DEFAULT_STYLE;
 
-  const { data: wrapperData } = await supabase.from("question_wrappers").select("question_text, is_featured, sort_order").eq("topic_id", t.id).order("is_featured", { ascending: false }).order("sort_order", { ascending: true }).limit(5);
-  const wrappers = (wrapperData ?? []) as Array<{ question_text: string; is_featured: boolean; sort_order: number }>;
+  const { data: wrapperData } = await db(supabase).from("question_wrappers").select("id, question_text, is_featured, sort_order").eq("topic_id", t.id).order("is_featured", { ascending: false }).order("sort_order", { ascending: true }).limit(5);
+  const wrappers = (wrapperData ?? []) as Array<{ id: string; question_text: string; is_featured: boolean; sort_order: number }>;
   const headline = wrappers[0]?.question_text ?? t.canonical_name;
 
   const { data: latestPointer } = await supabase.from("topic_latest_snapshot").select("snapshot_id").eq("topic_id", t.id).single();
@@ -177,6 +185,17 @@ export default async function TopicPage({ params }: TopicPageProps) {
 
   const { data: publicCard } = await supabase.from("public_topic_cards").select("one_liner").eq("topic_id", t.id).maybeSingle();
   const oneLiner = (publicCard as { one_liner: string | null } | null)?.one_liner ?? null;
+
+  // Load prediction market provenance links for this topic's wrappers
+  let marketPlatforms: string[] = [];
+  if (wrappers.length > 0) {
+    const wrapperIds = wrappers.map((w) => w.id);
+    if (wrapperIds.length > 0) {
+      const { data: links } = await db(supabase).from("market_question_links").select("platform").in("wrapper_id", wrapperIds);
+      const linkArr = (links ?? []) as Array<{ platform: string }>;
+      marketPlatforms = [...new Set(linkArr.map((l) => l.platform))];
+    }
+  }
 
   const answerState = snapshot ? getAnswerState({ direction: snapshot.direction, confidence: snapshot.confidence, category: t.category, disagreement: snapshot.disagreement }) : null;
   const hasProse = snapshot?.current_picture_text != null;
@@ -260,6 +279,7 @@ export default async function TopicPage({ params }: TopicPageProps) {
               {signals.length > 0 && (
                 <span className="text-[10px] text-muted-foreground">
                   Based on {signals.length} signals from {sourceFamilies.length} {sourceFamilies.length === 1 ? "source" : "sources"}
+                  {marketPlatforms.length > 0 && ` -- including ${marketPlatforms.map((p) => PLATFORM_DISPLAY[p] ?? p).join(", ")}`}
                 </span>
               )}
             </div>

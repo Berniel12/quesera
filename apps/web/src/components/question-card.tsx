@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getAnswerState } from "@/lib/answer-state";
+import { getTeamEntity } from "@/lib/team-entities";
 
 // Strong category colors — visible, not subtle
 const CAT_COLOR: Record<string, { dot: string; bg: string; border: string; text: string; fill: string }> = {
@@ -57,6 +58,7 @@ export function QuestionCard({
   const pct = confidence !== null ? Math.round(confidence * 100) : 0;
   const c = category ? (CAT_COLOR[category] ?? DEFAULT_CAT) : DEFAULT_CAT;
   const ts = snapshotPublishedAt ? timeAgo(snapshotPublishedAt) : "";
+  const team = getTeamEntity(questionText);
 
   // ════════════════════════════════════════════
   // HERO — large editorial card
@@ -65,8 +67,18 @@ export function QuestionCard({
     return (
       <Link href={`/topics/${slug}`}>
         <div className={`group relative overflow-hidden rounded-2xl animate-card-enter bg-gradient-to-br ${c.bg} bg-card card-shadow-rich border-t-2 ${c.border} dark:border dark:border-white/5 dark:border-t-2 hover-lift`}>
+          {team && (
+            <div className="absolute top-4 right-4 opacity-20 group-hover:opacity-30 transition-opacity">
+              <img src={team.logoUrl} alt={team.name} className="h-16 w-16 object-contain" loading="lazy" />
+            </div>
+          )}
           <div className="p-6 sm:p-8">
             <div className="flex items-center gap-2 mb-3">
+              {team && (
+                <div className={`h-6 w-6 rounded-md ${team.bgColor} flex items-center justify-center flex-shrink-0`}>
+                  <img src={team.logoUrl} alt={team.name} className="h-4 w-4 object-contain" />
+                </div>
+              )}
               <span className={`h-2 w-2 rounded-full ${c.dot}`} />
               <span className={`text-[10px] font-bold uppercase tracking-[0.15em] ${c.text}`}>{category ?? "Signal"}</span>
               {ts && <span className="text-[10px] text-muted-foreground/50 ml-auto">{ts}</span>}
@@ -320,9 +332,15 @@ export function QuestionCard({
     <Link href={`/topics/${slug}`}>
       <div className={`${base} bg-card card-shadow-rich ${dark} overflow-hidden border-l-[3px] ${c.border}`} style={{ animationDelay: `${delay}ms`, opacity: 0 }}>
         <div className="flex items-center p-4 gap-4">
-          <div className={`flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center bg-gradient-to-br ${c.bg}`}>
-            <span className={`text-sm font-black font-mono ${c.text}`}>{pct}</span>
-          </div>
+          {team ? (
+            <div className={`flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center ${team.bgColor}`}>
+              <img src={team.logoUrl} alt={team.name} className="h-6 w-6 object-contain" loading="lazy" />
+            </div>
+          ) : (
+            <div className={`flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center bg-gradient-to-br ${c.bg}`}>
+              <span className={`text-sm font-black font-mono ${c.text}`}>{pct}</span>
+            </div>
+          )}
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-sm text-foreground leading-snug truncate">{questionText}</p>
             <div className="flex items-center gap-2 mt-0.5">

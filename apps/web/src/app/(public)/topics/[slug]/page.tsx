@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { getAnswerState } from "@/lib/answer-state";
+import { getTeamEntity, getCompetitionAnswer, isCompetitionQuestion } from "@/lib/team-entities";
 import { SignalGroup } from "@/components/signal-card";
 import { ConfidenceTimeline } from "@/components/confidence-timeline";
 import { FollowButton } from "@/components/follow-button";
@@ -130,6 +131,8 @@ export default async function TopicPage({ params }: TopicPageProps) {
   const { data: wrapperData } = await db(supabase).from("question_wrappers").select("id, question_text, is_featured, sort_order").eq("topic_id", t.id).order("is_featured", { ascending: false }).order("sort_order", { ascending: true }).limit(5);
   const wrappers = (wrapperData ?? []) as Array<{ id: string; question_text: string; is_featured: boolean; sort_order: number }>;
   const headline = wrappers[0]?.question_text ?? t.canonical_name;
+  const competitionAnswer = isCompetitionQuestion(headline) ? getCompetitionAnswer(t.slug) : null;
+  const teamEntity = competitionAnswer ? null : getTeamEntity(headline);
 
   const { data: latestPointer } = await supabase.from("topic_latest_snapshot").select("snapshot_id").eq("topic_id", t.id).single();
   const snapshotId = (latestPointer as { snapshot_id: string } | null)?.snapshot_id;
@@ -246,10 +249,63 @@ export default async function TopicPage({ params }: TopicPageProps) {
           {snapshot?.published_at && <span className="text-[10px] text-muted-foreground/50 ml-auto">{timeAgo(snapshot.published_at)}</span>}
         </div>
 
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground leading-tight">{headline}</h1>
+        <div className="flex items-start gap-4">
+          {(competitionAnswer?.favorite.logoUrl || teamEntity?.logoUrl) && (
+            <div className={`flex-shrink-0 h-12 w-12 sm:h-14 sm:w-14 rounded-2xl ${(competitionAnswer?.favorite.bgColor ?? teamEntity?.bgColor) as string} flex items-center justify-center mt-0.5`}>
+              <img src={(competitionAnswer?.favorite.logoUrl ?? teamEntity?.logoUrl) as string} alt="" className="h-8 w-8 sm:h-10 sm:w-10 object-contain" />
+            </div>
+          )}
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground leading-tight">{headline}</h1>
+        </div>
 
-        {/* Verdict card with gauge */}
-        {answerState && (
+        {/* Competition answer card -- shows team as the answer */}
+        {competitionAnswer ? (
+          <div className={`mt-5 p-5 rounded-2xl bg-gradient-to-br ${metricBg} border ${cat.border}`}>
+            <div className="flex items-center gap-4">
+              {competitionAnswer.favorite.logoUrl && (
+                <div className={`flex-shrink-0 h-20 w-20 rounded-2xl ${competitionAnswer.favorite.bgColor} flex items-center justify-center`}>
+                  <img src={competitionAnswer.favorite.logoUrl} alt={competitionAnswer.favorite.name} className="h-14 w-14 object-contain" />
+                </div>
+              )}
+              <div>
+                <span className={`text-2xl sm:text-3xl font-black ${cat.accent} block`}>{competitionAnswer.favorite.name}</span>
+                <span className="text-xs font-bold text-muted-foreground">Projected favorite</span>
+              </div>
+            </div>
+
+            {/* Contenders */}
+            {competitionAnswer.contenders.length > 0 && (
+              <div className="mt-4 pt-4 border-t border-border/10 dark:border-white/5">
+                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide block mb-3">Also in the mix</span>
+                <div className="flex flex-wrap gap-3">
+                  {competitionAnswer.contenders.map((c) => (
+                    <div key={c.shortName} className={`flex items-center gap-2 px-3 py-2 rounded-xl ${c.bgColor}`}>
+                      {c.logoUrl && <img src={c.logoUrl} alt={c.name} className="h-6 w-6 object-contain" loading="lazy" />}
+                      <span className="text-sm font-bold text-foreground">{c.name}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Prose explanation */}
+            <p className="mt-4 text-sm leading-relaxed text-foreground/90">
+              {hasProse
+                ? snapshot?.current_picture_text
+                : oneLiner ?? `We are tracking this question across multiple sources.`}
+            </p>
+
+            <div className="mt-4 flex items-center gap-3">
+              <FollowButton topicSlug={t.slug} isAuthenticated={user !== null} initialFollowing={isFollowing} />
+              {signals.length > 0 && (
+                <span className="text-[10px] text-muted-foreground">
+                  Based on {signals.length} signals from {sourceFamilies.length} {sourceFamilies.length === 1 ? "source" : "sources"}
+                  {marketPlatforms.length > 0 && ` -- including ${marketPlatforms.map((p) => PLATFORM_DISPLAY[p] ?? p).join(", ")}`}
+                </span>
+              )}
+            </div>
+          </div>
+        ) : answerState ? (
           <div className={`mt-5 p-5 rounded-2xl bg-gradient-to-br ${metricBg} border ${cat.border}`}>
             <div className="flex items-center justify-between gap-4">
               <div>
@@ -284,7 +340,7 @@ export default async function TopicPage({ params }: TopicPageProps) {
               )}
             </div>
           </div>
-        )}
+        ) : null}
       </section>
 
       {snapshot ? (
@@ -440,11 +496,21 @@ export default async function TopicPage({ params }: TopicPageProps) {
                   <div className="grid gap-2 sm:grid-cols-2">
                     {relatedQuestions.map((rq) => {
                       const rqState = rq.direction && rq.confidence !== null ? getAnswerState({ direction: rq.direction, confidence: rq.confidence, category: t.category, disagreement: 0 }) : null;
+                      const rqTeam = getTeamEntity(rq.question_text);
                       return (
                         <Link key={rq.slug} href={`/topics/${rq.slug}`}>
                           <div className="p-4 rounded-xl bg-muted/20 dark:bg-white/[0.02] hover:bg-muted/40 dark:hover:bg-white/[0.04] transition-colors">
-                            <p className="text-sm font-semibold text-foreground leading-snug">{rq.question_text}</p>
-                            {rqState && <p className={`text-xs font-bold mt-1 ${rqState.colorClass}`}>{rqState.label}</p>}
+                            <div className="flex items-start gap-3">
+                              {rqTeam && (
+                                <div className={`flex-shrink-0 h-8 w-8 rounded-lg ${rqTeam.bgColor} flex items-center justify-center`}>
+                                  <img src={rqTeam.logoUrl} alt={rqTeam.name} className="h-5 w-5 object-contain" />
+                                </div>
+                              )}
+                              <div>
+                                <p className="text-sm font-semibold text-foreground leading-snug">{rq.question_text}</p>
+                                {rqState && <p className={`text-xs font-bold mt-1 ${rqState.colorClass}`}>{rqState.label}</p>}
+                              </div>
+                            </div>
                           </div>
                         </Link>
                       );

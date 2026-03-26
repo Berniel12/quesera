@@ -147,8 +147,9 @@ export async function POST(request: Request) {
       if (allText.includes(kw)) matchCount++;
     }
 
-    // Score: fraction of keywords matched (minimum 2 keyword matches to qualify)
-    if (matchCount >= 2 && keywords.length > 0) {
+    // Score: fraction of keywords matched (minimum 1 match for short questions, 2 for longer)
+    const minMatches = keywords.length <= 3 ? 1 : 2;
+    if (matchCount >= minMatches && keywords.length > 0) {
       const score = matchCount / keywords.length;
       if (score > bestScore) {
         bestScore = score;

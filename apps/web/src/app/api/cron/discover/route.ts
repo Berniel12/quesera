@@ -62,6 +62,17 @@ export async function GET(request: Request) {
   // 3. Load alive topics: have a fresh snapshot with real signals
   const aliveTopics = await loadAliveTopics(supabase);
 
+  // Pre-load aliases and topic names for matching (avoid N+1 queries in the loop)
+  const aliveIds = aliveTopics.map((t) => t.topicId);
+  const { data: allAliases } = aliveIds.length > 0
+    ? await supabase.from("topic_aliases").select("topic_id, alias").in("topic_id", aliveIds)
+    : { data: [] };
+  const { data: allTopicNames } = aliveIds.length > 0
+    ? await supabase.from("topics").select("id, canonical_name").in("id", aliveIds)
+    : { data: [] };
+  const aliasArr = (allAliases ?? []) as Array<{ topic_id: string; alias: string }>;
+  const topicNameArr = (allTopicNames ?? []) as Array<{ id: string; canonical_name: string }>;
+
   const imported: string[] = [];
   const rejected: Array<{ question: string; reason: string }> = [];
 
@@ -96,7 +107,7 @@ export async function GET(request: Request) {
     }
 
     // --- Map to existing alive topic via trigram search ---
-    const matchedTopic = await matchToAliveTopic(supabase, question, aliveTopics);
+    const matchedTopic = await matchToAliveTopic(supabase, question, aliveTopics, aliasArr, topicNameArr);
     if (!matchedTopic) {
       rejected.push({ question: question.slice(0, 40), reason: "no-alive-topic" });
       continue;
@@ -123,7 +134,13 @@ export async function GET(request: Request) {
       .single();
 
     if (wrapperErr || !wrapper) {
-      rejected.push({ question: question.slice(0, 40), reason: `wrapper-err: ${wrapperErr?.message ?? "unknown"}` });
+      // Unique-constraint violation (23505) means another run already imported this -- treat as exists
+      if (wrapperErr?.code === "23505") {
+        await maybeAddPlatformLink(supabase, existingWrappers ?? [], candidate);
+        rejected.push({ question: question.slice(0, 40), reason: "already-exists" });
+      } else {
+        rejected.push({ question: question.slice(0, 40), reason: `wrapper-err: ${wrapperErr?.message ?? "unknown"}` });
+      }
       continue;
     }
 
@@ -149,7 +166,7 @@ export async function GET(request: Request) {
       }, { onConflict: "source_item_id,topic_id" });
     }
 
-    existingQuestionTexts.add(displayQuestion.toLowerCase());
+    existingQuestionTexts.add(cleanedQuestion.toLowerCase());
     imported.push(`[${candidate.platform}] ${displayQuestion.slice(0, 60)}`);
 
     // Cap at 15 new wrappers per run
@@ -281,10 +298,14 @@ async function loadAliveTopics(supabase: SupabaseClient): Promise<AliveTopic[]> 
 
   // Count signals per snapshot
   const freshSnapshotIds = (freshSnapshots ?? []).map((s: { id: string }) => s.id);
-  const { data: signalCounts } = await db(supabase)
-    .from("topic_signals")
-    .select("snapshot_id")
-    .in("snapshot_id", freshSnapshotIds.length > 0 ? freshSnapshotIds : ["none"]);
+  let signalCounts: Array<{ snapshot_id: string }> | null = null;
+  if (freshSnapshotIds.length > 0) {
+    const { data } = await db(supabase)
+      .from("topic_signals")
+      .select("snapshot_id")
+      .in("snapshot_id", freshSnapshotIds);
+    signalCounts = data as Array<{ snapshot_id: string }> | null;
+  }
 
   const signalCountBySnapshot = new Map<string, number>();
   for (const s of signalCounts ?? []) {
@@ -312,6 +333,8 @@ async function matchToAliveTopic(
   supabase: SupabaseClient,
   question: string,
   aliveTopics: AliveTopic[],
+  aliases: Array<{ topic_id: string; alias: string }>,
+  topicNames: Array<{ id: string; canonical_name: string }>,
 ): Promise<AliveTopic | null> {
   if (aliveTopics.length === 0) return null;
 
@@ -330,20 +353,13 @@ async function matchToAliveTopic(
   }
 
   // Strategy 2: Keyword-alias matching (handles "Will the Fed cut rates?" -> alias "Fed Rates")
-  // Load all aliases for alive topics
-  const aliveIds = aliveTopics.map((t) => t.topicId);
-  const { data: aliases } = await supabase
-    .from("topic_aliases")
-    .select("topic_id, alias")
-    .in("topic_id", aliveIds);
-
-  if (!aliases || aliases.length === 0) return null;
+  if (aliases.length === 0) return null;
 
   const qLower = question.toLowerCase();
   let bestMatch: AliveTopic | null = null;
   let bestScore = 0;
 
-  for (const alias of aliases as Array<{ topic_id: string; alias: string }>) {
+  for (const alias of aliases) {
     const aliasLower = alias.alias.toLowerCase();
     // Check if the alias appears in the question (word-boundary aware for short aliases)
     const aliasInQuestion = aliasLower.length <= 3
@@ -363,18 +379,11 @@ async function matchToAliveTopic(
   }
 
   // Also check canonical names
-  const { data: topicNames } = await supabase
-    .from("topics")
-    .select("id, canonical_name")
-    .in("id", aliveIds);
-
-  for (const topic of topicNames ?? []) {
-    const t = topic as { id: string; canonical_name: string };
+  for (const t of topicNames) {
     const nameLower = t.canonical_name.toLowerCase();
-    // Check individual significant words from the topic name
     const words = nameLower.split(/\s+/).filter((w) => w.length > 3);
     const matchingWords = words.filter((w) => qLower.includes(w));
-    const score = matchingWords.length * 4; // Weight word matches
+    const score = matchingWords.length * 4;
     if (score > bestScore) {
       const alive = aliveTopics.find((at) => at.topicId === t.id);
       if (alive) {
@@ -384,7 +393,6 @@ async function matchToAliveTopic(
     }
   }
 
-  // Require minimum match quality
   return bestScore >= 3 ? bestMatch : null;
 }
 
@@ -482,9 +490,12 @@ function isFutureOriented(question: string): boolean {
     /\bthis (year|summer|winter|spring|fall)/,
     /\bin (20\d{2}|the next)/,
     /\bover the next/,
-    /\bgoing to /,
+    /\bgoing (to|above|below|over|under)\b/,
     /\blikely to /,
     /\bexpected to /,
+    /\b(reach|hit|exceed|surpass|break|drop below|fall below|dip to|settle at)\b/,
+    /\bwin (the|a)\b/,
+    /\bbe (confirmed|elected|appointed|nominated)\b/,
   ];
   return futurePatterns.some((p) => p.test(q));
 }

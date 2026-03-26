@@ -107,6 +107,8 @@ export async function POST(request: Request) {
     "what", "which", "who", "whom", "how", "when", "where", "why",
     "there", "here", "than", "then", "if", "because", "while", "until",
     "ever", "going", "get", "go", "happen", "next", "much", "many", "more",
+    "keep", "rising", "falling", "still", "yet", "really", "actually", "just",
+    "likely", "probably", "soon", "already", "start", "stop", "continue",
   ]);
 
   const normalized = rawQuestion.toLowerCase().trim().replace(/[^\w\s]/g, "").replace(/\s+/g, " ");
@@ -166,7 +168,8 @@ export async function POST(request: Request) {
   }
 
   // 5. Insert oracle query
-  const matchedTopic = bestMatch && bestScore >= 0.5 ? bestMatch : null;
+  // Lower threshold for keyword matching (0.25 = at least 1 in 4 keywords matched + minMatches gate passed)
+  const matchedTopic = bestMatch && bestScore >= 0.25 ? bestMatch : null;
   const status = matchedTopic ? "answered" : "insufficient_data";
 
   const { data: inserted, error: insertError } = await db(supabase)

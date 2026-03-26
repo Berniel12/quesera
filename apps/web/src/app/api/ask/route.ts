@@ -96,53 +96,71 @@ export async function POST(request: Request) {
     return NextResponse.json({ slug, existing: true });
   }
 
-  // 4. Topic matching (web-side: ilike on canonical_name + aliases)
-  const normalized = rawQuestion.toLowerCase().trim().replace(/\s+/g, " ");
+  // 4. Topic matching (web-side: keyword extraction + ilike on canonical_name + aliases)
+  const STOP_WORDS = new Set([
+    "will", "the", "a", "an", "is", "are", "was", "were", "be", "been", "being",
+    "have", "has", "had", "do", "does", "did", "shall", "should", "would", "could",
+    "may", "might", "must", "can", "to", "of", "in", "for", "on", "with", "at",
+    "by", "from", "as", "into", "about", "between", "through", "during", "before",
+    "after", "above", "below", "and", "but", "or", "nor", "not", "so", "yet",
+    "this", "that", "these", "those", "it", "its", "i", "we", "they", "he", "she",
+    "what", "which", "who", "whom", "how", "when", "where", "why",
+    "there", "here", "than", "then", "if", "because", "while", "until",
+    "ever", "going", "get", "go", "happen", "next", "much", "many", "more",
+  ]);
 
-  // Try canonical name match
-  const { data: nameMatches } = await supabase
+  const normalized = rawQuestion.toLowerCase().trim().replace(/[^\w\s]/g, "").replace(/\s+/g, " ");
+  const keywords = normalized.split(" ").filter((w) => w.length > 2 && !STOP_WORDS.has(w));
+
+  // Load all active public topics for keyword scoring
+  const { data: allTopics } = await supabase
     .from("topics")
     .select("id, slug, canonical_name, category")
     .eq("status", "active")
-    .eq("is_public", true)
-    .ilike("canonical_name", `%${normalized}%`)
-    .limit(10);
+    .eq("is_public", true);
 
-  // Try alias match
-  const { data: aliasMatches } = await supabase
+  // Load all aliases
+  const { data: allAliases } = await supabase
     .from("topic_aliases")
-    .select("topic_id, alias")
-    .ilike("alias", `%${normalized}%`)
-    .limit(10);
+    .select("topic_id, alias");
 
-  // Score and pick best match
+  // Build alias lookup
+  const aliasesByTopic = new Map<string, string[]>();
+  for (const a of (allAliases ?? []) as Array<{ topic_id: string; alias: string }>) {
+    const arr = aliasesByTopic.get(a.topic_id) ?? [];
+    arr.push(a.alias.toLowerCase());
+    aliasesByTopic.set(a.topic_id, arr);
+  }
+
+  // Score each topic by keyword overlap
   let bestMatch: { id: string; slug: string; canonical_name: string; category: string | null } | null = null;
   let bestScore = 0;
 
-  for (const t of (nameMatches ?? []) as Array<{ id: string; slug: string; canonical_name: string; category: string | null }>) {
-    const nameNorm = t.canonical_name.toLowerCase();
-    const score = nameNorm === normalized ? 1.0 : nameNorm.includes(normalized) ? 0.8 : normalized.includes(nameNorm) ? 0.7 : 0.5;
-    if (score > bestScore) {
-      bestScore = score;
-      bestMatch = t;
+  for (const t of (allTopics ?? []) as Array<{ id: string; slug: string; canonical_name: string; category: string | null }>) {
+    const nameWords = t.canonical_name.toLowerCase().split(/[\s-]+/);
+    const aliases = aliasesByTopic.get(t.id) ?? [];
+    const allText = [...nameWords, ...aliases.flatMap((a) => a.split(/[\s-]+/))].join(" ");
+
+    // Count how many keywords appear in the topic name + aliases
+    let matchCount = 0;
+    for (const kw of keywords) {
+      if (allText.includes(kw)) matchCount++;
     }
-  }
 
-  // Check alias matches if no strong name match
-  if (bestScore < 0.7 && aliasMatches && aliasMatches.length > 0) {
-    const aliasTopicIds = (aliasMatches as Array<{ topic_id: string }>).map((a) => a.topic_id);
-    const { data: aliasTopics } = await supabase
-      .from("topics")
-      .select("id, slug, canonical_name, category")
-      .in("id", aliasTopicIds)
-      .eq("status", "active")
-      .eq("is_public", true);
-
-    for (const t of (aliasTopics ?? []) as Array<{ id: string; slug: string; canonical_name: string; category: string | null }>) {
-      if (0.6 > bestScore) {
-        bestScore = 0.6;
+    // Score: fraction of keywords matched (minimum 2 keyword matches to qualify)
+    if (matchCount >= 2 && keywords.length > 0) {
+      const score = matchCount / keywords.length;
+      if (score > bestScore) {
+        bestScore = score;
         bestMatch = t;
       }
+    }
+
+    // Also check: does the full question contain the canonical name?
+    const nameNorm = t.canonical_name.toLowerCase();
+    if (normalized.includes(nameNorm) && 0.8 > bestScore) {
+      bestScore = 0.8;
+      bestMatch = t;
     }
   }
 

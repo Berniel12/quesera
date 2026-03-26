@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { getAnswerState } from "@/lib/answer-state";
-import { getTeamEntity, getCompetitionAnswer, isCompetitionQuestion } from "@/lib/team-entities";
+import { getTeamEntity, getCompetitionAnswer, isCompetitionQuestion, getTopicLogo } from "@/lib/team-entities";
 import { SignalGroup, EvidenceWall } from "@/components/signal-card";
 import { ConfidenceTimeline } from "@/components/confidence-timeline";
 import { FollowButton } from "@/components/follow-button";
@@ -133,6 +133,7 @@ export default async function TopicPage({ params }: TopicPageProps) {
   const headline = wrappers[0]?.question_text ?? t.canonical_name;
   const competitionAnswer = isCompetitionQuestion(headline) ? getCompetitionAnswer(t.slug) : null;
   const teamEntity = competitionAnswer ? null : getTeamEntity(headline);
+  const topicLogo = getTopicLogo(t.slug);
 
   const { data: latestPointer } = await supabase.from("topic_latest_snapshot").select("snapshot_id").eq("topic_id", t.id).single();
   const snapshotId = (latestPointer as { snapshot_id: string } | null)?.snapshot_id;
@@ -250,9 +251,9 @@ export default async function TopicPage({ params }: TopicPageProps) {
         </div>
 
         <div className="flex items-start gap-4">
-          {(competitionAnswer?.favorite.logoUrl || teamEntity?.logoUrl) && (
-            <div className={`flex-shrink-0 h-12 w-12 sm:h-14 sm:w-14 rounded-2xl ${(competitionAnswer?.favorite.bgColor ?? teamEntity?.bgColor) as string} flex items-center justify-center mt-0.5`}>
-              <img src={(competitionAnswer?.favorite.logoUrl ?? teamEntity?.logoUrl) as string} alt="" className="h-8 w-8 sm:h-10 sm:w-10 object-contain" />
+          {(competitionAnswer?.favorite.logoUrl || teamEntity?.logoUrl || topicLogo?.logoUrl) && (
+            <div className={`flex-shrink-0 h-12 w-12 sm:h-14 sm:w-14 rounded-2xl ${(competitionAnswer?.favorite.bgColor ?? teamEntity?.bgColor ?? topicLogo?.bgColor) as string} flex items-center justify-center mt-0.5`}>
+              <img src={(competitionAnswer?.favorite.logoUrl ?? teamEntity?.logoUrl ?? topicLogo?.logoUrl) as string} alt="" className="h-8 w-8 sm:h-10 sm:w-10 object-contain" />
             </div>
           )}
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground leading-tight">{headline}</h1>

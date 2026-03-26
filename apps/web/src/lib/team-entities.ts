@@ -1,8 +1,13 @@
-// Maps topic slugs to competition answers (favorite + contenders).
-// Used when the question is a "Who will win?" type -- shows the predicted
-// winner as the answer instead of "Probably yes/no".
+// Maps topic slugs to competition answers (favorite + contenders)
+// and provides logos for topics, sources, and entities.
 //
-// Logo URLs: ESPN CDN for teams, flagcdn.com for countries.
+// Logo strategy:
+//   - Sports teams: ESPN CDN (verified working for NBA, NFL, soccer, MLB)
+//   - Countries: flagcdn.com
+//   - Companies/institutions: Google Favicon API (universal, free, no key)
+//   - F1 teams: Google Favicon (ESPN doesn't host F1 logos)
+
+const favicon = (domain: string) => `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
 
 export interface TeamEntity {
   name: string;
@@ -102,46 +107,68 @@ const COMPETITION_ANSWERS: Record<string, CompetitionAnswer> = {
     favorite: {
       name: "Scuderia Ferrari",
       shortName: "FER",
-      logoUrl: "",
+      logoUrl: favicon("ferrari.com"),
       bgColor: "bg-red-900/30",
     },
     contenders: [
-      { name: "Red Bull Racing", shortName: "RBR", logoUrl: "", bgColor: "bg-blue-900/30" },
-      { name: "McLaren", shortName: "MCL", logoUrl: "", bgColor: "bg-orange-900/30" },
+      { name: "Red Bull Racing", shortName: "RBR", logoUrl: favicon("redbullracing.com"), bgColor: "bg-blue-900/30" },
+      { name: "McLaren", shortName: "MCL", logoUrl: favicon("mclaren.com"), bgColor: "bg-orange-900/30" },
     ],
   },
   "ufc-mma": {
     favorite: {
       name: "Islam Makhachev",
       shortName: "MAK",
-      logoUrl: "",
+      logoUrl: favicon("ufc.com"),
       bgColor: "bg-red-900/30",
     },
     contenders: [],
   },
-  // Non-sports competition questions
   "ai-industry": {
     favorite: {
       name: "OpenAI",
       shortName: "OAI",
-      logoUrl: "",
+      logoUrl: favicon("openai.com"),
       bgColor: "bg-emerald-900/30",
     },
     contenders: [
-      { name: "Google DeepMind", shortName: "GDM", logoUrl: "", bgColor: "bg-blue-900/30" },
-      { name: "Anthropic", shortName: "ANT", logoUrl: "", bgColor: "bg-amber-900/30" },
-      { name: "Meta AI", shortName: "META", logoUrl: "", bgColor: "bg-blue-900/30" },
+      { name: "Google DeepMind", shortName: "GDM", logoUrl: favicon("deepmind.google"), bgColor: "bg-blue-900/30" },
+      { name: "Anthropic", shortName: "ANT", logoUrl: favicon("anthropic.com"), bgColor: "bg-amber-900/30" },
+      { name: "Meta AI", shortName: "META", logoUrl: favicon("ai.meta.com"), bgColor: "bg-blue-900/30" },
     ],
   },
   "2026-us-midterm-elections": {
     favorite: {
       name: "Republicans",
       shortName: "GOP",
-      logoUrl: "",
+      logoUrl: favicon("gop.com"),
       bgColor: "bg-red-900/30",
     },
     contenders: [
-      { name: "Democrats", shortName: "DEM", logoUrl: "", bgColor: "bg-blue-900/30" },
+      { name: "Democrats", shortName: "DEM", logoUrl: favicon("democrats.org"), bgColor: "bg-blue-900/30" },
+    ],
+  },
+  "netflix-streaming-wars": {
+    favorite: {
+      name: "Netflix",
+      shortName: "NFLX",
+      logoUrl: favicon("netflix.com"),
+      bgColor: "bg-red-900/30",
+    },
+    contenders: [
+      { name: "Disney+", shortName: "DIS", logoUrl: favicon("disneyplus.com"), bgColor: "bg-blue-900/30" },
+      { name: "Apple TV+", shortName: "ATV", logoUrl: favicon("tv.apple.com"), bgColor: "bg-slate-900/30" },
+    ],
+  },
+  "spotify-vs-apple-music": {
+    favorite: {
+      name: "Spotify",
+      shortName: "SPOT",
+      logoUrl: favicon("spotify.com"),
+      bgColor: "bg-emerald-900/30",
+    },
+    contenders: [
+      { name: "Apple Music", shortName: "AAPL", logoUrl: favicon("music.apple.com"), bgColor: "bg-pink-900/30" },
     ],
   },
 };
@@ -156,7 +183,8 @@ export function isCompetitionQuestion(questionText: string): boolean {
     q.startsWith("who will win") ||
     q.startsWith("who is the") ||
     q.startsWith("which party will win") ||
-    q.startsWith("which ai company")
+    q.startsWith("which ai company") ||
+    q.startsWith("which streaming")
   );
 }
 
@@ -166,6 +194,102 @@ export function isCompetitionQuestion(questionText: string): boolean {
  */
 export function getCompetitionAnswer(topicSlug: string): CompetitionAnswer | null {
   return COMPETITION_ANSWERS[topicSlug] ?? null;
+}
+
+// ─── Topic logos: non-competition topics that deserve a visual identity ─────
+// Used on topic pages and cards to give each topic a recognizable icon.
+
+const TOPIC_LOGOS: Record<string, { logoUrl: string; bgColor: string }> = {
+  // Tech
+  "tesla": { logoUrl: favicon("tesla.com"), bgColor: "bg-red-900/30" },
+  "apple": { logoUrl: favicon("apple.com"), bgColor: "bg-slate-900/30" },
+  "spacex-starship": { logoUrl: favicon("spacex.com"), bgColor: "bg-slate-900/30" },
+  "tiktok-ban": { logoUrl: favicon("tiktok.com"), bgColor: "bg-pink-900/30" },
+  "ai-industry": { logoUrl: favicon("openai.com"), bgColor: "bg-emerald-900/30" },
+
+  // Macro / institutions
+  "us-federal-reserve-interest-rates": { logoUrl: favicon("federalreserve.gov"), bgColor: "bg-blue-900/30" },
+  "us-inflation-rate": { logoUrl: favicon("bls.gov"), bgColor: "bg-blue-900/30" },
+  "us-stock-market": { logoUrl: favicon("nyse.com"), bgColor: "bg-blue-900/30" },
+  "us-housing-market": { logoUrl: favicon("realtor.com"), bgColor: "bg-blue-900/30" },
+  "ecb-interest-rates": { logoUrl: favicon("ecb.europa.eu"), bgColor: "bg-blue-900/30" },
+  "uk-inflation": { logoUrl: favicon("bankofengland.co.uk"), bgColor: "bg-blue-900/30" },
+  "gold-price": { logoUrl: favicon("gold.org"), bgColor: "bg-yellow-900/30" },
+  "global-oil-prices": { logoUrl: favicon("opec.org"), bgColor: "bg-amber-900/30" },
+  "us-dollar-strength": { logoUrl: favicon("treasury.gov"), bgColor: "bg-emerald-900/30" },
+  "china-gdp-growth": { logoUrl: "https://flagcdn.com/w160/cn.png", bgColor: "bg-red-900/30" },
+  "japan-economy": { logoUrl: "https://flagcdn.com/w160/jp.png", bgColor: "bg-red-900/30" },
+  "india-economy": { logoUrl: "https://flagcdn.com/w160/in.png", bgColor: "bg-orange-900/30" },
+
+  // Politics
+  "us-supreme-court": { logoUrl: favicon("supremecourt.gov"), bgColor: "bg-slate-900/30" },
+  "us-congress-legislation": { logoUrl: favicon("congress.gov"), bgColor: "bg-slate-900/30" },
+  "us-debt-ceiling": { logoUrl: favicon("treasury.gov"), bgColor: "bg-slate-900/30" },
+  "artificial-intelligence-policy": { logoUrl: favicon("whitehouse.gov"), bgColor: "bg-blue-900/30" },
+  "us-trade-policy": { logoUrl: favicon("ustr.gov"), bgColor: "bg-blue-900/30" },
+  "us-immigration-policy": { logoUrl: favicon("uscis.gov"), bgColor: "bg-blue-900/30" },
+  "us-healthcare-policy": { logoUrl: favicon("hhs.gov"), bgColor: "bg-blue-900/30" },
+  "uk-elections": { logoUrl: "https://flagcdn.com/w160/gb.png", bgColor: "bg-red-900/30" },
+  "india-elections": { logoUrl: "https://flagcdn.com/w160/in.png", bgColor: "bg-orange-900/30" },
+  "brazil-politics": { logoUrl: "https://flagcdn.com/w160/br.png", bgColor: "bg-green-900/30" },
+  "france-elections": { logoUrl: "https://flagcdn.com/w160/fr.png", bgColor: "bg-blue-900/30" },
+
+  // Crypto
+  "bitcoin-price": { logoUrl: favicon("bitcoin.org"), bgColor: "bg-amber-900/30" },
+  "ethereum-price": { logoUrl: favicon("ethereum.org"), bgColor: "bg-indigo-900/30" },
+  "crypto-market": { logoUrl: favicon("coingecko.com"), bgColor: "bg-emerald-900/30" },
+
+  // Geopolitics (flags)
+  "russia-ukraine-war": { logoUrl: "https://flagcdn.com/w160/ua.png", bgColor: "bg-blue-900/30" },
+  "china-taiwan-relations": { logoUrl: "https://flagcdn.com/w160/tw.png", bgColor: "bg-red-900/30" },
+  "israel-palestine-conflict": { logoUrl: "https://flagcdn.com/w160/il.png", bgColor: "bg-blue-900/30" },
+  "iran-us-tensions": { logoUrl: "https://flagcdn.com/w160/ir.png", bgColor: "bg-red-900/30" },
+  "iran-nuclear-program": { logoUrl: "https://flagcdn.com/w160/ir.png", bgColor: "bg-red-900/30" },
+  "north-korea": { logoUrl: "https://flagcdn.com/w160/kp.png", bgColor: "bg-red-900/30" },
+  "nato-alliance": { logoUrl: favicon("nato.int"), bgColor: "bg-blue-900/30" },
+  "european-union": { logoUrl: favicon("europa.eu"), bgColor: "bg-blue-900/30" },
+  "lebanon-war-2026": { logoUrl: "https://flagcdn.com/w160/lb.png", bgColor: "bg-red-900/30" },
+  "sudan-conflict": { logoUrl: "https://flagcdn.com/w160/sd.png", bgColor: "bg-red-900/30" },
+  "venezuela-crisis": { logoUrl: "https://flagcdn.com/w160/ve.png", bgColor: "bg-yellow-900/30" },
+  "climate-change": { logoUrl: favicon("unfccc.int"), bgColor: "bg-emerald-900/30" },
+
+  // Disasters
+  "earthquake-activity": { logoUrl: favicon("usgs.gov"), bgColor: "bg-orange-900/30" },
+  "severe-weather-alerts": { logoUrl: favicon("weather.gov"), bgColor: "bg-orange-900/30" },
+  "hurricane-season-2026": { logoUrl: favicon("nhc.noaa.gov"), bgColor: "bg-orange-900/30" },
+  "wildfire-season": { logoUrl: favicon("nifc.gov"), bgColor: "bg-orange-900/30" },
+
+  // Entertainment
+  "taylor-swift": { logoUrl: favicon("taylorswift.com"), bgColor: "bg-pink-900/30" },
+  "marvel-cinematic-universe": { logoUrl: favicon("marvel.com"), bgColor: "bg-red-900/30" },
+  "oscar-awards-2026": { logoUrl: favicon("oscars.org"), bgColor: "bg-yellow-900/30" },
+  "grammy-awards-2026": { logoUrl: favicon("grammy.com"), bgColor: "bg-yellow-900/30" },
+  "eurovision-2026": { logoUrl: favicon("eurovision.tv"), bgColor: "bg-pink-900/30" },
+  "gta-6": { logoUrl: favicon("rockstargames.com"), bgColor: "bg-slate-900/30" },
+  "beyonce": { logoUrl: favicon("beyonce.com"), bgColor: "bg-yellow-900/30" },
+  "k-pop": { logoUrl: favicon("kprofiles.com"), bgColor: "bg-pink-900/30" },
+  "bollywood": { logoUrl: "https://flagcdn.com/w160/in.png", bgColor: "bg-orange-900/30" },
+  "star-wars": { logoUrl: favicon("starwars.com"), bgColor: "bg-yellow-900/30" },
+  "game-of-thrones-spinoffs": { logoUrl: favicon("hbo.com"), bgColor: "bg-slate-900/30" },
+  "video-game-industry": { logoUrl: favicon("ign.com"), bgColor: "bg-red-900/30" },
+
+  // Sports (non-competition topics)
+  "la-liga": { logoUrl: favicon("laliga.com"), bgColor: "bg-blue-900/30" },
+  "bundesliga": { logoUrl: favicon("bundesliga.com"), bgColor: "bg-red-900/30" },
+  "ipl-cricket": { logoUrl: favicon("iplt20.com"), bgColor: "bg-blue-900/30" },
+  "cricket-world-cup": { logoUrl: favicon("icc-cricket.com"), bgColor: "bg-blue-900/30" },
+  "tennis-grand-slams": { logoUrl: favicon("wimbledon.com"), bgColor: "bg-emerald-900/30" },
+  "olympics-2028": { logoUrl: favicon("olympics.com"), bgColor: "bg-blue-900/30" },
+  "tour-de-france": { logoUrl: favicon("letour.fr"), bgColor: "bg-yellow-900/30" },
+  "rugby-world-cup": { logoUrl: favicon("rugbyworldcup.com"), bgColor: "bg-emerald-900/30" },
+};
+
+/**
+ * Get a logo for any topic by slug.
+ * Used on topic pages and cards for visual identity.
+ */
+export function getTopicLogo(topicSlug: string): { logoUrl: string; bgColor: string } | null {
+  return TOPIC_LOGOS[topicSlug] ?? null;
 }
 
 // ─── Single-entity matching (for Polymarket-imported team questions) ─────
@@ -184,6 +308,9 @@ const TEAM_MAP: Array<{ pattern: RegExp; entity: TeamEntity }> = [
   { pattern: /\bmakhachev\b/i, entity: COMPETITION_ANSWERS["ufc-mma"].favorite },
   { pattern: /\bargentin/i, entity: COMPETITION_ANSWERS["fifa-world-cup-2026"].contenders[0] },
   { pattern: /\bfrance\b/i, entity: COMPETITION_ANSWERS["fifa-world-cup-2026"].contenders[1] },
+  { pattern: /\bopenai\b/i, entity: COMPETITION_ANSWERS["ai-industry"].favorite },
+  { pattern: /\bnetflix\b/i, entity: COMPETITION_ANSWERS["netflix-streaming-wars"].favorite },
+  { pattern: /\bspotify\b/i, entity: COMPETITION_ANSWERS["spotify-vs-apple-music"].favorite },
 ];
 
 /**

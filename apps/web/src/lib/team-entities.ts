@@ -102,19 +102,19 @@ const COMPETITION_ANSWERS: Record<string, CompetitionAnswer> = {
     favorite: {
       name: "Scuderia Ferrari",
       shortName: "FER",
-      logoUrl: "https://a.espncdn.com/i/teamlogos/f1/500/fer.png",
+      logoUrl: "",
       bgColor: "bg-red-900/30",
     },
     contenders: [
-      { name: "Red Bull Racing", shortName: "RBR", logoUrl: "https://a.espncdn.com/i/teamlogos/f1/500/rbr.png", bgColor: "bg-blue-900/30" },
-      { name: "McLaren", shortName: "MCL", logoUrl: "https://a.espncdn.com/i/teamlogos/f1/500/mcl.png", bgColor: "bg-orange-900/30" },
+      { name: "Red Bull Racing", shortName: "RBR", logoUrl: "", bgColor: "bg-blue-900/30" },
+      { name: "McLaren", shortName: "MCL", logoUrl: "", bgColor: "bg-orange-900/30" },
     ],
   },
   "ufc-mma": {
     favorite: {
       name: "Islam Makhachev",
       shortName: "MAK",
-      logoUrl: "https://a.espncdn.com/i/teamlogos/leagues/500/mma.png",
+      logoUrl: "",
       bgColor: "bg-red-900/30",
     },
     contenders: [],

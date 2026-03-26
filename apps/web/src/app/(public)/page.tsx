@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { getAnswerState } from "@/lib/answer-state";
+import { getTeamEntity, getCompetitionAnswer, isCompetitionQuestion } from "@/lib/team-entities";
 import Link from "next/link";
 import {
   getInferredLocation,
@@ -215,6 +216,8 @@ export default async function LandingPage() {
           ? getAnswerState({ direction: heroQ.direction, confidence: heroQ.confidence, category: heroQ.category, disagreement: 0 }) : null;
 
         const heroPhoto = getCatPhoto(heroQ.category, heroQ.slug);
+        const heroComp = isCompetitionQuestion(heroQ.question_text) ? getCompetitionAnswer(heroQ.slug) : null;
+        const heroTeam = heroComp ? null : getTeamEntity(heroQ.question_text);
         return (
           <section className="grid grid-cols-1 lg:grid-cols-12 gap-6 pt-6 pb-8 animate-slide-up">
             {/* Main hero */}
@@ -228,6 +231,12 @@ export default async function LandingPage() {
                     <div className="absolute inset-0 bg-gradient-to-t from-card dark:from-[#131B2E] via-card/70 dark:via-[#131B2E]/70 to-card/30 dark:to-[#131B2E]/30" />
                   </div>
                 )}
+                {/* Favorite team logo watermark */}
+                {(heroComp?.favorite.logoUrl || heroTeam?.logoUrl) && (
+                  <div className="absolute top-6 right-6 z-[1] opacity-30 group-hover:opacity-50 transition-opacity">
+                    <img src={(heroComp?.favorite.logoUrl ?? heroTeam?.logoUrl) as string} alt="" className="h-20 w-20 sm:h-28 sm:w-28 object-contain drop-shadow-lg" loading="eager" />
+                  </div>
+                )}
                 {/* Glow */}
                 <div className="absolute top-0 right-0 w-80 h-80 bg-primary/10 blur-[120px] hidden dark:block z-0" />
                 <div className="relative z-10">
@@ -238,17 +247,51 @@ export default async function LandingPage() {
                   <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-foreground leading-[1] tracking-tight mb-6">
                     {heroQ.question_text}
                   </h1>
-                  <div className="flex gap-4 items-end">
-                    <div className="flex flex-col">
-                      <span className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tighter text-foreground dark:text-primary">{pct}%</span>
-                      <span className="text-[10px] uppercase tracking-widest mt-1 font-bold text-muted-foreground">
-                        {ans?.label ?? "Tracking"}
-                      </span>
+
+                  {/* Competition answer: show team as the answer */}
+                  {heroComp ? (
+                    <div>
+                      <div className="flex items-center gap-4 mb-3">
+                        {heroComp.favorite.logoUrl && (
+                          <div className={`flex-shrink-0 h-14 w-14 sm:h-16 sm:w-16 rounded-2xl ${heroComp.favorite.bgColor} flex items-center justify-center`}>
+                            <img src={heroComp.favorite.logoUrl} alt={heroComp.favorite.name} className="h-10 w-10 sm:h-12 sm:w-12 object-contain" />
+                          </div>
+                        )}
+                        <div>
+                          <span className="text-3xl sm:text-4xl md:text-5xl font-black text-foreground dark:text-primary block leading-none">{heroComp.favorite.name}</span>
+                          <span className="text-[10px] uppercase tracking-widest mt-1 font-bold text-muted-foreground">Projected favorite</span>
+                        </div>
+                      </div>
+                      {heroComp.contenders.length > 0 && (
+                        <div className="flex items-center gap-3 mt-3">
+                          <span className="text-[10px] text-muted-foreground/60 uppercase tracking-wider font-bold">Also in the mix</span>
+                          {heroComp.contenders.map((c) => (
+                            <div key={c.shortName} className="flex items-center gap-1.5">
+                              {c.logoUrl && <img src={c.logoUrl} alt={c.name} className="h-5 w-5 object-contain" loading="lazy" />}
+                              <span className="text-xs font-bold text-muted-foreground">{c.name}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                    <div className="flex-1 h-2 mb-4 rounded-full overflow-hidden bg-border/30 dark:bg-white/10">
-                      <div className={`h-full bg-primary animate-bar-fill`} style={{ width: `${pct}%` }} />
+                  ) : (
+                    <div className="flex gap-4 items-end">
+                      {heroTeam && (
+                        <div className={`flex-shrink-0 h-14 w-14 sm:h-16 sm:w-16 rounded-2xl ${heroTeam.bgColor} flex items-center justify-center mb-2`}>
+                          <img src={heroTeam.logoUrl} alt={heroTeam.name} className="h-10 w-10 sm:h-12 sm:w-12 object-contain" />
+                        </div>
+                      )}
+                      <div className="flex flex-col">
+                        <span className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tighter text-foreground dark:text-primary">{pct}%</span>
+                        <span className="text-[10px] uppercase tracking-widest mt-1 font-bold text-muted-foreground">
+                          {ans?.label ?? "Tracking"}
+                        </span>
+                      </div>
+                      <div className="flex-1 h-2 mb-4 rounded-full overflow-hidden bg-border/30 dark:bg-white/10">
+                        <div className={`h-full bg-primary animate-bar-fill`} style={{ width: `${pct}%` }} />
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               </div>
             </Link>
@@ -260,16 +303,44 @@ export default async function LandingPage() {
               const pct2 = q2.confidence !== null ? Math.round(q2.confidence * 100) : 0;
               const ans2 = q2.direction && q2.confidence !== null
                 ? getAnswerState({ direction: q2.direction, confidence: q2.confidence, category: q2.category, disagreement: 0 }) : null;
+              const comp2 = isCompetitionQuestion(q2.question_text) ? getCompetitionAnswer(q2.slug) : null;
+              const team2 = comp2 ? null : getTeamEntity(q2.question_text);
               return (
                 <Link href={`/topics/${q2.slug}`} className="lg:col-span-4">
-                  <div className={`h-full rounded-[2rem] p-6 sm:p-8 flex flex-col justify-between
+                  <div className={`h-full rounded-[2rem] p-6 sm:p-8 flex flex-col justify-between relative overflow-hidden
                     bg-gradient-to-br ${a2.bg} bg-card dark:bg-[#131B2E] card-shadow-rich dark:border dark:border-white/5 hover-lift-sm`}>
-                    <div>
+                    {(comp2?.favorite.logoUrl || team2?.logoUrl) && (
+                      <div className="absolute top-4 right-4 opacity-20">
+                        <img src={(comp2?.favorite.logoUrl ?? team2?.logoUrl) as string} alt="" className="h-16 w-16 object-contain" loading="lazy" />
+                      </div>
+                    )}
+                    <div className="relative z-10">
                       <span className={`text-[10px] font-bold uppercase tracking-[0.2em] ${a2.text} block mb-3`}>{a2.label}</span>
                       <h2 className="text-lg sm:text-xl font-bold text-foreground tracking-tight leading-tight mb-3">{q2.question_text}</h2>
                     </div>
-                    <div>
-                      {ans2 && <span className={`text-xl font-black ${ans2.colorClass} block mb-1`}>{ans2.label}</span>}
+                    <div className="relative z-10">
+                      {comp2 ? (
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            {comp2.favorite.logoUrl && <img src={comp2.favorite.logoUrl} alt={comp2.favorite.name} className="h-7 w-7 object-contain" />}
+                            <span className={`text-xl font-black ${a2.text}`}>{comp2.favorite.name}</span>
+                          </div>
+                          {comp2.contenders.length > 0 && (
+                            <div className="flex items-center gap-2 mt-1">
+                              {comp2.contenders.slice(0, 2).map((c) => (
+                                <div key={c.shortName} className="flex items-center gap-1">
+                                  {c.logoUrl && <img src={c.logoUrl} alt={c.name} className="h-4 w-4 object-contain opacity-60" loading="lazy" />}
+                                  <span className="text-[10px] text-muted-foreground font-medium">{c.shortName}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <>
+                          {ans2 && <span className={`text-xl font-black ${ans2.colorClass} block mb-1`}>{ans2.label}</span>}
+                        </>
+                      )}
                       <div className="flex items-center gap-2">
                         <div className="h-1.5 flex-1 rounded-full bg-border/30 dark:bg-white/10 overflow-hidden">
                           <div className={`h-full rounded-full bg-current ${a2.text} animate-bar-fill`} style={{ width: `${pct2}%` }} />
@@ -287,6 +358,19 @@ export default async function LandingPage() {
           </section>
         );
       })()}
+
+      {/* ── ORACLE SEARCH BAR ── */}
+      <div className="pb-6 animate-fade-in delay-300">
+        <form action="/ask" className="relative max-w-lg mx-auto">
+          <input
+            type="search"
+            name="q"
+            aria-label="Ask QUESERA"
+            placeholder="Have a question? Ask QUESERA..."
+            className="w-full px-4 py-3 rounded-xl bg-card/60 border border-border/40 text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all"
+          />
+        </form>
+      </div>
 
       {/* ── BENTO GRID ── */}
       {feed.length > 0 && (
@@ -371,6 +455,8 @@ export default async function LandingPage() {
               ? getAnswerState({ direction: q.direction, confidence: q.confidence, category: q.category, disagreement: 0 }) : null;
             const pct = q.confidence !== null ? Math.round(q.confidence * 100) : 0;
             const photo = getCatPhoto(q.category, q.slug);
+            const comp = isCompetitionQuestion(q.question_text) ? getCompetitionAnswer(q.slug) : null;
+            const team = comp ? null : getTeamEntity(q.question_text);
 
             // Alternate card sizes: 4-8, 8-4, 4-4-4, etc.
             const span = i % 3 === 0 ? "md:col-span-4" : i % 3 === 1 ? "md:col-span-8" : "md:col-span-4";
@@ -394,18 +480,46 @@ export default async function LandingPage() {
                       }`} />
                     </div>
                   )}
+                  {/* Team logo watermark */}
+                  {team && !photo && (
+                    <div className="absolute top-4 right-4 z-[1] opacity-15">
+                      <img src={team.logoUrl} alt={team.name} className="h-16 w-16 object-contain" loading="lazy" />
+                    </div>
+                  )}
 
                   <div className={`${isWide ? "flex-1" : ""} relative z-10`}>
-                    <span className={`text-[10px] font-bold uppercase tracking-[0.2em] ${a.text} block mb-2`}>{a.label}</span>
+                    <div className="flex items-center gap-2 mb-2">
+                      {(comp?.favorite.logoUrl || team?.logoUrl) && (
+                        <div className={`h-6 w-6 rounded-md ${(comp?.favorite.bgColor ?? team?.bgColor) as string} flex items-center justify-center flex-shrink-0`}>
+                          <img src={(comp?.favorite.logoUrl ?? team?.logoUrl) as string} alt="" className="h-4 w-4 object-contain" />
+                        </div>
+                      )}
+                      <span className={`text-[10px] font-bold uppercase tracking-[0.2em] ${a.text}`}>{a.label}</span>
+                    </div>
                     <h3 className={`${isWide ? "text-xl sm:text-2xl" : "text-lg"} font-bold text-foreground tracking-tight leading-tight mb-2`}>{q.question_text}</h3>
-                    {ans && <span className={`text-sm font-bold ${ans.colorClass}`}>{ans.label}</span>}
+                    {comp ? (
+                      <div className="flex items-center gap-2">
+                        <span className={`text-sm font-black ${a.text}`}>{comp.favorite.name}</span>
+                        {comp.contenders.slice(0, 2).map((c) => (
+                          <span key={c.shortName} className="text-[10px] text-muted-foreground">{c.shortName}</span>
+                        ))}
+                      </div>
+                    ) : (
+                      ans && <span className={`text-sm font-bold ${ans.colorClass}`}>{ans.label}</span>
+                    )}
                     {q.snapshot_published_at && <p className="text-[10px] text-muted-foreground/50 mt-1">{timeAgo(q.snapshot_published_at)}</p>}
                   </div>
 
-                  {/* Visual element */}
+                  {/* Visual element -- show team logo for competition, % for others */}
                   <div className={`${isWide ? "flex-shrink-0 text-right" : "mt-4"} relative z-10`}>
-                    <span className={`${isWide ? "text-4xl" : "text-3xl"} font-black font-mono ${a.text}`}>{pct}%</span>
-                    <p className="text-[9px] text-muted-foreground uppercase tracking-widest font-bold">Confidence</p>
+                    {comp?.favorite.logoUrl ? (
+                      <img src={comp.favorite.logoUrl} alt={comp.favorite.name} className={`${isWide ? "h-14 w-14" : "h-12 w-12"} object-contain mx-auto`} loading="lazy" />
+                    ) : (
+                      <>
+                        <span className={`${isWide ? "text-4xl" : "text-3xl"} font-black font-mono ${a.text}`}>{pct}%</span>
+                        <p className="text-[9px] text-muted-foreground uppercase tracking-widest font-bold">Confidence</p>
+                      </>
+                    )}
                   </div>
                 </div>
               </Link>
@@ -423,14 +537,27 @@ export default async function LandingPage() {
                   const ans = q.direction && q.confidence !== null
                     ? getAnswerState({ direction: q.direction, confidence: q.confidence, category: q.category, disagreement: 0 }) : null;
                   const pct = q.confidence !== null ? Math.round(q.confidence * 100) : 0;
+                  const tickerComp = isCompetitionQuestion(q.question_text) ? getCompetitionAnswer(q.slug) : null;
+                  const tickerTeam = tickerComp ? null : getTeamEntity(q.question_text);
+                  const tickerLogo = tickerComp?.favorite.logoUrl ?? tickerTeam?.logoUrl;
+                  const tickerBg = tickerComp?.favorite.bgColor ?? tickerTeam?.bgColor;
                   return (
                     <Link key={q.topic_id} href={`/topics/${q.slug}`} className="flex items-center gap-4 py-3 group hover:bg-muted/30 dark:hover:bg-white/5 -mx-3 px-3 rounded-xl transition-colors">
-                      <span className={`text-lg font-black font-mono w-10 text-center ${a.text}`}>{pct}</span>
+                      {tickerLogo ? (
+                        <div className={`h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0 ${tickerBg}`}>
+                          <img src={tickerLogo} alt="" className="h-6 w-6 object-contain" loading="lazy" />
+                        </div>
+                      ) : (
+                        <span className={`text-lg font-black font-mono w-10 text-center ${a.text}`}>{pct}</span>
+                      )}
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-foreground truncate">{q.question_text}</p>
                         <div className="flex items-center gap-2 mt-0.5">
                           <span className={`text-[10px] uppercase tracking-wider ${a.text} font-bold`}>{a.label}</span>
-                          {ans && <span className={`text-[10px] font-bold ${ans.colorClass}`}>{ans.label}</span>}
+                          {tickerComp
+                            ? <span className={`text-[10px] font-bold ${a.text}`}>{tickerComp.favorite.name}</span>
+                            : ans && <span className={`text-[10px] font-bold ${ans.colorClass}`}>{ans.label}</span>
+                          }
                         </div>
                       </div>
                       {q.snapshot_published_at && <span className="text-[10px] text-muted-foreground/50 flex-shrink-0">{timeAgo(q.snapshot_published_at)}</span>}

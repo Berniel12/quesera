@@ -159,6 +159,43 @@ export async function handleSnapshotGeneration(
     });
   }
 
+  // 8c. Re-synthesize oracle queries pointing to this topic (batch: one job per topic)
+  if (changes.shouldSummarize || payload.force) {
+    const { data: oracleRows } = await supabase
+      .from("oracle_queries")
+      .select("id")
+      .eq("matched_topic_id", topicId)
+      .eq("status", "answered");
+
+    if (oracleRows && oracleRows.length > 0) {
+      // Clear existing verdicts so frontends show skeleton while re-synthesizing
+      const oracleIds = (oracleRows as Array<{ id: string }>).map((r) => r.id);
+      await supabase
+        .from("oracle_queries")
+        .update({ llm_verdict: null, source_signals: null, answer_snapshot_id: published.id, synthesis_failed_at: null })
+        .in("id", oracleIds);
+
+      // Enqueue ONE synthesis job per oracle query (they may have different question framings)
+      for (const row of oracleRows as Array<{ id: string }>) {
+        await enqueue(supabase, {
+          job_type: "oracle_synthesis",
+          payload: {
+            oracle_query_id: row.id,
+            topic_id: topicId,
+            snapshot_id: published.id,
+          },
+          priority: 2,
+          idempotency_key: `oracle-resynth-${row.id}-${published.id}`,
+        });
+      }
+
+      logger.info(
+        { topic_id: topicId, oracle_queries_count: oracleIds.length },
+        "Re-synthesis enqueued for oracle queries",
+      );
+    }
+  }
+
   // 9. Update run as completed
   await supabase
     .from("snapshot_generation_runs")

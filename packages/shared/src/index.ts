@@ -7,6 +7,9 @@ export {
   SourceRoleEnum,
   LicenseClassEnum,
   RiskLevelEnum,
+  OracleQueryStatusEnum,
+  OracleSignalSchema,
+  OracleSignalsArraySchema,
   SOURCE_FAMILIES,
 } from "./constants";
 export type {
@@ -19,6 +22,8 @@ export type {
   LicenseClass,
   RiskLevel,
   SourceFamily,
+  OracleQueryStatus,
+  OracleSignal,
 } from "./constants";
 
 export {

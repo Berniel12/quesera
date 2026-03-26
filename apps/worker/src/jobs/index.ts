@@ -6,6 +6,7 @@ import { handleTopicMatching } from "./topic-matching.js";
 import { handleSnapshotGeneration } from "./snapshot-generation.js";
 import { handleSummarization } from "./summarization.js";
 import { handleNotificationGeneration } from "./notification-generation.js";
+import { handleOracleSynthesis } from "./oracle-synthesis.js";
 
 type JobHandler = (
   job: Job,
@@ -24,6 +25,7 @@ const handlers: Record<string, JobHandler> = {
   snapshot_generation: handleSnapshotGeneration,
   summarization: handleSummarization,
   notification_generation: handleNotificationGeneration,
+  oracle_synthesis: handleOracleSynthesis,
   reconciliation: stubHandler,
   cleanup_archive: stubHandler,
 };

@@ -7,6 +7,7 @@ export const JobTypeEnum = z.enum([
   "snapshot_generation",
   "summarization",
   "notification_generation",
+  "oracle_synthesis",
   "reconciliation",
   "cleanup_archive",
 ]);
@@ -49,6 +50,21 @@ export type LicenseClass = z.infer<typeof LicenseClassEnum>;
 
 export const RiskLevelEnum = z.enum(["low", "medium", "high"]);
 export type RiskLevel = z.infer<typeof RiskLevelEnum>;
+
+export const OracleQueryStatusEnum = z.enum(["answered", "insufficient_data"]);
+export type OracleQueryStatus = z.infer<typeof OracleQueryStatusEnum>;
+
+export const OracleSignalSchema = z.object({
+  source: z.string(),
+  value: z.string(),
+  probability: z.number().optional(),
+  direction: z.string().optional(),
+  confidence: z.string().optional(),
+  updated_at: z.string(),
+});
+export type OracleSignal = z.infer<typeof OracleSignalSchema>;
+
+export const OracleSignalsArraySchema = z.array(OracleSignalSchema);
 
 export const SOURCE_FAMILIES = [
   "prediction_market",

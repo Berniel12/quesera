@@ -62,21 +62,21 @@ export function getAnswerState(input: AnswerStateInput): AnswerState {
   if (confidence >= 0.6) {
     if (direction === "up") return { label: "Probably yes", headline, colorClass, intensity: "strong" };
     if (direction === "down") return { label: "Probably not", headline, colorClass, intensity: "strong" };
-    return { label: "Probably not", headline, colorClass: "text-foreground", intensity: "strong" };
+    return { label: "Holding steady", headline, colorClass: "text-foreground", intensity: "strong" };
   }
 
   // MODERATE confidence (0.35 - 0.6)
   if (confidence >= 0.35) {
     if (direction === "up") return { label: "Probably yes", headline, colorClass, intensity: "moderate" };
     if (direction === "down") return { label: "Probably not", headline, colorClass, intensity: "moderate" };
-    if (direction === "stable") return { label: "Probably not", headline, colorClass: "text-foreground", intensity: "moderate" };
+    if (direction === "stable") return { label: "Holding steady", headline, colorClass: "text-foreground", intensity: "moderate" };
     return { label: "Hard to say", headline, colorClass: "text-muted-foreground", intensity: "moderate" };
   }
 
   // LOW confidence (< 0.35)
   if (direction === "up") return { label: "Probably yes", headline, colorClass, intensity: "weak" };
   if (direction === "down") return { label: "Probably not", headline, colorClass: "text-destructive", intensity: "weak" };
-  if (direction === "stable") return { label: "Probably not", headline, colorClass: "text-foreground", intensity: "weak" };
+  if (direction === "stable") return { label: "Holding steady", headline, colorClass: "text-foreground", intensity: "weak" };
 
   // Unknown direction -- use headline which is already category-aware
   return { label: headline, headline, colorClass: category === "disasters" || category === "geopolitics" ? "text-warning" : category === "sports" ? "text-foreground" : "text-muted-foreground", intensity: "weak" };

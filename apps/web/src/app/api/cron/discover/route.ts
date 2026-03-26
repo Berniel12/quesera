@@ -413,8 +413,8 @@ async function maybeAddPlatformLink(
   );
   if (!wrapper) return;
 
-  // Upsert platform link (might already exist)
-  await db(supabase).from("market_question_links").upsert({
+  // Upsert platform link (might already exist). Errors are non-fatal -- provenance is best-effort.
+  const { error: linkErr } = await db(supabase).from("market_question_links").upsert({
     wrapper_id: wrapper.id,
     platform: candidate.platform,
     source_item_id: candidate.sourceItemId,
@@ -425,6 +425,10 @@ async function maybeAddPlatformLink(
     last_volume: candidate.volume,
     last_synced_at: new Date().toISOString(),
   }, { onConflict: "wrapper_id,platform,external_id" });
+  if (linkErr) {
+    // Non-fatal: provenance is best-effort. Log for debugging but don't fail the run.
+    console.warn(`market_question_links upsert failed for wrapper ${wrapper.id}: ${linkErr.message}`);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -440,9 +444,9 @@ function cleanQuestionText(raw: string): string {
   q = q.replace(/\s*at the closing date.*$/gi, "");
   q = q.replace(/\s*according to.*$/gi, "");
 
-  // Simplify price language
-  q = q.replace(/Will the price of (\w+) exceed \$?([\d,]+)/gi, "Will $1 hit $$2");
-  q = q.replace(/Will the price of (\w+) fall below \$?([\d,]+)/gi, "Will $1 drop below $$2");
+  // Simplify price language (handles multi-word names like "Crude Oil")
+  q = q.replace(/Will the price of (.+?) exceed \$?([\d,]+)/gi, "Will $1 hit $$2");
+  q = q.replace(/Will the price of (.+?) fall below \$?([\d,]+)/gi, "Will $1 drop below $$2");
 
   // Simplify Fed language
   q = q.replace(/Will the Federal Reserve (decrease|increase) the federal funds rate at the (\w+ \d{4}) FOMC meeting/gi,
@@ -500,15 +504,3 @@ function isFutureOriented(question: string): boolean {
   return futurePatterns.some((p) => p.test(q));
 }
 
-function guessCategory(question: string): string {
-  const q = question.toLowerCase();
-  if (/bitcoin|ethereum|crypto|btc|eth|defi|token/i.test(q)) return "crypto";
-  if (/stock|market|s&p|dow|nasdaq|recession|gdp|inflation|rate|mortgage|oil|gold|gas|dollar/i.test(q)) return "macro";
-  if (/election|congress|senate|president|vote|midterm|supreme court|legislation|law/i.test(q)) return "politics";
-  if (/war|ceasefire|invasion|conflict|nato|nuclear|sanctions|iran|ukraine|russia|china|taiwan|israel/i.test(q)) return "geopolitics";
-  if (/nba|nfl|fifa|world cup|premier league|champion|ufc|f1|formula|mlb|super bowl|tennis|olympics/i.test(q)) return "sports";
-  if (/hurricane|earthquake|wildfire|flood|storm|weather|tornado|tsunami|drought/i.test(q)) return "disasters";
-  if (/ai |artificial intelligence|openai|gpt|robot|machine learning|tesla|spacex|apple|tiktok|google/i.test(q)) return "tech";
-  if (/oscar|grammy|taylor|movie|film|album|concert|netflix|disney|marvel/i.test(q)) return "entertainment";
-  return "politics";
-}

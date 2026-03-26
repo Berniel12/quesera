@@ -362,8 +362,10 @@ async function matchToAliveTopic(
   for (const alias of aliases) {
     const aliasLower = alias.alias.toLowerCase();
     // Check if the alias appears in the question (word-boundary aware for short aliases)
-    const aliasInQuestion = aliasLower.length <= 3
-      ? new RegExp(`\\b${aliasLower.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i").test(question)
+    // Word-boundary check for all aliases <= 6 chars to prevent "Iran" matching "Ukrainian"
+    const escaped = aliasLower.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const aliasInQuestion = aliasLower.length <= 6
+      ? new RegExp(`\\b${escaped}\\b`, "i").test(question)
       : qLower.includes(aliasLower);
     if (aliasInQuestion) {
       // Score by alias length (longer = more specific = better match)
@@ -378,13 +380,19 @@ async function matchToAliveTopic(
     }
   }
 
-  // Also check canonical names
+  // Also check canonical names (require multiple significant word matches to avoid false positives)
+  // Skip common words that cause false matches: years, generic terms
+  const STOP_WORDS = new Set(["2025", "2026", "2027", "2028", "the", "and", "for", "with", "from", "will", "season", "price", "rate", "policy"]);
   for (const t of topicNames) {
     const nameLower = t.canonical_name.toLowerCase();
-    const words = nameLower.split(/\s+/).filter((w) => w.length > 3);
-    const matchingWords = words.filter((w) => qLower.includes(w));
+    const words = nameLower.split(/[\s-]+/).filter((w) => w.length > 3 && !STOP_WORDS.has(w));
+    const matchingWords = words.filter((w) => {
+      // Use word boundary to avoid partial matches (e.g., "iran" in "ukrainian")
+      return new RegExp(`\\b${w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`).test(qLower);
+    });
+    // Require at least 2 matching words for canonical name match (stricter than alias match)
     const score = matchingWords.length * 4;
-    if (score > bestScore) {
+    if (score > bestScore && matchingWords.length >= 2) {
       const alive = aliveTopics.find((at) => at.topicId === t.id);
       if (alive) {
         bestMatch = alive;

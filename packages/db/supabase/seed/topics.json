@@ -390,8 +390,7 @@
     "aliases": [
       "Bitcoin",
       "BTC",
-      "Bitcoin Price",
-      "Crypto Market"
+      "Bitcoin Price"
     ]
   },
   {
@@ -552,7 +551,6 @@
     "description": "AI companies, product launches, and industry developments",
     "aliases": [
       "AI",
-      "Artificial Intelligence",
       "ChatGPT",
       "OpenAI",
       "Google AI",
@@ -1009,7 +1007,7 @@
     ]
   },
   {
-    "canonical_name": "Summer Movies 2026",
+    "canonical_name": "Summer Movie Season 2026",
     "slug": "summer-movie-season-2026",
     "category": "entertainment",
     "description": "2026 summer blockbuster movie predictions",

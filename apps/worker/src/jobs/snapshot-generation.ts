@@ -168,14 +168,10 @@ export async function handleSnapshotGeneration(
       .eq("status", "answered");
 
     if (oracleRows && oracleRows.length > 0) {
-      // Clear existing verdicts so frontends show skeleton while re-synthesizing
       const oracleIds = (oracleRows as Array<{ id: string }>).map((r) => r.id);
-      await supabase
-        .from("oracle_queries")
-        .update({ llm_verdict: null, source_signals: null, answer_snapshot_id: published.id, synthesis_failed_at: null })
-        .in("id", oracleIds);
 
-      // Enqueue ONE synthesis job per oracle query (they may have different question framings)
+      // Enqueue synthesis jobs FIRST -- before clearing verdicts
+      // If enqueue fails, the old verdict stays visible (better than skeleton with no job)
       for (const row of oracleRows as Array<{ id: string }>) {
         await enqueue(supabase, {
           job_type: "oracle_synthesis",
@@ -188,6 +184,12 @@ export async function handleSnapshotGeneration(
           idempotency_key: `oracle-resynth-${row.id}-${published.id}`,
         });
       }
+
+      // Clear verdicts AFTER all jobs are enqueued (safe ordering)
+      await supabase
+        .from("oracle_queries")
+        .update({ llm_verdict: null, source_signals: null, answer_snapshot_id: published.id, synthesis_failed_at: null })
+        .in("id", oracleIds);
 
       logger.info(
         { topic_id: topicId, oracle_queries_count: oracleIds.length },

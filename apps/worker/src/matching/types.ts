@@ -275,7 +275,7 @@ export const MANIFOLD_QUESTION_RULES: Array<{ pattern: string; entries: SeedMapE
   { pattern: "iran regime", entries: [{ slug: "iran-us-tensions", confidence: 0.7 }] },
   { pattern: "us forces enter iran", entries: [{ slug: "iran-us-tensions", confidence: 0.9 }] },
   { pattern: "israel launch", entries: [{ slug: "israel-palestine-conflict", confidence: 0.8 }] },
-  { pattern: "israel lebanon", entries: [{ slug: "israel-palestine-conflict", confidence: 0.7 }] },
+  { pattern: "israel lebanon", entries: [{ slug: "lebanon-war-2026", confidence: 0.8 }] },
   { pattern: "netanyahu", entries: [{ slug: "israel-palestine-conflict", confidence: 0.6 }] },
   { pattern: "ukraine ceasefire", entries: [{ slug: "russia-ukraine-war", confidence: 0.8 }] },
   { pattern: "russia ukraine", entries: [{ slug: "russia-ukraine-war", confidence: 0.8 }] },

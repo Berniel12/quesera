@@ -114,6 +114,24 @@ export async function POST(request: Request) {
   const normalized = rawQuestion.toLowerCase().trim().replace(/[^\w\s]/g, "").replace(/\s+/g, " ");
   const keywords = normalized.split(" ").filter((w) => w.length > 2 && !STOP_WORDS.has(w));
 
+  // Guard: if no meaningful keywords extracted, reject
+  if (keywords.length < 2) {
+    // Still create the query as insufficient_data for demand tracking, but don't try matching
+    const noMatchSlug = slugify(rawQuestion);
+    if (!noMatchSlug) return NextResponse.json({ error: "Could not generate a valid URL from that question" }, { status: 400 });
+
+    const { data: existingNoMatch } = await db(supabase).from("oracle_queries").select("id").eq("question_slug", noMatchSlug).maybeSingle();
+    if (existingNoMatch) {
+      await db(supabase).rpc("increment_asked_count", { p_slug: noMatchSlug }).then(() => {}, () => {});
+      return NextResponse.json({ slug: noMatchSlug, existing: true });
+    }
+
+    await db(supabase).from("oracle_queries").insert({
+      question_text: rawQuestion, question_slug: noMatchSlug, status: "insufficient_data",
+    });
+    return NextResponse.json({ slug: noMatchSlug, existing: false });
+  }
+
   // Load all active public topics for keyword scoring
   const { data: allTopics } = await supabase
     .from("topics")

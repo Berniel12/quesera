@@ -31,7 +31,7 @@ const HEADLINES: Record<string, { up: string; down: string; stable: string; unkn
   tech:          { up: "Probably yes",         down: "Probably not",          stable: "Holding steady",     unknown: "Hard to say" },
 };
 
-const DEFAULT_HEADLINES = { up: "Probably yes", down: "Probably not", stable: "Probably not", unknown: "Hard to say" };
+const DEFAULT_HEADLINES = { up: "Probably yes", down: "Probably not", stable: "Holding steady", unknown: "Hard to say" };
 
 function getHeadline(direction: string, category: string | null): string {
   const map = (category ? HEADLINES[category] : undefined) ?? DEFAULT_HEADLINES;

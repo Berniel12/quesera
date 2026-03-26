@@ -86,13 +86,12 @@ export function QuestionCard({
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold leading-[1.1] tracking-tight text-foreground mb-4">{questionText}</h2>
             {answerState && (
               <div className="flex items-center gap-3 mb-3">
-                <span className={`text-xl sm:text-2xl font-black ${answerState.colorClass}`}>{answerState.label}</span>
+                <span className={`text-2xl sm:text-3xl font-black ${answerState.colorClass}`}>{answerState.headline}</span>
                 {confidence !== null && (
                   <div className="flex items-center gap-2 flex-1 max-w-[200px]">
                     <div className="h-2 flex-1 rounded-full bg-border/40 dark:bg-white/10 overflow-hidden">
                       <div className={`h-full rounded-full ${c.fill} animate-bar-fill`} style={{ width: `${pct}%` }} />
                     </div>
-                    <span className="text-xs font-bold font-mono text-muted-foreground">{pct}%</span>
                   </div>
                 )}
               </div>
@@ -254,7 +253,7 @@ export function QuestionCard({
           <p className="font-semibold text-base text-foreground leading-snug mb-3">{questionText}</p>
           <div className="flex items-center gap-3 flex-wrap">
             {answerState && (
-              <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-bold ${pillClass}`}>{answerState.label}</span>
+              <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-bold ${pillClass}`}>{answerState.headline}</span>
             )}
             {confidence !== null && <span className={`text-[11px] font-mono font-bold ${c.text}`}>{pct}%</span>}
             {ts && <span className="text-[10px] text-muted-foreground/50 ml-auto">{ts}</span>}
@@ -271,7 +270,7 @@ export function QuestionCard({
         <div className={`${base} bg-card card-shadow-rich ${dark} overflow-hidden`} style={{ animationDelay: `${delay}ms`, opacity: 0 }}>
           <div className="flex flex-col sm:flex-row min-h-[120px]">
             <div className={`sm:w-2/5 p-5 flex flex-col justify-center bg-gradient-to-br ${c.bg}`}>
-              {answerState && <span className={`text-xl sm:text-2xl font-black ${answerState.colorClass} leading-tight`}>{answerState.label}</span>}
+              {answerState && <span className={`text-xl sm:text-2xl font-black ${answerState.colorClass} leading-tight`}>{answerState.headline}</span>}
               {confidence !== null && <span className={`text-xs font-mono mt-1 ${c.text}`}>{pct}% confidence</span>}
             </div>
             <div className="flex-1 p-5 border-t sm:border-t-0 sm:border-l border-border/20 dark:border-white/5">
@@ -314,7 +313,7 @@ export function QuestionCard({
     return (
       <Link href={`/topics/${slug}`}>
         <div className={`${base} p-5 bg-gradient-to-br ${c.bg} bg-card card-shadow-rich ${dark} border-t-2 ${c.border}`} style={{ animationDelay: `${delay}ms`, opacity: 0 }}>
-          {answerState && <span className={`text-2xl font-black ${answerState.colorClass} leading-none mb-2 block`}>{answerState.label}</span>}
+          {answerState && <span className={`text-2xl font-black ${answerState.colorClass} leading-none mb-2 block`}>{answerState.headline}</span>}
           <p className="font-semibold text-sm text-foreground leading-snug mb-2">{questionText}</p>
           <div className="flex items-center gap-3">
             <span className={`h-1.5 w-1.5 rounded-full ${c.dot}`} />

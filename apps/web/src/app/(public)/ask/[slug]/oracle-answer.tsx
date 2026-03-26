@@ -213,57 +213,48 @@ export function OracleAnswer({
 
   return (
     <div className="animate-slide-up">
-      {/* Verdict block */}
+      {/* Verdict headline -- huge, bold, the clickbait */}
       <div className={`rounded-xl bg-gradient-to-br ${gradient} p-6 mb-6`}>
-        <div className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-3">
+        <div className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-2">
           Oracle verdict
         </div>
         {verdict ? (
-          <p className="text-base leading-relaxed">{verdict}</p>
+          <p className="text-2xl sm:text-3xl font-black leading-tight mb-3">{verdict}</p>
         ) : showingFallback ? (
           <p className="text-sm text-muted-foreground italic">
             We have the data but the summary is still processing. Here are the raw signals below.
           </p>
         ) : null}
-
-        {/* Probability bar (from first signal with probability) */}
-        {signals && signals.some((s) => s.probability != null) && (
-          <div className="mt-4 flex items-center gap-3">
-            <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-              <div
-                className="h-full bg-primary rounded-full animate-bar-fill"
-                style={{ width: `${signals.find((s) => s.probability != null)?.probability ?? 0}%` }}
-                role="progressbar"
-                aria-valuenow={signals.find((s) => s.probability != null)?.probability ?? 0}
-                aria-valuemin={0}
-                aria-valuemax={100}
-              />
-            </div>
-            <span className="text-xl font-bold tabular-nums animate-number-reveal delay-200">
-              {signals.find((s) => s.probability != null)?.probability}%
-            </span>
-          </div>
-        )}
       </div>
 
-      {/* Source signals */}
+      {/* Evidence Wall -- the star, always visible */}
       {signals && signals.length > 0 && (
         <section className="mb-6">
-          <h2 className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-3">
-            Source signals
-          </h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">
+              What the signals say
+            </h2>
+            <span className="text-xs text-muted-foreground">
+              {signals.length} {signals.length === 1 ? "source" : "sources"}
+            </span>
+          </div>
           <div className="space-y-2">
             {signals.map((s, i) => (
               <div
                 key={`${s.source}-${i}`}
-                className="flex items-center gap-3 px-4 py-3 rounded-lg bg-card border border-border/50"
+                className="flex items-start gap-3 px-4 py-3 rounded-lg bg-card border border-border/50"
               >
-                <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground min-w-[100px]">
+                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground min-w-[100px] pt-0.5">
                   {s.source}
                 </span>
-                <span className="text-sm flex-1">{s.value}</span>
-                {s.confidence && (
-                  <span className="text-xs text-muted-foreground">{s.confidence}</span>
+                <div className="flex-1 min-w-0">
+                  <span className="text-sm font-medium block">{s.value}</span>
+                  {s.confidence && (
+                    <span className="text-xs text-muted-foreground">{s.confidence}</span>
+                  )}
+                </div>
+                {s.probability != null && (
+                  <span className="text-sm font-bold font-mono tabular-nums flex-shrink-0">{s.probability}%</span>
                 )}
               </div>
             ))}

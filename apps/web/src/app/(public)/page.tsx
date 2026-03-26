@@ -282,9 +282,8 @@ export default async function LandingPage() {
                         </div>
                       )}
                       <div className="flex flex-col">
-                        <span className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tighter text-foreground dark:text-primary">{pct}%</span>
-                        <span className="text-[10px] uppercase tracking-widest mt-1 font-bold text-muted-foreground">
-                          {ans?.label ?? "Tracking"}
+                        <span className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-foreground dark:text-primary">
+                          {ans?.headline ?? ans?.label ?? "Tracking"}
                         </span>
                       </div>
                       <div className="flex-1 h-2 mb-4 rounded-full overflow-hidden bg-border/30 dark:bg-white/10">

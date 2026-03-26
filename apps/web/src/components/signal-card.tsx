@@ -47,6 +47,10 @@ const FAMILY_CONFIG: Record<string, { label: string; dotColor: string; accentCla
   hazard_weather: { label: "Hazard Alert", dotColor: "bg-destructive", accentClass: "border-destructive/20", darkAccent: "dark:border-destructive/20" },
   crypto_market: { label: "Crypto Data", dotColor: "bg-warning dark:bg-[#00DAF3]", accentClass: "border-warning/20", darkAccent: "dark:border-[#00DAF3]/20" },
   news_evidence: { label: "News", dotColor: "bg-navy dark:bg-[#00DAF3]", accentClass: "border-navy/20", darkAccent: "dark:border-[#00DAF3]/20" },
+  sports_odds: { label: "Bookmaker Odds", dotColor: "bg-emerald-500 dark:bg-emerald-400", accentClass: "border-emerald-500/20", darkAccent: "dark:border-emerald-400/20" },
+  defi_signal: { label: "DeFi Data", dotColor: "bg-violet-500 dark:bg-violet-400", accentClass: "border-violet-500/20", darkAccent: "dark:border-violet-400/20" },
+  humanitarian_conflict: { label: "Humanitarian", dotColor: "bg-red-500 dark:bg-red-400", accentClass: "border-red-500/20", darkAccent: "dark:border-red-400/20" },
+  reference_entity: { label: "Reference", dotColor: "bg-muted-foreground", accentClass: "border-navy/20", darkAccent: "dark:border-[#00DAF3]/20" },
 };
 
 const DEFAULT_CONFIG = { label: "Signal", dotColor: "bg-muted-foreground", accentClass: "border-navy/20", darkAccent: "dark:border-[#00DAF3]/20" };
@@ -294,9 +298,10 @@ export function SignalGroup({ familyKey, signals }: SignalGroupProps) {
   const summary = getFamilySummary(familyKey, signals);
   const sorted = [...signals].sort((a, b) => b.weight - a.weight);
 
-  // For hazard_weather with many identical signals, show aggregated view
-  const isHazardDump = familyKey === "hazard_weather" && signals.length > 5;
-  const displaySignals = isHazardDump ? sorted.slice(0, 3) : sorted.slice(0, 5);
+  // Show all signals -- sources are the product, never hide them
+  // Soft cap for hazard topics to avoid 100+ identical earthquake rows
+  const isHazardDump = familyKey === "hazard_weather" && signals.length > 8;
+  const displaySignals = isHazardDump ? sorted.slice(0, 8) : sorted;
   const hiddenCount = signals.length - displaySignals.length;
 
   return (
@@ -306,6 +311,7 @@ export function SignalGroup({ familyKey, signals }: SignalGroupProps) {
         <h3 className="text-[11px] font-bold uppercase tracking-[0.15em] text-muted-foreground">
           {config.label}
         </h3>
+        <span className="text-[10px] text-muted-foreground/60 ml-auto">{signals.length} {signals.length === 1 ? "signal" : "signals"}</span>
       </div>
       {summary && (
         <p className="text-xs text-muted-foreground mb-3 ml-4">{summary}</p>
@@ -324,6 +330,51 @@ export function SignalGroup({ familyKey, signals }: SignalGroupProps) {
           </p>
         )}
       </div>
+    </div>
+  );
+}
+
+// ── EVIDENCE WALL ──
+// The star of the page. All signals, always visible, grouped by source.
+
+interface EvidenceWallProps {
+  signals: SignalData[];
+}
+
+export function EvidenceWall({ signals }: EvidenceWallProps) {
+  // Group by source family
+  const byFamily = new Map<string, SignalData[]>();
+  for (const s of signals) {
+    const fam = s.source_family ?? "unknown";
+    const arr = byFamily.get(fam) ?? [];
+    arr.push(s);
+    byFamily.set(fam, arr);
+  }
+
+  const totalSignals = signals.length;
+  const totalSources = byFamily.size;
+
+  if (totalSignals === 0) {
+    return (
+      <div className="py-8 text-center">
+        <p className="text-sm text-muted-foreground">No signals available yet. We are gathering data from prediction markets and other sources.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">
+          What the signals say
+        </h2>
+        <span className="text-xs text-muted-foreground">
+          {totalSignals} {totalSignals === 1 ? "signal" : "signals"} from {totalSources} {totalSources === 1 ? "source" : "sources"}
+        </span>
+      </div>
+      {[...byFamily.entries()].map(([familyKey, familySignals]) => (
+        <SignalGroup key={familyKey} familyKey={familyKey} signals={familySignals} />
+      ))}
     </div>
   );
 }

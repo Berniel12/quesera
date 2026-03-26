@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { getAnswerState } from "@/lib/answer-state";
 import { getTeamEntity, getCompetitionAnswer, isCompetitionQuestion } from "@/lib/team-entities";
-import { SignalGroup } from "@/components/signal-card";
+import { SignalGroup, EvidenceWall } from "@/components/signal-card";
 import { ConfidenceTimeline } from "@/components/confidence-timeline";
 import { FollowButton } from "@/components/follow-button";
 import { EvidenceDrawer } from "@/components/evidence-drawer";
@@ -307,23 +307,11 @@ export default async function TopicPage({ params }: TopicPageProps) {
           </div>
         ) : answerState ? (
           <div className={`mt-5 p-5 rounded-2xl bg-gradient-to-br ${metricBg} border ${cat.border}`}>
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <span className={`text-2xl sm:text-3xl font-black ${answerState.colorClass} block`}>{answerState.label}</span>
-                {changeText && <p className="text-xs font-medium text-muted-foreground mt-1">{changeText}</p>}
-              </div>
-              <div className="flex-shrink-0 relative h-16 w-16">
-                <svg viewBox="0 0 36 36" className="h-16 w-16 -rotate-90">
-                  <circle cx="18" cy="18" r="14" fill="none" strokeWidth="3" className="stroke-border/20 dark:stroke-white/10" />
-                  <circle cx="18" cy="18" r="14" fill="none" strokeWidth="3" strokeLinecap="round" strokeDasharray={`${(pct / 100) * 88} 88`} className={`${cat.accent.replace("text-", "stroke-")}`} />
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-sm font-black font-mono text-foreground">{pct}%</span>
-                </div>
-              </div>
-            </div>
+            {/* Verdict headline -- the clickbait, huge and bold */}
+            <span className={`text-4xl sm:text-5xl font-black ${answerState.colorClass} block leading-tight`}>{answerState.headline}</span>
+            {changeText && <p className="text-xs font-medium text-muted-foreground mt-2">{changeText}</p>}
 
-            {/* Prose explanation -- part of the verdict, not a separate section */}
+            {/* Prose explanation */}
             <p className="mt-4 text-sm leading-relaxed text-foreground/90">
               {hasProse
                 ? snapshot?.current_picture_text
@@ -355,7 +343,18 @@ export default async function TopicPage({ params }: TopicPageProps) {
                 <h2 className={`text-[10px] font-bold uppercase tracking-[0.2em] ${cat.accent} mb-3`}>Intelligence Briefing</h2>
                 <div className="rounded-2xl bg-card dark:bg-[#131B2E] card-shadow-rich dark:border dark:border-white/5 overflow-hidden">
 
-                  {/* Key metric -- compact row at top */}
+                  {/* Confidence level -- secondary detail, moved from verdict */}
+                  {pct > 0 && (
+                    <div className="flex items-center gap-3 p-4 border-b border-border/10 dark:border-white/5">
+                      <span className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Confidence</span>
+                      <div className="flex-1 h-1.5 rounded-full bg-border/30 dark:bg-white/10 overflow-hidden">
+                        <div className="h-full bg-primary rounded-full animate-bar-fill" style={{ width: `${pct}%` }} />
+                      </div>
+                      <span className="text-xs font-bold font-mono text-muted-foreground">{pct}%</span>
+                    </div>
+                  )}
+
+                  {/* Key metric -- compact row */}
                   {keyMetric && (
                     <div className={`flex items-center gap-4 p-5 border-b border-border/10 dark:border-white/5 bg-gradient-to-r ${metricBg}`}>
                       <span className="text-2xl sm:text-3xl font-black tracking-tight text-foreground dark:text-primary">{keyMetric.value}</span>
@@ -419,19 +418,11 @@ export default async function TopicPage({ params }: TopicPageProps) {
                   )}
                 </div>
 
-                {/* Detailed signal data -- collapsed */}
+                {/* Evidence Wall -- the star of the page, always visible */}
                 {signals.length > 0 && (
-                  <details className="group mt-4">
-                    <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors flex items-center gap-1">
-                      <span>View raw signal data ({signals.length} signals)</span>
-                      <svg className="h-3 w-3 transition-transform group-open:rotate-90" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 2l4 4-4 4" /></svg>
-                    </summary>
-                    <div className="mt-3">
-                      {sortedFamilies.map((key) => (
-                        <SignalGroup key={key} familyKey={key} signals={grouped.get(key) ?? []} />
-                      ))}
-                    </div>
-                  </details>
+                  <div className="mt-6">
+                    <EvidenceWall signals={signals} />
+                  </div>
                 )}
               </section>
             </AnimateOnScroll>
@@ -508,7 +499,7 @@ export default async function TopicPage({ params }: TopicPageProps) {
                               )}
                               <div>
                                 <p className="text-sm font-semibold text-foreground leading-snug">{rq.question_text}</p>
-                                {rqState && <p className={`text-xs font-bold mt-1 ${rqState.colorClass}`}>{rqState.label}</p>}
+                                {rqState && <p className={`text-xs font-bold mt-1 ${rqState.colorClass}`}>{rqState.headline}</p>}
                               </div>
                             </div>
                           </div>

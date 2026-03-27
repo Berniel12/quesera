@@ -10,6 +10,7 @@ import {
   CANDIDATE_THRESHOLD,
   type TopicMatch,
 } from "./types.js";
+import { validateSignalRelevance } from "./llm-validator.js";
 
 interface SourceItem {
   id: string;
@@ -57,14 +58,26 @@ export async function matchSourceItem(
     for (const entry of seedMapEntries) {
       const { data: topic } = await supabase
         .from("topics")
-        .select("id")
+        .select("id, canonical_name, category")
         .eq("slug", entry.slug)
         .eq("status", "active")
         .single();
 
       if (topic) {
-        const topicId = (topic as { id: string }).id;
-        await insertMatch(supabase, item.id, topicId, "seed_map", entry.confidence, {
+        const t = topic as { id: string; canonical_name: string; category: string | null };
+
+        // LLM validation for prediction market items (cheap check: does this signal belong here?)
+        // Skip for deterministic matches (FRED, earthquakes, weather) -- these are correct by construction
+        if (item.source_item_type === "market") {
+          const signalText = String(item.normalized_payload.question ?? item.normalized_payload.slug ?? "");
+          const isRelevant = await validateSignalRelevance(signalText, t.canonical_name, t.category, logger);
+          if (!isRelevant) {
+            result.discardedCount++;
+            continue; // LLM says this signal doesn't belong -- skip it
+          }
+        }
+
+        await insertMatch(supabase, item.id, t.id, "seed_map", entry.confidence, {
           seed_map_slug: entry.slug,
           series_id: item.normalized_payload.series_id,
         });
@@ -136,6 +149,18 @@ export async function matchSourceItem(
     result.topScores.push(match.compositeScore);
 
     if (match.compositeScore >= ACCEPT_THRESHOLD) {
+      // LLM validation for prediction market items on the composite path too
+      if (item.source_item_type === "market") {
+        const signalText = String(item.normalized_payload.question ?? item.normalized_payload.slug ?? "");
+        const topicName = match.topicSlug.replace(/-/g, " ");
+        const topicCat = categoryMap.get(match.topicId) ?? null;
+        const isRelevant = await validateSignalRelevance(signalText, topicName, topicCat, logger);
+        if (!isRelevant) {
+          result.discardedCount++;
+          continue;
+        }
+      }
+
       await insertMatch(supabase, item.id, match.topicId, match.matchMethod, match.compositeScore, {
         trigram_score: match.trigramScore,
         entity_score: match.entityScore,

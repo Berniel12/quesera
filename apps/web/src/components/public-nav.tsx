@@ -19,13 +19,13 @@ export function PublicNav() {
           <ThemeToggle />
           <Link
             href="/search"
-            className="hidden sm:flex h-9 items-center rounded-2xl bg-secondary dark:bg-[#222A3E] px-4 text-xs text-muted-foreground transition-colors hover:text-foreground"
+            className="hidden sm:flex h-11 items-center rounded-2xl bg-secondary dark:bg-[#222A3E] px-4 text-xs text-muted-foreground transition-colors hover:text-foreground"
           >
             Search
           </Link>
           <Link
             href="/login"
-            className="h-9 inline-flex items-center rounded-2xl bg-navy dark:bg-[#00DAF3] px-5 text-xs font-medium text-white dark:text-[#00171B] transition-colors hover:opacity-90"
+            className="h-11 inline-flex items-center rounded-2xl bg-navy dark:bg-[#00DAF3] px-5 text-xs font-medium text-white dark:text-[#00171B] transition-colors hover:opacity-90"
           >
             Sign In
           </Link>

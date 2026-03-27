@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { getAnswerState } from "@/lib/answer-state";
 import { getTeamEntity, getCompetitionAnswer, isCompetitionQuestion, getTopicLogo } from "@/lib/team-entities";
+import { getTopicImage } from "@/lib/topic-images";
 import { SignalGroup, EvidenceWall } from "@/components/signal-card";
 import { ConfidenceTimeline } from "@/components/confidence-timeline";
 import { FollowButton } from "@/components/follow-button";
@@ -136,6 +137,7 @@ export default async function TopicPage({ params }: TopicPageProps) {
   const competitionAnswer = isCompetitionQuestion(headline) ? getCompetitionAnswer(t.slug) : null;
   const teamEntity = competitionAnswer ? null : getTeamEntity(headline);
   const topicLogo = getTopicLogo(t.slug);
+  const heroImage = getTopicImage(t.slug, t.category);
 
   const { data: latestPointer } = await supabase.from("topic_latest_snapshot").select("snapshot_id").eq("topic_id", t.id).single();
   const snapshotId = (latestPointer as { snapshot_id: string } | null)?.snapshot_id;
@@ -246,6 +248,15 @@ export default async function TopicPage({ params }: TopicPageProps) {
           Question + verdict + prose explanation + follow
           ================================================================ */}
       <section className="mb-10 animate-slide-up">
+        {/* Hero image background */}
+        {heroImage && (
+          <div className="relative -mx-4 sm:-mx-6 mb-6 rounded-2xl overflow-hidden">
+            <div className="relative h-48 sm:h-64">
+              <img src={heroImage} alt="" className="w-full h-full object-cover opacity-30 dark:opacity-20 dark:brightness-50 grayscale" loading="eager" />
+              <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-background/30" />
+            </div>
+          </div>
+        )}
         <div className="flex items-center gap-2 mb-3">
           <span className={`h-2 w-2 rounded-full ${cat.accent.replace("text-", "bg-")}`} />
           <span className={`text-[10px] font-bold uppercase tracking-[0.2em] ${cat.accent}`}>{t.category ?? "Signal"}</span>

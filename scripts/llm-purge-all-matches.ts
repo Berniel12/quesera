@@ -36,7 +36,7 @@ async function llmValidate(signalText: string, topicName: string, topicCategory:
   keyIndex++;
 
   const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+  const model = genAI.getGenerativeModel({ model: process.env.GEMINI_MODEL ?? "gemini-2.0-flash" });
 
   const prompt = `Signal: "${signalText.slice(0, 300)}"
 Topic: "${topicName}" (category: ${topicCategory})
@@ -131,10 +131,10 @@ async function main() {
       kept++;
     }
 
-    // Rate limit: small delay between LLM calls
-    if ((purged + kept) % 10 === 0) {
+    // Rate limit: delay between LLM calls to avoid 429s
+    if ((purged + kept) % 5 === 0) {
       process.stdout.write(`  Progress: ${purged + kept + skipped}/${allMatches.length} (${purged} purged, ${kept} kept)\r`);
-      await new Promise(r => setTimeout(r, 200));
+      await new Promise(r => setTimeout(r, 1000)); // 1s between batches of 5
     }
   }
 

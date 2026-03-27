@@ -430,7 +430,7 @@ export default async function TopicPage({ params }: TopicPageProps) {
                 {/* Evidence Wall -- the star of the page, always visible */}
                 {signals.length > 0 && (
                   <div className="mt-6">
-                    <EvidenceWall signals={signals} />
+                    <EvidenceWall signals={signals} isCompetition={!!competitionAnswer} />
                   </div>
                 )}
               </section>

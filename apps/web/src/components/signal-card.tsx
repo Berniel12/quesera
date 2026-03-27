@@ -350,14 +350,79 @@ export function SignalGroup({ familyKey, signals }: SignalGroupProps) {
   );
 }
 
+// ── COMPETITION LEADERBOARD ──
+// For "who will win?" topics: ranked list instead of individual signal cards
+
+function CompetitionLeaderboard({ signals }: { signals: SignalData[] }) {
+  // Extract contenders from market signals, ranked by probability
+  const contenders = signals
+    .filter((s) => s.source_family === "prediction_market" || s.source_family === "forecasting")
+    .map((s) => {
+      // Extract the subject from the question (e.g., "Will Argentina win..." -> "Argentina")
+      const q = String((s.metadata as Record<string, unknown>)?.question ?? "");
+      const match = q.match(/Will (.+?) win/i);
+      const name = match?.[1]?.trim() ?? q.slice(0, 40);
+      const pct = Math.round(s.current_value * 100);
+      return { name, pct, question: q };
+    })
+    .filter((c) => c.pct > 0) // Only show non-zero contenders
+    .sort((a, b) => b.pct - a.pct);
+
+  // Deduplicate by name (in case multiple markets for same contender)
+  const seen = new Set<string>();
+  const unique = contenders.filter((c) => {
+    const key = c.name.toLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  if (unique.length === 0) return null;
+
+  return (
+    <div className="mb-6">
+      <div className="flex items-center gap-2 mb-3">
+        <span className="h-2 w-2 rounded-full bg-positive dark:bg-[#4EDEA3]" />
+        <h3 className="text-[11px] font-bold uppercase tracking-[0.15em] text-muted-foreground">
+          Market Rankings
+        </h3>
+        <span className="text-[10px] text-muted-foreground/60 ml-auto">{signals.length} markets tracked</span>
+      </div>
+      <div className="space-y-1">
+        {unique.slice(0, 10).map((c, i) => (
+          <div
+            key={c.name}
+            className="flex items-center gap-3 px-4 py-2.5 rounded-lg bg-card border border-border/30"
+          >
+            <span className="text-sm font-black text-muted-foreground w-6 tabular-nums">{i + 1}.</span>
+            <span className="text-sm font-semibold flex-1">{c.name}</span>
+            <div className="flex items-center gap-2">
+              <div className="w-20 h-1.5 rounded-full bg-border/30 dark:bg-white/10 overflow-hidden">
+                <div className="h-full bg-primary rounded-full" style={{ width: `${Math.min(c.pct * 2, 100)}%` }} />
+              </div>
+              <span className="text-sm font-bold font-mono tabular-nums w-10 text-right">{c.pct}%</span>
+            </div>
+          </div>
+        ))}
+        {unique.length > 10 && (
+          <p className="text-xs text-muted-foreground text-center py-2">
+            and {unique.length - 10} more contenders
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── EVIDENCE WALL ──
 // The star of the page. All signals, always visible, grouped by source.
 
 interface EvidenceWallProps {
   signals: SignalData[];
+  isCompetition?: boolean;
 }
 
-export function EvidenceWall({ signals }: EvidenceWallProps) {
+export function EvidenceWall({ signals, isCompetition }: EvidenceWallProps) {
   // Group by source family
   const byFamily = new Map<string, SignalData[]>();
   for (const s of signals) {
@@ -378,6 +443,10 @@ export function EvidenceWall({ signals }: EvidenceWallProps) {
     );
   }
 
+  // For competition topics: show a ranked leaderboard for market signals
+  const marketFamilies = ["prediction_market", "forecasting"];
+  const nonMarketFamilies = [...byFamily.entries()].filter(([k]) => !marketFamilies.includes(k));
+
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
@@ -388,9 +457,18 @@ export function EvidenceWall({ signals }: EvidenceWallProps) {
           {totalSignals} {totalSignals === 1 ? "signal" : "signals"} from {totalSources} {totalSources === 1 ? "source" : "sources"}
         </span>
       </div>
-      {[...byFamily.entries()].map(([familyKey, familySignals]) => (
-        <SignalGroup key={familyKey} familyKey={familyKey} signals={familySignals} />
-      ))}
+      {isCompetition ? (
+        <>
+          <CompetitionLeaderboard signals={signals} />
+          {nonMarketFamilies.map(([familyKey, familySignals]) => (
+            <SignalGroup key={familyKey} familyKey={familyKey} signals={familySignals} />
+          ))}
+        </>
+      ) : (
+        [...byFamily.entries()].map(([familyKey, familySignals]) => (
+          <SignalGroup key={familyKey} familyKey={familyKey} signals={familySignals} />
+        ))
+      )}
     </div>
   );
 }

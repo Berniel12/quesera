@@ -15,12 +15,13 @@ export class NoaaNwsAdapter extends BaseAdapter {
       logger: this.logger,
     });
 
-    const data = (await response.json()) as {
-      features: Array<{
-        id: string;
-        properties: Record<string, unknown>;
-      }>;
-    };
+    let data: { features: Array<{ id: string; properties: Record<string, unknown> }> };
+    try {
+      data = (await response.json()) as typeof data;
+    } catch {
+      this.logger.warn("NOAA NWS returned non-JSON response, skipping");
+      return { items: [] };
+    }
 
     const items: RawItem[] = (data.features ?? []).map((feature) => ({
       externalId: feature.id,

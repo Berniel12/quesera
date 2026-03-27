@@ -78,6 +78,6 @@ export function getAnswerState(input: AnswerStateInput): AnswerState {
   if (direction === "down") return { label: "Probably not", headline, colorClass: "text-destructive", intensity: "weak" };
   if (direction === "stable") return { label: "Probably not", headline, colorClass: "text-foreground", intensity: "weak" };
 
-  // Unknown direction -- use headline which is already category-aware
-  return { label: headline, headline, colorClass: category === "disasters" || category === "geopolitics" ? "text-warning" : category === "sports" ? "text-foreground" : "text-muted-foreground", intensity: "weak" };
+  // Unknown direction -- label stays canonical, headline is category-flavored
+  return { label: "Hard to say", headline, colorClass: category === "disasters" || category === "geopolitics" ? "text-warning" : category === "sports" ? "text-foreground" : "text-muted-foreground", intensity: "weak" };
 }

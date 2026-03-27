@@ -128,7 +128,8 @@ export abstract class BaseAdapter {
           });
 
         if (versionError) {
-          this.logger.error({ error: versionError.message }, "Failed to insert version");
+          this.logger.error({ error: versionError.message }, "Failed to insert version, skipping update");
+          continue; // Don't update item if version write failed -- prevents orphaned versions
         }
 
         const { error: updateError } = await this.supabase

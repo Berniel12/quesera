@@ -5,7 +5,7 @@ import type { Logger } from "@signal-map/logger";
 import { getGeminiKey, markGeminiKeyFailed } from "../utils/key-rotator.js";
 
 const MAX_VERDICT_LENGTH = 600;
-const GEMINI_MODEL = process.env.GEMINI_MODEL ?? "gemini-2.0-flash";
+const GEMINI_MODEL = process.env.GEMINI_MODEL ?? "gemini-3.1-flash-lite-preview";
 
 const SOURCE_NAMES: Record<string, string> = {
   fred: "Federal Reserve data", bls: "Bureau of Labor Statistics",

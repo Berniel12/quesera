@@ -5,7 +5,7 @@ import { getGeminiKey, markGeminiKeyFailed } from "../utils/key-rotator.js";
 import type { ScoredSignal } from "./types.js";
 
 const MAX_PROSE_LENGTH = 800;
-const GEMINI_MODEL = process.env.GEMINI_MODEL ?? "gemini-2.0-flash";
+const GEMINI_MODEL = process.env.GEMINI_MODEL ?? "gemini-3.1-flash-lite-preview";
 
 // Human-readable source names for the prompt
 const SOURCE_NAMES: Record<string, string> = {

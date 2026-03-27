@@ -36,7 +36,7 @@ async function llmValidate(signalText: string, topicName: string, topicCategory:
   keyIndex++;
 
   const genAI = new GoogleGenerativeAI(apiKey);
-  const modelName = process.env.GEMINI_MODEL ?? "gemini-2.0-flash";
+  const modelName = process.env.GEMINI_MODEL ?? "gemini-3.1-flash-lite-preview";
   const model = genAI.getGenerativeModel({ model: modelName });
 
   const prompt = `Signal: "${signalText.slice(0, 300)}"

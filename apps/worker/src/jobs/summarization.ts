@@ -153,7 +153,7 @@ export async function handleSummarization(
       topic_id: payload.topic_id,
       snapshot_id: payload.snapshot_id,
       summarization_success: success,
-      model_name: process.env.GEMINI_MODEL ?? "gemini-2.0-flash",
+      model_name: process.env.GEMINI_MODEL ?? "gemini-3.1-flash-lite-preview",
       duration_ms: Date.now() - startTime,
     },
     "Summarization completed",

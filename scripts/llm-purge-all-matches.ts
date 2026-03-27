@@ -89,8 +89,8 @@ async function main() {
   const uniqueItemIds = [...new Set(allMatches.map(m => m.source_item_id))];
   const itemMap = new Map<string, { question: string; slug: string; source_item_type: string }>();
 
-  for (let i = 0; i < uniqueItemIds.length; i += 10) {
-    const batch = uniqueItemIds.slice(i, i + 10);
+  for (let i = 0; i < uniqueItemIds.length; i += 5) {
+    const batch = uniqueItemIds.slice(i, i + 5);
     const items = await query(
       `source_items?select=id,source_item_type,normalized_payload&id=in.(${batch.join(",")})`
     );

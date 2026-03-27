@@ -89,6 +89,7 @@ async function main() {
         await del(`source_item_topic_matches?id=eq.${match.id}`);
         affectedTopicIds.add(match.topic_id);
         purged++;
+        continue; // already deleted -- skip further checks on this match
       }
 
       // Also check: if the slug contains "vs" and has team-name patterns, it's likely sports

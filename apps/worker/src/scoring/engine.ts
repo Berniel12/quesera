@@ -41,7 +41,7 @@ export async function scoreTopic(
   const marketSignals = signals.filter((s) => s.sourceFamily === "prediction_market");
   if (marketSignals.length > 0 && marketSignals.length === signals.length) {
     const uniqueQuestions = new Set(
-      marketSignals.map((s) => String((s as unknown as { metadata?: { question?: string } }).metadata?.question ?? ""))
+      marketSignals.map((s) => String(s.metadata["question"] ?? ""))
     );
     if (uniqueQuestions.size <= 2) {
       logger.warn(

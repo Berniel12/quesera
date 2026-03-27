@@ -101,11 +101,10 @@ export const FRED_SERIES_SEED_MAP: Record<string, SeedMapEntry[]> = {
   PFOODINDEXM: [{ slug: "global-food-prices", confidence: 0.9 }],
 
   // ── EIA series (same macro_series_observation type as FRED) ──
-  "ELEC.PRICE.US-ALL.M": [{ slug: "us-consumer-confidence", confidence: 0.6 }],
+  "ELEC.PRICE.US-ALL.M": [{ slug: "us-inflation-rate", confidence: 0.6 }],
   "PET.RWTC.D": [{ slug: "global-oil-prices", confidence: 1.0 }],
   "PET.EMM_EPMR_PTE_NUS_DPG.W": [{ slug: "us-gas-prices", confidence: 0.9 }],
   "NG.RNGWHHD.D": [{ slug: "global-oil-prices", confidence: 0.7 }],
-  "TOTAL.PATWPUUS.M": [{ slug: "us-gas-prices", confidence: 0.7 }],
 };
 
 // CoinGecko coin_id -> topic slugs (deterministic seed map)

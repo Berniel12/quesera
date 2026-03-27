@@ -24,11 +24,10 @@ function escapeRegex(s: string): string {
  * Treats hyphens as word boundaries (common in slugs).
  */
 function matchesPattern(text: string, pattern: string): boolean {
-  // For patterns with trailing space (e.g. "f1 "), trim and use word boundary
-  const trimmed = pattern.trimEnd();
-  const escaped = escapeRegex(trimmed);
-  // Use \b for word boundaries; also treat hyphens as boundaries for slugs
-  const re = new RegExp(`(?:^|[\\s\\-_/])${escaped}(?:$|[\\s\\-_/])`, "i");
+  const escaped = escapeRegex(pattern.trimEnd());
+  // If pattern had trailing space, require whitespace after (not just word boundary)
+  const suffix = pattern.endsWith(" ") ? "[\\s]" : "(?:$|[\\s\\-_/])";
+  const re = new RegExp(`(?:^|[\\s\\-_/])${escaped}${suffix}`, "i");
   return re.test(text);
 }
 

@@ -298,9 +298,11 @@ export function SignalGroup({ familyKey, signals }: SignalGroupProps) {
 
   // Filter out uninformative signals (0% probability markets = no information)
   const isMarket = familyKey === "prediction_market" || familyKey === "forecasting";
-  const meaningful = isMarket
-    ? signals.filter((s) => s.current_value > 0.001) // Keep only non-zero probability
+  const filtered = isMarket
+    ? signals.filter((s) => s.current_value > 0.001)
     : signals;
+  // If ALL signals are 0%, show original list rather than a blank section
+  const meaningful = filtered.length > 0 ? filtered : signals;
 
   // Sort: markets by probability descending (most informative first), others by weight
   const sorted = isMarket
@@ -314,7 +316,7 @@ export function SignalGroup({ familyKey, signals }: SignalGroupProps) {
   const cap = isMarket ? 5 : isHazardDump ? 8 : sorted.length;
   const displaySignals = sorted.slice(0, cap);
   const hiddenCount = sorted.length - displaySignals.length;
-  const filteredCount = signals.length - meaningful.length;
+  const filteredCount = filtered.length > 0 ? signals.length - filtered.length : 0;
 
   return (
     <div className="mb-6">

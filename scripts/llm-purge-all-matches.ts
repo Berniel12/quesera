@@ -56,7 +56,8 @@ Is this signal actually about this topic? Answer only YES or NO.
     return text.startsWith("YES");
   } catch (err) {
     console.error(`  LLM error: ${err instanceof Error ? err.message : String(err)}`);
-    return true; // permissive fallback
+    return true; // permissive fallback for purge -- keep match if we can't validate
+    // Note: for a stricter purge, change to `return false` to delete on uncertainty
   }
 }
 

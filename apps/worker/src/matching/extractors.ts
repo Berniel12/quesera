@@ -11,6 +11,42 @@ interface SourceDefinition {
   source_family: string;
 }
 
+// ── Matching helpers ──
+
+/** Escape regex special chars in a pattern string */
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * Word-boundary match instead of substring.
+ * "hurricane" matches "hurricane-season" but NOT "hurricanes-vs-canadiens".
+ * Treats hyphens as word boundaries (common in slugs).
+ */
+function matchesPattern(text: string, pattern: string): boolean {
+  // For patterns with trailing space (e.g. "f1 "), trim and use word boundary
+  const trimmed = pattern.trimEnd();
+  const escaped = escapeRegex(trimmed);
+  // Use \b for word boundaries; also treat hyphens as boundaries for slugs
+  const re = new RegExp(`(?:^|[\\s\\-_/])${escaped}(?:$|[\\s\\-_/])`, "i");
+  return re.test(text);
+}
+
+/** Detect sports bets by characteristic patterns in question/slug text */
+const SPORTS_BET_PATTERN = /\bvs\.?\s|\bspread[:\s]|\bo\/u\s|\bover[\s/-]under\b|\bmoneyline\b|\bparlay\b|\bpoint spread\b|\btotal points\b|\bgame \d/i;
+
+/** Sports topic slugs -- used to allow sports bets to match sports topics only */
+const SPORTS_SLUGS = new Set([
+  "nba-season-2025-26", "nfl-2026-season", "premier-league", "champions-league",
+  "fifa-world-cup-2026", "mlb-season-2026", "formula-1-2026", "ufc-mma",
+  "la-liga", "bundesliga", "ipl-cricket", "cricket-world-cup", "rugby-world-cup",
+  "tennis-grand-slams", "olympics-2028", "tour-de-france",
+]);
+
+function isSportsSlug(slug: string): boolean {
+  return SPORTS_SLUGS.has(slug);
+}
+
 /**
  * Extract matchable signals from a source item's normalized payload.
  * Works only from stored data — never refetches upstream APIs.
@@ -111,33 +147,49 @@ export function getSeedMapMatches(item: SourceItem): SeedMapEntry[] | null {
 
   // Prediction market items: keyword matching on slug or question text
   if (item.source_item_type === "market") {
-    // Try Polymarket slug-based matching first
     const slug = String(item.normalized_payload.slug ?? "").toLowerCase();
+    const question = String(item.normalized_payload.question ?? "").toLowerCase();
+    const text = `${slug} ${question}`;
+
+    // Sports bet exclusion: if this looks like a sports bet, only match to sports topics
+    const isSportsBet = SPORTS_BET_PATTERN.test(text);
+
+    // Try Polymarket slug-based matching first (word-boundary, not substring)
     if (slug) {
       for (const rule of POLYMARKET_SLUG_RULES) {
-        if (slug.includes(rule.pattern)) {
+        if (matchesPattern(slug, rule.pattern)) {
+          // If it's a sports bet, only allow matches to sports topics
+          if (isSportsBet) {
+            const sportsEntries = rule.entries.filter((e) => isSportsSlug(e.slug));
+            if (sportsEntries.length > 0) return sportsEntries;
+            continue; // skip this rule -- sports bet matching non-sports topic
+          }
           return rule.entries;
         }
       }
     }
 
-    // Try Manifold/generic question-text matching
-    const question = String(item.normalized_payload.question ?? "").toLowerCase();
+    // Try Manifold/generic question-text matching (word-boundary)
     if (question) {
       for (const rule of MANIFOLD_QUESTION_RULES) {
-        if (question.includes(rule.pattern)) {
+        if (matchesPattern(question, rule.pattern)) {
+          if (isSportsBet) {
+            const sportsEntries = rule.entries.filter((e) => isSportsSlug(e.slug));
+            if (sportsEntries.length > 0) return sportsEntries;
+            continue;
+          }
           return rule.entries;
         }
       }
     }
   }
 
-  // Congress.gov bills: title keyword matching (policy-specific only)
+  // Congress.gov bills: title keyword matching (word-boundary)
   if (item.source_item_type === "bill") {
     const title = String(item.normalized_payload.title ?? "").toLowerCase();
     if (title) {
       for (const rule of CONGRESS_TITLE_RULES) {
-        if (title.includes(rule.pattern)) {
+        if (matchesPattern(title, rule.pattern)) {
           return rule.entries;
         }
       }

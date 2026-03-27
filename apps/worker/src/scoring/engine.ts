@@ -36,6 +36,22 @@ export async function scoreTopic(
     return null;
   }
 
+  // Quality gate: reject if ALL signals come from 1-2 prediction market questions
+  // (likely contamination -- e.g., 4 hockey bets on a hurricane topic)
+  const marketSignals = signals.filter((s) => s.sourceFamily === "prediction_market");
+  if (marketSignals.length > 0 && marketSignals.length === signals.length) {
+    const uniqueQuestions = new Set(
+      marketSignals.map((s) => String((s as unknown as { metadata?: { question?: string } }).metadata?.question ?? ""))
+    );
+    if (uniqueQuestions.size <= 2) {
+      logger.warn(
+        { topicId, signalCount: signals.length, uniqueQuestions: uniqueQuestions.size },
+        "All signals from 1-2 market questions -- likely contamination, skipping snapshot",
+      );
+      return null;
+    }
+  }
+
   const direction = computeDirection(signals);
   const confidence = computeConfidence(signals);
   const disagreement = computeDisagreement(signals);

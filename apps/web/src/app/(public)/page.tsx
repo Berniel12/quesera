@@ -151,6 +151,8 @@ export default async function LandingPage() {
     const card = cardByTopicId.get(topic.id);
     if (!card) continue;
     if (seenSlugs.has(topic.slug)) continue;
+    // Quality gate: skip topics with dead freshness or zero confidence (no real data)
+    if (card.freshness === "dead" || card.confidence === 0) continue;
     seenSlugs.add(topic.slug);
     allQuestions.push({
       question_text: r.question_text, slug: topic.slug, category: topic.category,

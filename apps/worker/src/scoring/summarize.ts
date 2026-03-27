@@ -131,6 +131,10 @@ RULES:
 - No hedge words like "it remains to be seen" or "time will tell"
 - No indicator codes (say "unemployment rate" not "UNRATE")
 - No emojis
+- ALWAYS include geographic specificity: say "US", "Atlantic", "European", etc. Never say "this hurricane season" without saying where.
+- ALWAYS include specific numbers and thresholds: say "above the 14-storm historical average" not "above average". Say "3.2% CPI" not "inflation cooling".
+- ALWAYS cite the specific data source for every claim: "Polymarket at 73%" not "markets say likely"
+- If you only have 1-2 signals, acknowledge the limited data: "Based on early Polymarket data only -- more sources needed for a complete picture"
 - Respond with valid JSON only, no markdown fences
 `;
 

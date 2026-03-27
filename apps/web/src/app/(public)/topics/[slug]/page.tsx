@@ -344,14 +344,20 @@ export default async function TopicPage({ params }: TopicPageProps) {
                 <h2 className={`text-[10px] font-bold uppercase tracking-[0.2em] ${cat.accent} mb-3`}>Intelligence Briefing</h2>
                 <div className="rounded-2xl bg-card dark:bg-[#131B2E] card-shadow-rich dark:border dark:border-white/5 overflow-hidden">
 
-                  {/* Confidence level -- secondary detail, moved from verdict */}
-                  {pct > 0 && (
+                  {/* Confidence level -- only show with enough signal diversity */}
+                  {pct > 0 && signals.length >= 3 && sourceFamilies.length >= 2 && (
                     <div className="flex items-center gap-3 p-4 border-b border-border/10 dark:border-white/5">
                       <span className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Confidence</span>
                       <div className="flex-1 h-1.5 rounded-full bg-border/30 dark:bg-white/10 overflow-hidden">
                         <div className="h-full bg-primary rounded-full animate-bar-fill" style={{ width: `${pct}%` }} />
                       </div>
                       <span className="text-xs font-bold font-mono text-muted-foreground">{pct}%</span>
+                    </div>
+                  )}
+                  {/* Low signal quality notice */}
+                  {signals.length > 0 && sourceFamilies.length < 2 && (
+                    <div className="p-4 border-b border-border/10 dark:border-white/5">
+                      <p className="text-xs text-muted-foreground">Early signal -- waiting for more sources to build a complete picture.</p>
                     </div>
                   )}
 

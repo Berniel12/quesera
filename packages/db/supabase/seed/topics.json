@@ -42,7 +42,7 @@
     "canonical_name": "US Inflation Rate",
     "slug": "us-inflation-rate",
     "category": "macro",
-    "description": "Consumer price inflation in the United States",
+    "description": "US Consumer Price Index (CPI): monthly inflation rate vs the Federal Reserve's 2% target. Currently tracking at 3.2% annualized.",
     "aliases": [
       "CPI",
       "US CPI",
@@ -104,7 +104,7 @@
     "canonical_name": "Hurricane Season 2026",
     "slug": "hurricane-season-2026",
     "category": "disasters",
-    "description": "2026 Atlantic hurricane season tracking and forecasts",
+    "description": "2026 Atlantic hurricane season: will it produce more than the historical average of 14 named storms? Tracking sea surface temperatures, NOAA forecasts, and prediction market odds.",
     "aliases": [
       "Atlantic Hurricanes",
       "Hurricane Season",
@@ -197,7 +197,7 @@
     "canonical_name": "US Housing Market",
     "slug": "us-housing-market",
     "category": "macro",
-    "description": "US housing prices, mortgage rates, and real estate trends",
+    "description": "US housing market: Case-Shiller Home Price Index, median sales price, housing starts, and mortgage rate impact on affordability.",
     "aliases": [
       "Housing Market",
       "Home Prices",
@@ -244,7 +244,7 @@
     "canonical_name": "Earthquake Activity",
     "slug": "earthquake-activity",
     "category": "disasters",
-    "description": "Global earthquake activity and seismic events",
+    "description": "Global earthquake activity from USGS: significant seismic events (M5.0+), unusual patterns, and risk areas. Updated continuously from US Geological Survey sensors worldwide.",
     "aliases": [
       "Earthquakes",
       "Seismic Activity",
@@ -255,7 +255,7 @@
     "canonical_name": "Severe Weather Alerts",
     "slug": "severe-weather-alerts",
     "category": "disasters",
-    "description": "Active severe weather warnings and advisories",
+    "description": "Active severe weather warnings across the United States from the National Weather Service. Tornadoes, severe thunderstorms, and extreme weather events.",
     "aliases": [
       "Severe Weather",
       "Weather Alerts",
@@ -267,7 +267,7 @@
     "canonical_name": "Wildfire Season",
     "slug": "wildfire-season",
     "category": "disasters",
-    "description": "Wildfire activity and fire season tracking",
+    "description": "US wildfire risk and active fire tracking. Western states drought conditions, acres burned vs historical average, and seasonal outlook from NIFC.",
     "aliases": [
       "Wildfires",
       "Forest Fires",
@@ -313,7 +313,7 @@
     "canonical_name": "Climate Change",
     "slug": "climate-change",
     "category": "geopolitics",
-    "description": "Climate change developments, policy, and impact",
+    "description": "Global climate indicators: average temperature anomaly vs pre-industrial baseline, Arctic ice extent, extreme weather frequency, and COP commitments vs actual emissions.",
     "aliases": [
       "Climate",
       "Global Warming",
@@ -656,7 +656,7 @@
     "canonical_name": "Global Recession Risk",
     "slug": "global-recession-risk",
     "category": "macro",
-    "description": "Indicators and signals of potential global economic recession",
+    "description": "Probability of a US or global recession within 12 months. Tracked via yield curve inversion, PMI data, prediction markets, and leading indicators.",
     "aliases": [
       "Recession",
       "Economic Downturn",

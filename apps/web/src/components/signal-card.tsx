@@ -398,7 +398,7 @@ function CompetitionLeaderboard({ signals }: { signals: SignalData[] }) {
             <span className="text-sm font-semibold flex-1">{c.name}</span>
             <div className="flex items-center gap-2">
               <div className="w-20 h-1.5 rounded-full bg-border/30 dark:bg-white/10 overflow-hidden">
-                <div className="h-full bg-primary rounded-full" style={{ width: `${Math.min(c.pct * 2, 100)}%` }} />
+                <div className="h-full bg-primary rounded-full" style={{ width: `${c.pct}%` }} />
               </div>
               <span className="text-sm font-bold font-mono tabular-nums w-10 text-right">{c.pct}%</span>
             </div>

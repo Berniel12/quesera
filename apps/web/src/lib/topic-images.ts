@@ -78,7 +78,7 @@ const TOPIC_IMAGES: Record<string, string> = {
   "us-debt-ceiling": img("1526304640581-d334cdbbf45e"),       // US currency
   "artificial-intelligence-policy": img("1677442136019-21780ecad995"), // AI abstract
   "us-trade-policy": img("1494412574643-ff11b0a5eb19"),       // shipping containers
-  "us-immigration-policy": img("1521295121783-8a321d551ad2"),  // border/immigration
+  "us-immigration-policy": img("1494412574643-ff11b0a5eb19"),  // border crossing/travel
   "us-healthcare-policy": img("1519494026257-aeff85a46d3d"),   // hospital
   "uk-elections": img("1513635269975-59663e0ac1ad"),          // Parliament/London
   "india-elections": img("1524492412937-b28074a5d7da"),       // India Parliament

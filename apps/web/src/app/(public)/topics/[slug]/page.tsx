@@ -250,7 +250,7 @@ export default async function TopicPage({ params }: TopicPageProps) {
       <section className="mb-10 animate-slide-up">
         {/* Hero image background */}
         {heroImage && (
-          <div className="relative -mx-4 sm:-mx-6 mb-6 rounded-2xl overflow-hidden">
+          <div className="relative -mx-6 mb-6 rounded-2xl overflow-hidden">
             <div className="relative h-48 sm:h-64">
               <img src={heroImage} alt="" className="w-full h-full object-cover opacity-30 dark:opacity-20 dark:brightness-50 grayscale" loading="eager" />
               <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-background/30" />

@@ -103,6 +103,27 @@ export function extractMatchSignals(
         entities: (p.aliases as string[]) ?? [],
       };
 
+    case "sports_odds":
+      return {
+        text: `${p.sport_key ?? ""} ${p.home_team ?? ""} ${p.away_team ?? ""}`.trim(),
+        category: "sports",
+        entities: [String(p.home_team ?? ""), String(p.away_team ?? "")].filter(Boolean),
+      };
+
+    case "sports_event":
+      return {
+        text: `${p.league ?? ""} ${p.name ?? p.headline ?? ""}`.trim(),
+        category: "sports",
+        entities: extractEntitiesFromText(String(p.name ?? p.headline ?? "")),
+      };
+
+    case "article":
+      return {
+        text: `${p.title ?? p.headline ?? ""} ${p.description ?? ""}`.trim().slice(0, 500),
+        category,
+        entities: extractEntitiesFromText(String(p.title ?? p.headline ?? "")),
+      };
+
     case "filing":
       return {
         text: String(p.committee_name ?? ""),
@@ -143,6 +164,47 @@ export function getSeedMapMatches(item: SourceItem): SeedMapEntry[] | null {
   // NOAA weather alerts: all items → severe-weather-alerts
   if (item.source_item_type === "weather_alert") {
     return [{ slug: "severe-weather-alerts", confidence: 1.0 }];
+  }
+
+  // Sports odds: map sport_key to topic
+  if (item.source_item_type === "sports_odds") {
+    const sportKey = String(item.normalized_payload.sport_key ?? "").toLowerCase();
+    const SPORT_KEY_MAP: Record<string, SeedMapEntry[]> = {
+      "soccer_epl": [{ slug: "premier-league", confidence: 0.9 }],
+      "soccer_uefa_champs_league": [{ slug: "champions-league", confidence: 0.9 }],
+      "soccer_spain_la_liga": [{ slug: "la-liga", confidence: 0.9 }],
+      "soccer_germany_bundesliga": [{ slug: "bundesliga", confidence: 0.9 }],
+      "soccer_fifa_world_cup": [{ slug: "fifa-world-cup-2026", confidence: 0.9 }],
+      "americanfootball_nfl": [{ slug: "nfl-2026-season", confidence: 0.9 }],
+      "basketball_nba": [{ slug: "nba-season-2025-26", confidence: 0.9 }],
+      "baseball_mlb": [{ slug: "mlb-season-2026", confidence: 0.9 }],
+      "mma_mixed_martial_arts": [{ slug: "ufc-mma", confidence: 0.9 }],
+      "cricket_ipl": [{ slug: "ipl-cricket", confidence: 0.9 }],
+      "rugbyleague_nrl": [{ slug: "rugby-world-cup", confidence: 0.7 }],
+      "tennis_atp_french_open": [{ slug: "tennis-grand-slams", confidence: 0.9 }],
+      "tennis_atp_wimbledon": [{ slug: "tennis-grand-slams", confidence: 0.9 }],
+      "tennis_atp_us_open": [{ slug: "tennis-grand-slams", confidence: 0.9 }],
+      "tennis_atp_aus_open": [{ slug: "tennis-grand-slams", confidence: 0.9 }],
+      "motorsport_formula_one": [{ slug: "formula-1-2026", confidence: 0.9 }],
+    };
+    const entries = SPORT_KEY_MAP[sportKey];
+    if (entries) return entries;
+    // Unknown sport -- fall through to trigram matching
+  }
+
+  // ESPN sports events: map league to topic
+  if (item.source_item_type === "sports_event") {
+    const league = String(item.normalized_payload.league ?? "").toLowerCase();
+    const LEAGUE_MAP: Record<string, SeedMapEntry[]> = {
+      "nfl": [{ slug: "nfl-2026-season", confidence: 0.9 }],
+      "nba": [{ slug: "nba-season-2025-26", confidence: 0.9 }],
+      "mlb": [{ slug: "mlb-season-2026", confidence: 0.9 }],
+      "nhl": [], // No NHL topic -- skip
+      "epl": [{ slug: "premier-league", confidence: 0.9 }],
+    };
+    const entries = LEAGUE_MAP[league];
+    if (entries && entries.length > 0) return entries;
+    if (entries && entries.length === 0) return null; // explicitly skip (e.g., NHL)
   }
 
   // Prediction market items: keyword matching on slug or question text

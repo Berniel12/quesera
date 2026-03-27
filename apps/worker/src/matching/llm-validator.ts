@@ -4,10 +4,11 @@ import { getGeminiKey, markGeminiKeyFailed } from "../utils/key-rotator.js";
 
 /**
  * Ultra-cheap LLM validation: "Does this signal belong to this topic?"
- * Uses Gemini 2.5 Flash-Lite (~$0.00002 per call).
+ * Uses cheapest available Gemini model (~$0.00002 per call).
  * Returns true if the signal is relevant, false if it's contamination.
  *
  * Cost estimate: 2,000 signals/day * $0.00002 = $0.04/day
+ * Set GEMINI_VALIDATOR_MODEL env var to override model.
  */
 
 const VALIDATOR_MODEL = process.env.GEMINI_VALIDATOR_MODEL ?? "gemini-2.0-flash-lite";

@@ -86,6 +86,9 @@ export async function matchSourceItem(
       }
     }
     if (result.matchedCount > 0) return result;
+    // If ALL seed-map entries were LLM-rejected for a market item, don't fall through
+    // to composite path -- the LLM already judged this signal irrelevant
+    if (item.source_item_type === "market" && result.discardedCount > 0) return result;
   }
 
   // 2. Extract signals
@@ -109,12 +112,14 @@ export async function matchSourceItem(
 
   const { data: topicCategories } = await supabase
     .from("topics")
-    .select("id, category")
+    .select("id, category, canonical_name")
     .in("id", candidateTopicIds);
 
   const categoryMap = new Map<string, string | null>();
-  for (const t of (topicCategories ?? []) as Array<{ id: string; category: string | null }>) {
+  const nameMap = new Map<string, string>();
+  for (const t of (topicCategories ?? []) as Array<{ id: string; category: string | null; canonical_name: string }>) {
     categoryMap.set(t.id, t.category);
+    nameMap.set(t.id, t.canonical_name);
   }
 
   // 5. Score each candidate topic
@@ -152,7 +157,7 @@ export async function matchSourceItem(
       // LLM validation for prediction market items on the composite path too
       if (item.source_item_type === "market") {
         const signalText = String(item.normalized_payload.question ?? item.normalized_payload.slug ?? "");
-        const topicName = match.topicSlug.replace(/-/g, " ");
+        const topicName = nameMap.get(match.topicId) ?? match.topicSlug.replace(/-/g, " ");
         const topicCat = categoryMap.get(match.topicId) ?? null;
         const isRelevant = await validateSignalRelevance(signalText, topicName, topicCat, logger);
         if (!isRelevant) {

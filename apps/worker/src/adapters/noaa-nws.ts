@@ -22,7 +22,7 @@ export class NoaaNwsAdapter extends BaseAdapter {
       }>;
     };
 
-    const items: RawItem[] = data.features.map((feature) => ({
+    const items: RawItem[] = (data.features ?? []).map((feature) => ({
       externalId: feature.id,
       payload: feature.properties,
       occurredAt: feature.properties.onset

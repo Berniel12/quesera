@@ -49,7 +49,25 @@ export abstract class BaseAdapter {
 
   async sync(): Promise<SyncResult> {
     const fetchResult = await this.fetch();
-    const items = fetchResult.items.map((raw) => this.normalize(raw));
+    // Per-item error isolation: one bad item should NOT crash the entire sync
+    const items: NormalizedItem[] = [];
+    let normalizeErrors = 0;
+    for (const raw of fetchResult.items) {
+      try {
+        items.push(this.normalize(raw));
+      } catch (err) {
+        normalizeErrors++;
+        if (normalizeErrors <= 3) {
+          this.logger.warn(
+            { externalId: raw.externalId, error: err instanceof Error ? err.message : String(err) },
+            "normalize() failed for item, skipping",
+          );
+        }
+      }
+    }
+    if (normalizeErrors > 3) {
+      this.logger.warn({ normalizeErrors }, `${normalizeErrors} items failed to normalize (showing first 3)`);
+    }
 
     this.logger.info(
       { sourceKey: this.sourceDefinition.source_key, fetched: items.length },

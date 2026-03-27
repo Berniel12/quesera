@@ -22,16 +22,16 @@ const INVERTED_CATEGORIES = new Set(["disasters", "geopolitics"]);
 // Category-specific verdict headlines -- the fun, shareable version
 const HEADLINES: Record<string, { up: string; down: string; stable: string; unknown: string }> = {
   sports:        { up: "Lock it in",          down: "Don't bet on it",       stable: "Still wide open",    unknown: "Still wide open" },
-  crypto:        { up: "To the moon",         down: "Not this cycle",        stable: "Hodl tight",         unknown: "Hard to say" },
-  entertainment: { up: "Count on it",         down: "Don't hold your breath", stable: "Stay tuned",        unknown: "Drama incoming" },
+  crypto:        { up: "To the moon",         down: "Not this cycle",        stable: "Not yet",            unknown: "Hard to say" },
+  entertainment: { up: "Count on it",         down: "Don't hold your breath", stable: "Not yet",           unknown: "Drama incoming" },
   geopolitics:   { up: "Brace yourself",      down: "Cooler heads prevail",  stable: "Uneasy calm",        unknown: "Situation developing" },
-  disasters:     { up: "Brace yourself",      down: "All clear for now",     stable: "Monitoring",          unknown: "Situation developing" },
+  disasters:     { up: "Brace yourself",      down: "All clear for now",     stable: "All clear for now",   unknown: "Situation developing" },
   macro:         { up: "Probably yes",         down: "Probably not",          stable: "Holding steady",     unknown: "Hard to say" },
-  politics:      { up: "Probably yes",         down: "Probably not",          stable: "Status quo",         unknown: "Hard to say" },
-  tech:          { up: "Probably yes",         down: "Probably not",          stable: "Holding steady",     unknown: "Hard to say" },
+  politics:      { up: "Probably yes",         down: "Probably not",          stable: "Probably not",       unknown: "Hard to say" },
+  tech:          { up: "Probably yes",         down: "Probably not",          stable: "Probably not",       unknown: "Hard to say" },
 };
 
-const DEFAULT_HEADLINES = { up: "Probably yes", down: "Probably not", stable: "Holding steady", unknown: "Hard to say" };
+const DEFAULT_HEADLINES = { up: "Probably yes", down: "Probably not", stable: "Probably not", unknown: "Hard to say" };
 
 function getHeadline(direction: string, category: string | null): string {
   const map = (category ? HEADLINES[category] : undefined) ?? DEFAULT_HEADLINES;
@@ -62,21 +62,21 @@ export function getAnswerState(input: AnswerStateInput): AnswerState {
   if (confidence >= 0.6) {
     if (direction === "up") return { label: "Probably yes", headline, colorClass, intensity: "strong" };
     if (direction === "down") return { label: "Probably not", headline, colorClass, intensity: "strong" };
-    return { label: "Holding steady", headline, colorClass: "text-foreground", intensity: "strong" };
+    return { label: "Probably not", headline, colorClass: "text-foreground", intensity: "strong" };
   }
 
   // MODERATE confidence (0.35 - 0.6)
   if (confidence >= 0.35) {
     if (direction === "up") return { label: "Probably yes", headline, colorClass, intensity: "moderate" };
     if (direction === "down") return { label: "Probably not", headline, colorClass, intensity: "moderate" };
-    if (direction === "stable") return { label: "Holding steady", headline, colorClass: "text-foreground", intensity: "moderate" };
+    if (direction === "stable") return { label: "Probably not", headline, colorClass: "text-foreground", intensity: "moderate" };
     return { label: "Hard to say", headline, colorClass: "text-muted-foreground", intensity: "moderate" };
   }
 
   // LOW confidence (< 0.35)
   if (direction === "up") return { label: "Probably yes", headline, colorClass, intensity: "weak" };
   if (direction === "down") return { label: "Probably not", headline, colorClass: "text-destructive", intensity: "weak" };
-  if (direction === "stable") return { label: "Holding steady", headline, colorClass: "text-foreground", intensity: "weak" };
+  if (direction === "stable") return { label: "Probably not", headline, colorClass: "text-foreground", intensity: "weak" };
 
   // Unknown direction -- use headline which is already category-aware
   return { label: headline, headline, colorClass: category === "disasters" || category === "geopolitics" ? "text-warning" : category === "sports" ? "text-foreground" : "text-muted-foreground", intensity: "weak" };

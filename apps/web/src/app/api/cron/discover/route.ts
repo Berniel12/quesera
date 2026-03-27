@@ -127,8 +127,8 @@ export async function GET(request: Request) {
       .insert({
         topic_id: matchedTopic.topicId,
         question_text: displayQuestion,
-        is_featured: true,
-        sort_order: 10, // lower priority than hand-curated (sort_order: 1)
+        is_featured: false, // market titles are signals, not headlines
+        sort_order: 50, // much lower priority than hand-curated (sort_order: 1)
       })
       .select("id")
       .single();

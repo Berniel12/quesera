@@ -111,14 +111,17 @@ ${signalBlocks}
 OVERALL: Direction is "${input.direction}", confidence ${Math.round(input.confidence * 100)}%, disagreement ${Math.round(input.disagreement * 100)}%.
 ${priorContext}
 
+THE SYSTEM VERDICT: Based on the data, the system labeled this "${input.direction}" with ${Math.round(input.confidence * 100)}% confidence.
+Your prose MUST be coherent with this verdict. If the verdict says "stable" or "down", do NOT write prose that says "tensions are escalating" or "momentum is building." If you genuinely disagree with the verdict based on the data, explicitly say so: "Despite the stable signals, the underlying dynamics suggest..."
+
 Write a JSON response with three fields:
 
 {
-  "current_picture": "Start with your bold answer -- not 'it depends', but what the signals actually point to. Then explain why in 3-4 sentences. Reference specific sources by name. If prediction markets and official data disagree, say so and explain which side you'd trust more here.",
+  "current_picture": "Start with your bold answer using the EXACT framing of the question. If the question asks 'Will X happen?' answer 'Yes, because...' or 'No, because...'. Never answer with a generic topic summary. Reference at least 2 specific signals by source name and number. If you only have signals from 1 source, say so explicitly.",
 
-  "what_changed": "What moved recently? Be specific: name the data point, the direction, and why it matters. If nothing moved, say what it means that things are stuck.",
+  "what_changed": "What moved recently? Name the specific data point, the direction, and the number. If nothing moved, explain what the stasis means for the prediction -- not just 'things are unchanged' but WHY unchanged matters.",
 
-  "what_next": "Name the specific dates, events, or data releases that will move this. Not 'watch for developments' but 'the next CPI print on April 10 is the one that matters' or 'if Polymarket breaks above 80%, the market has made up its mind'."
+  "what_next": "Name specific dates, events, or thresholds that will resolve this question. Not 'watch for developments' but 'the June 11 FOMC meeting is the next decision point' or 'if Polymarket breaks above 80%, the market has decided'. Give the reader a calendar marker."
 }
 
 RULES:

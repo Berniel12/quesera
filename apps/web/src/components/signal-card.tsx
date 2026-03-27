@@ -295,14 +295,26 @@ function getFamilySummary(familyKey: string, signals: SignalData[]): string | nu
 
 export function SignalGroup({ familyKey, signals }: SignalGroupProps) {
   const config = FAMILY_CONFIG[familyKey] ?? DEFAULT_CONFIG;
-  const summary = getFamilySummary(familyKey, signals);
-  const sorted = [...signals].sort((a, b) => b.weight - a.weight);
 
-  // Show all signals -- sources are the product, never hide them
-  // Soft cap for hazard topics to avoid 100+ identical earthquake rows
-  const isHazardDump = familyKey === "hazard_weather" && signals.length > 8;
-  const displaySignals = isHazardDump ? sorted.slice(0, 8) : sorted;
-  const hiddenCount = signals.length - displaySignals.length;
+  // Filter out uninformative signals (0% probability markets = no information)
+  const isMarket = familyKey === "prediction_market" || familyKey === "forecasting";
+  const meaningful = isMarket
+    ? signals.filter((s) => s.current_value > 0.001) // Keep only non-zero probability
+    : signals;
+
+  // Sort: markets by probability descending (most informative first), others by weight
+  const sorted = isMarket
+    ? [...meaningful].sort((a, b) => b.current_value - a.current_value)
+    : [...meaningful].sort((a, b) => b.weight - a.weight);
+
+  const summary = getFamilySummary(familyKey, sorted);
+
+  // Soft cap: show top 5 for markets (quality over quantity), 8 for hazard
+  const isHazardDump = familyKey === "hazard_weather" && sorted.length > 8;
+  const cap = isMarket ? 5 : isHazardDump ? 8 : sorted.length;
+  const displaySignals = sorted.slice(0, cap);
+  const hiddenCount = sorted.length - displaySignals.length;
+  const filteredCount = signals.length - meaningful.length;
 
   return (
     <div className="mb-6">
@@ -324,9 +336,11 @@ export function SignalGroup({ familyKey, signals }: SignalGroupProps) {
             className={i === 0 ? "" : `delay-${Math.min(i * 50, 300)}`}
           />
         ))}
-        {hiddenCount > 0 && (
+        {(hiddenCount > 0 || filteredCount > 0) && (
           <p className="text-xs text-muted-foreground text-center py-2">
-            and {hiddenCount} more {hiddenCount === 1 ? "signal" : "signals"}
+            {hiddenCount > 0 && `${hiddenCount} more ${hiddenCount === 1 ? "signal" : "signals"}`}
+            {hiddenCount > 0 && filteredCount > 0 && " | "}
+            {filteredCount > 0 && `${filteredCount} low-probability markets hidden`}
           </p>
         )}
       </div>

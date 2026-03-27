@@ -11,7 +11,7 @@ import { getGeminiKey, markGeminiKeyFailed } from "../utils/key-rotator.js";
  * Set GEMINI_VALIDATOR_MODEL env var to override model.
  */
 
-const VALIDATOR_MODEL = process.env.GEMINI_VALIDATOR_MODEL ?? "gemini-2.0-flash-lite";
+const VALIDATOR_MODEL = process.env.GEMINI_VALIDATOR_MODEL ?? "gemini-3.1-flash-lite";
 
 // Cache to avoid re-validating the same signal+topic pair
 const validationCache = new Map<string, boolean>();

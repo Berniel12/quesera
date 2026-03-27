@@ -82,6 +82,8 @@ function formatKeyMetric(signal: { source_family: string; signal_type: string; c
   }
   if (signal.signal_type === "market_probability" || signal.signal_type === "forecast_probability") {
     const pct = Math.round(signal.current_value * 100);
+    // Don't show 0% as a key metric -- it's usually from multi-outcome markets where most options are 0%
+    if (pct <= 0) return null;
     return { value: `${pct}%`, label: "Market probability", context: `Real money is behind this number.` };
   }
   if (signal.signal_type === "earthquake_magnitude") {

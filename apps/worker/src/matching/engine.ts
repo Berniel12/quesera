@@ -16,15 +16,19 @@ import { validateSignalRelevance } from "./llm-validator.js";
 // The full contract system lives in apps/web/src/lib/question-contracts.ts
 // This is a lightweight version that uses topic category to filter disallowed families
 
+// Must match the contract definitions in apps/web/src/lib/question-contracts.ts
 const CATEGORY_DISALLOWED: Record<string, string[]> = {
+  // competition: disallow non-sports families
   sports: ["political_official", "macro_official", "hazard_weather", "crypto_market", "defi_signal"],
+  // threshold: disallow non-data families
   macro: ["sports_odds", "hazard_weather", "political_official"],
   crypto: ["sports_odds", "hazard_weather", "political_official"],
+  // binary_event: disallow only sports_odds (political_official is supporting, not disallowed)
   politics: ["sports_odds"],
   geopolitics: ["sports_odds"],
   tech: ["sports_odds"],
-  entertainment: ["sports_odds", "political_official", "macro_official", "hazard_weather"],
-  disasters: ["sports_odds", "political_official", "macro_official"],
+  entertainment: ["sports_odds"],
+  disasters: ["sports_odds"],
 };
 
 function isDisallowedByContract(sourceFamily: string, topicCategory: string | null): boolean {

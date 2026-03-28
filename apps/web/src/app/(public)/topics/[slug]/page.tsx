@@ -156,12 +156,12 @@ export default async function TopicPage({ params }: TopicPageProps) {
 
   // ── Question Contract: filter signals by what's allowed for this question type ──
   const contract = getContract(
-    { question_text: headline, question_type: null },
+    { question_text: headline, question_type: null }, // TODO: read question_type from wrapper when schema supports it
     { slug: t.slug, category: t.category },
   );
   signals = filterSignalsByContract(signals, contract);
   const pagePublishable = isPublishable(
-    { question_text: headline, question_type: null },
+    { question_text: headline, question_type: null }, // TODO: read question_type from wrapper when schema supports it
     { slug: t.slug, category: t.category },
     signals,
   );

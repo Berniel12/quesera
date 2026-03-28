@@ -88,10 +88,8 @@ const POLITICAL_PRIMARY_TOPICS = new Set([
   "us-trade-policy", "us-immigration-policy", "us-healthcare-policy",
 ]);
 
-// Topics where crypto_market is allowed for binary_event
-const CRYPTO_TOPICS = new Set([
-  "bitcoin-price", "ethereum-price", "crypto-market",
-]);
+// Categories where crypto_market is allowed for binary_event
+const CRYPTO_CATEGORIES = new Set(["crypto", "tech"]);
 
 // ── Contract Derivation ──
 
@@ -139,7 +137,7 @@ export function getContract(
   const contract = { ...base, questionType };
 
   // Allow crypto_market for crypto/tech binary events
-  if (questionType === "binary_event" && CRYPTO_TOPICS.has(topic.slug)) {
+  if (questionType === "binary_event" && CRYPTO_CATEGORIES.has(topic.category ?? "")) {
     contract.primaryFamilies = [...contract.primaryFamilies, "crypto_market"];
     contract.allowedFamilies = [...contract.allowedFamilies, "crypto_market"];
     contract.disallowedFamilies = contract.disallowedFamilies.filter((f) => f !== "crypto_market");
@@ -172,7 +170,7 @@ export function getProvisionalContract(
   const contract = { ...base, questionType };
 
   // Same overrides as full contract
-  if (CRYPTO_TOPICS.has(topic.slug)) {
+  if (CRYPTO_CATEGORIES.has(topic.category ?? "")) {
     contract.primaryFamilies = [...contract.primaryFamilies, "crypto_market"];
     contract.allowedFamilies = [...contract.allowedFamilies, "crypto_market"];
     contract.disallowedFamilies = contract.disallowedFamilies.filter((f) => f !== "crypto_market");
@@ -234,8 +232,7 @@ export function validateQuestion(text: string): { valid: boolean; reason?: strin
 
   // B. Specificity -- needs a time horizon OR a specific actor
   const hasHorizon = /\b(202\d|this (year|season|month|quarter)|by (jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)|in \d{4})\b/i.test(q);
-  // eslint-disable-next-line no-useless-escape
-  const hasActor = /[A-Z][a-z]+ [A-Z]|[A-Z]{2,}|\$\d|%/.test(text);
+  const hasActor = /[A-Z][a-z]+ [A-Z]|[A-Z]{2,}|[$]\d|%/.test(text);
   if (!hasHorizon && !hasActor) return { valid: false, reason: "too vague -- needs a time horizon or specific actor" };
 
   // C. Outcome clarity -- question must imply a concrete, interpretable outcome
@@ -270,9 +267,8 @@ export function isPublishable<T extends SignalLike>(
   const nonSupporting = clean.filter((s) => !contract.supportingOnlyFamilies.includes(s.source_family));
   if (nonSupporting.length === 0) return false;
 
-  // 4. Question must be valid
-  const validity = validateQuestion(wrapper.question_text);
-  if (!validity.valid) return false;
+  // Question validity is checked at intake/admin time, not render time.
+  // At render time, if a wrapper exists and has signals, it's publishable.
 
   return true;
 }

@@ -12,6 +12,27 @@ import {
 } from "./types.js";
 import { validateSignalRelevance } from "./llm-validator.js";
 
+// ── Provisional Contract (simplified version for matching time) ──
+// The full contract system lives in apps/web/src/lib/question-contracts.ts
+// This is a lightweight version that uses topic category to filter disallowed families
+
+const CATEGORY_DISALLOWED: Record<string, string[]> = {
+  sports: ["political_official", "macro_official", "hazard_weather", "crypto_market", "defi_signal"],
+  macro: ["sports_odds", "hazard_weather", "political_official"],
+  crypto: ["sports_odds", "hazard_weather", "political_official"],
+  politics: ["sports_odds"],
+  geopolitics: ["sports_odds"],
+  tech: ["sports_odds"],
+  entertainment: ["sports_odds", "political_official", "macro_official", "hazard_weather"],
+  disasters: ["sports_odds", "political_official", "macro_official"],
+};
+
+function isDisallowedByContract(sourceFamily: string, topicCategory: string | null): boolean {
+  if (!topicCategory) return false;
+  const disallowed = CATEGORY_DISALLOWED[topicCategory];
+  return disallowed ? disallowed.includes(sourceFamily) : false;
+}
+
 interface SourceItem {
   id: string;
   source_key: string;
@@ -65,6 +86,12 @@ export async function matchSourceItem(
 
       if (topic) {
         const t = topic as { id: string; canonical_name: string; category: string | null };
+
+        // Contract check: is this source family allowed for this topic's question type?
+        if (isDisallowedByContract(sourceDef.source_family, t.category)) {
+          logger.debug({ slug: entry.slug, sourceFamily: sourceDef.source_family, category: t.category }, "Signal family disallowed by contract");
+          continue;
+        }
 
         // LLM validation for prediction market items (cheap check: does this signal belong here?)
         // Skip for deterministic matches (FRED, earthquakes, weather) -- these are correct by construction
@@ -154,6 +181,12 @@ export async function matchSourceItem(
     result.topScores.push(match.compositeScore);
 
     if (match.compositeScore >= ACCEPT_THRESHOLD) {
+      // Contract check: is this source family allowed?
+      const topicCat = categoryMap.get(match.topicId) ?? null;
+      if (isDisallowedByContract(sourceDef.source_family, topicCat)) {
+        continue;
+      }
+
       // LLM validation for prediction market items on the composite path too
       if (item.source_item_type === "market") {
         const signalText = String(item.normalized_payload.question ?? item.normalized_payload.slug ?? "");

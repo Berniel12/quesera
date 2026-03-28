@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getAnswerState } from "@/lib/answer-state";
 import { getTeamEntity, getCompetitionAnswer, isCompetitionQuestion, getTopicLogo } from "@/lib/team-entities";
 import { getTopicImage } from "@/lib/topic-images";
+import { getContract, filterSignalsByContract, isPublishable } from "@/lib/question-contracts";
 import { SignalGroup, EvidenceWall } from "@/components/signal-card";
 import { ConfidenceTimeline } from "@/components/confidence-timeline";
 import { FollowButton } from "@/components/follow-button";
@@ -151,7 +152,19 @@ export default async function TopicPage({ params }: TopicPageProps) {
   if (prevArr && prevArr.length > 0) prevSnapshot = prevArr[0] as { direction: string; confidence: number };
 
   let signals: Array<{ source_name: string; source_family: string; signal_type: string; current_value: number; previous_value: number | null; delta: number | null; direction: string; freshness: string; weight: number; metadata: Record<string, unknown> | null }> = [];
-  if (snapshotId) { const { data } = await supabase.from("topic_signals").select("source_name, source_family, signal_type, current_value, previous_value, delta, direction, freshness, weight, metadata").eq("snapshot_id", snapshotId).order("weight", { ascending: false }).limit(20); signals = (data ?? []) as typeof signals; }
+  if (snapshotId) { const { data } = await supabase.from("topic_signals").select("source_name, source_family, signal_type, current_value, previous_value, delta, direction, freshness, weight, metadata").eq("snapshot_id", snapshotId).order("weight", { ascending: false }).limit(50); signals = (data ?? []) as typeof signals; }
+
+  // ── Question Contract: filter signals by what's allowed for this question type ──
+  const contract = getContract(
+    { question_text: headline, question_type: null },
+    { slug: t.slug, category: t.category },
+  );
+  signals = filterSignalsByContract(signals, contract);
+  const pagePublishable = isPublishable(
+    { question_text: headline, question_type: null },
+    { slug: t.slug, category: t.category },
+    signals,
+  );
 
   const { data: histData } = await supabase.from("topic_snapshots").select("version, direction, confidence, published_at, current_picture_text").eq("topic_id", t.id).order("version", { ascending: false }).limit(10);
   const history = (histData ?? []) as Array<{ version: number; direction: string; confidence: number; published_at: string; current_picture_text: string | null }>;
@@ -244,10 +257,32 @@ export default async function TopicPage({ params }: TopicPageProps) {
     <div className="mx-auto max-w-3xl px-6 py-8">
 
       {/* ================================================================
+          PUBLICATION GATE: if the page doesn't meet the question contract,
+          show a clean "gathering data" state instead of garbage
+          ================================================================ */}
+      {!pagePublishable && (
+        <section className="mb-10 animate-slide-up text-center py-16">
+          {heroImage && (
+            <div className="relative -mx-6 mb-8 rounded-2xl overflow-hidden">
+              <div className="relative h-40">
+                <img src={heroImage} alt="" className="w-full h-full object-cover opacity-20 grayscale" loading="eager" />
+                <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-background/30" />
+              </div>
+            </div>
+          )}
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-4">{headline}</h1>
+          <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+            We are gathering signals from prediction markets and other sources to answer this question. Check back soon.
+          </p>
+          <FollowButton topicSlug={t.slug} isAuthenticated={user !== null} initialFollowing={isFollowing} />
+        </section>
+      )}
+
+      {/* ================================================================
           TIER 1: THE ANSWER -- above the fold, one cohesive block
           Question + verdict + prose explanation + follow
           ================================================================ */}
-      <section className="mb-10 animate-slide-up">
+      {pagePublishable && <section className="mb-10 animate-slide-up">
         {/* Hero image background */}
         {heroImage && (
           <div className="relative -mx-6 mb-6 rounded-2xl overflow-hidden">
@@ -343,9 +378,9 @@ export default async function TopicPage({ params }: TopicPageProps) {
             </div>
           </div>
         ) : null}
-      </section>
+      </section>}
 
-      {snapshot ? (
+      {pagePublishable && snapshot ? (
         <>
           {/* ================================================================
               TIER 2: INTELLIGENCE BRIEFING -- one card, the full "why"
@@ -441,7 +476,7 @@ export default async function TopicPage({ params }: TopicPageProps) {
                 {/* Evidence Wall -- the star of the page, always visible */}
                 {signals.length > 0 && (
                   <div className="mt-6">
-                    <EvidenceWall signals={signals} isCompetition={!!competitionAnswer} />
+                    <EvidenceWall signals={signals} isCompetition={contract.renderMode === "leaderboard"} />
                   </div>
                 )}
               </section>

@@ -211,11 +211,13 @@ export function filterSignalsByContract<T extends SignalLike>(
     // Only keep allowed families
     if (!contract.allowedFamilies.includes(s.source_family)) return false;
 
-    // Filter resolved markets (99%+ = already happened)
-    if (contract.filterResolved && s.current_value >= 0.99) return false;
+    // Filter resolved markets (99%+ probability = already happened)
+    // Only applies to probability signals, not raw metrics (rates, prices)
+    const isProbabilityFamily = s.source_family === "prediction_market" || s.source_family === "forecasting";
+    if (contract.filterResolved && isProbabilityFamily && s.current_value >= 0.99) return false;
 
     // Filter zero probability markets (no information)
-    if (contract.filterZero && s.source_family === "prediction_market" && s.current_value <= 0.001) return false;
+    if (contract.filterZero && isProbabilityFamily && s.current_value <= 0.001) return false;
 
     // Filter micro-interval market noise (15-minute "up or down" bets)
     if (s.source_family === "prediction_market" && s.metadata) {

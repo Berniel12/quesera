@@ -35,7 +35,8 @@ function timeAgo(dateStr: string): string {
  */
 function extractTarget(questionText: string): { value: number; formatted: string } | null {
   // Match dollar amounts: $100k, $5,500, $100,000
-  const dollarMatch = questionText.match(/\$([0-9,]+(?:\.\d+)?)\s*([kKmMbB])?/);
+  // Multiplier suffix (k/M/B) must be immediately adjacent to the number, not a separate word
+  const dollarMatch = questionText.match(/\$([0-9,]+(?:\.\d+)?)([kKmMbB])?(?:\s|[^a-zA-Z])/);
   if (dollarMatch) {
     const raw = parseFloat(dollarMatch[1].replace(/,/g, ""));
     const multiplier = { k: 1e3, K: 1e3, m: 1e6, M: 1e6, b: 1e9, B: 1e9 }[dollarMatch[2] ?? ""] ?? 1;

@@ -1,6 +1,12 @@
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
+import { loadTopicData } from "@/lib/load-topic-data";
+import { FollowButton } from "@/components/follow-button";
+import { CompetitionTemplate } from "@/components/templates/competition-page";
+import { ThresholdTemplate } from "@/components/templates/threshold-page";
+import { BinaryEventTemplate } from "@/components/templates/binary-event-page";
+import type { QuestionType } from "@/lib/question-contracts";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -11,16 +17,16 @@ interface QuestionPageProps {
 }
 
 /**
- * Question-first route: /questions/[slug]
+ * Question-native route: /questions/[slug]
  *
- * This is a thin presentation layer. It loads the question object,
- * then internally redirects to the topic page (which does all the
- * actual rendering). The topic page will receive the question context
- * via the existing question_wrappers/headline system.
+ * This is the REAL rendered page. It loads the question, its primary topic,
+ * then switches to the right template based on contract.questionType:
+ *   - competition -> CompetitionTemplate (race card, leaderboard)
+ *   - threshold -> ThresholdTemplate (metric card, distance to target)
+ *   - binary_event -> BinaryEventTemplate (verdict, case for/against)
  *
- * Future: this page will render its own full experience without
- * redirecting to topics. For now, the redirect gives us question-first
- * URLs with zero rendering duplication.
+ * Questions without an explicit question_type or without enough data
+ * fall back to the binary_event template (closest to the current shared layout).
  */
 export async function generateMetadata({ params }: QuestionPageProps): Promise<Metadata> {
   const { slug } = await params;
@@ -73,18 +79,71 @@ export default async function QuestionPage({ params }: QuestionPageProps) {
   // Only show published or resolved questions
   if (question.status !== "published" && question.status !== "resolved") notFound();
 
-  // Load the primary topic's slug for the redirect
+  // Load the primary topic
   const { data: topic } = await supabase
     .from("topics")
-    .select("slug")
+    .select("id, canonical_name, slug, category, description")
     .eq("id", question.primary_topic_id)
     .single();
 
   if (!topic) notFound();
 
-  const topicSlug = (topic as { slug: string }).slug;
+  const t = topic as {
+    id: string;
+    canonical_name: string;
+    slug: string;
+    category: string | null;
+    description: string | null;
+  };
 
-  // Redirect to the topic page (which has the full rendering)
-  // The topic page will pick up this topic's question_wrappers as the headline
-  redirect(`/topics/${topicSlug}`);
+  // Load all data via shared loader
+  const { props, pagePublishable } = await loadTopicData({
+    topicId: t.id,
+    topicSlug: t.slug,
+    topicCategory: t.category,
+    topicCanonicalName: t.canonical_name,
+    topicDescription: t.description,
+    questionId: question.id,
+    questionText: question.question_text,
+    questionSlug: question.slug,
+    questionType: (question.question_type as QuestionType | null),
+    questionCategory: question.category,
+  });
+
+  // Publication gate: if not enough signals, show gathering state
+  if (!pagePublishable) {
+    return (
+      <div className="mx-auto max-w-3xl px-6 py-8">
+        <section className="animate-slide-up text-center py-16">
+          {props.heroImage && (
+            <div className="relative -mx-6 mb-8 rounded-2xl overflow-hidden">
+              <div className="relative h-40">
+                <img src={props.heroImage} alt="" className="w-full h-full object-cover opacity-20 grayscale" loading="eager" />
+                <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-background/30" />
+              </div>
+            </div>
+          )}
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-4">{question.question_text}</h1>
+          <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+            We are gathering signals from prediction markets and other sources to answer this question. Check back soon.
+          </p>
+          <FollowButton topicSlug={t.slug} isAuthenticated={props.isAuthenticated} initialFollowing={props.isFollowing} />
+        </section>
+      </div>
+    );
+  }
+
+  // Template switch based on question type
+  const questionType = props.contract.questionType;
+
+  if (questionType === "competition") {
+    return <CompetitionTemplate props={props} />;
+  }
+
+  if (questionType === "threshold") {
+    return <ThresholdTemplate props={props} />;
+  }
+
+  // Default: binary_event (also catches any unknown types)
+  return <BinaryEventTemplate props={props} />;
 }

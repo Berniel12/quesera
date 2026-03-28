@@ -2,7 +2,9 @@ import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getAnswerState } from "@/lib/answer-state";
-import { getTeamEntity, getCompetitionAnswer, isCompetitionQuestion } from "@/lib/team-entities";
+import { getTeamEntity, getCompetitionAnswer } from "@/lib/team-entities";
+import { deriveQuestionType } from "@/lib/question-contracts";
+import type { QuestionType } from "@/lib/question-contracts";
 import Link from "next/link";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -18,6 +20,8 @@ interface QuestionWithCard {
   slug: string;
   href: string;              // full route path: /questions/slug or /topics/slug
   category: string | null;
+  question_type: QuestionType;  // competition, threshold, or binary_event
+  topic_slug: string;        // the underlying topic slug (for CompetitionAnswer lookup)
   direction: string | null;
   confidence: number | null;
   freshness: string | null;
@@ -110,6 +114,17 @@ function getCatPhoto(category: string | null, slug: string): string | null {
   return pool[Math.abs(h) % pool.length];
 }
 
+/**
+ * Get the competition display for a card.
+ * Uses topic_slug (not question slug) to look up the static CompetitionAnswer.
+ * Returns the favorite name for display, or "Race underway" if no data.
+ */
+function getCompetitionDisplay(q: QuestionWithCard): { comp: ReturnType<typeof getCompetitionAnswer>; label: string } {
+  const comp = getCompetitionAnswer(q.topic_slug);
+  if (comp) return { comp, label: comp.favorite.name };
+  return { comp: null, label: "Race underway" };
+}
+
 export default async function LandingPage() {
   const supabase = await createClient();
 
@@ -128,7 +143,7 @@ export default async function LandingPage() {
   // Fall back to question_wrappers if questions table is empty (migration not yet run)
   const { data: questionRows, error: questionsError } = await db(supabase)
     .from("questions")
-    .select("id, question_text, slug, category, primary_topic_id, sort_order")
+    .select("id, question_text, slug, category, question_type, primary_topic_id, sort_order")
     .eq("status", "published")
     .eq("is_featured", true)
     .order("sort_order", { ascending: true });
@@ -165,15 +180,20 @@ export default async function LandingPage() {
 
   if (useQuestions) {
     // Question-first path: questions table -> topic cards
-    for (const q of (questionRows as Array<{ id: string; question_text: string; slug: string; category: string | null; primary_topic_id: string; sort_order: number }>) ?? []) {
+    for (const q of (questionRows as Array<{ id: string; question_text: string; slug: string; category: string | null; question_type: string | null; primary_topic_id: string; sort_order: number }>) ?? []) {
       const card = cardByTopicId.get(q.primary_topic_id);
       if (!card) continue;
       if (seenSlugs.has(q.slug)) continue;
       if (card.freshness === "dead" || card.confidence === 0) continue;
       seenSlugs.add(q.slug);
+      // Derive question type: explicit DB value > topic override > text derivation
+      const qt: QuestionType = (q.question_type && ["binary_event", "threshold", "competition"].includes(q.question_type))
+        ? q.question_type as QuestionType
+        : deriveQuestionType(q.question_text, q.category);
       allQuestions.push({
         question_text: q.question_text, slug: q.slug, href: `/questions/${q.slug}`,
-        category: q.category, direction: card.direction, confidence: card.confidence,
+        category: q.category, question_type: qt, topic_slug: card.slug,
+        direction: card.direction, confidence: card.confidence,
         freshness: card.freshness, one_liner: card.one_liner,
         snapshot_published_at: card.snapshot_published_at, topic_id: q.primary_topic_id,
       });
@@ -194,7 +214,8 @@ export default async function LandingPage() {
       seenSlugs.add(topic.slug);
       allQuestions.push({
         question_text: r.question_text, slug: topic.slug, href: `/topics/${topic.slug}`,
-        category: topic.category, direction: card.direction, confidence: card.confidence,
+        category: topic.category, question_type: deriveQuestionType(r.question_text, topic.category),
+        topic_slug: topic.slug, direction: card.direction, confidence: card.confidence,
         freshness: card.freshness, one_liner: card.one_liner,
         snapshot_published_at: card.snapshot_published_at, topic_id: topic.id,
       });
@@ -258,7 +279,8 @@ export default async function LandingPage() {
           ? getAnswerState({ direction: heroQ.direction, confidence: heroQ.confidence, category: heroQ.category, disagreement: 0 }) : null;
 
         const heroPhoto = getCatPhoto(heroQ.category, heroQ.slug);
-        const heroComp = isCompetitionQuestion(heroQ.question_text) ? getCompetitionAnswer(heroQ.slug) : null;
+        const isComp = heroQ.question_type === "competition";
+        const { comp: heroComp, label: heroCompLabel } = isComp ? getCompetitionDisplay(heroQ) : { comp: null, label: "" };
         const heroTeam = heroComp ? null : getTeamEntity(heroQ.question_text);
         return (
           <section className="grid grid-cols-1 lg:grid-cols-12 gap-6 pt-6 pb-8 animate-slide-up">
@@ -290,21 +312,21 @@ export default async function LandingPage() {
                     {heroQ.question_text}
                   </h1>
 
-                  {/* Competition answer: show team as the answer */}
-                  {heroComp ? (
+                  {/* Competition answer: show team/leader as the answer */}
+                  {isComp ? (
                     <div>
                       <div className="flex items-center gap-4 mb-3">
-                        {heroComp.favorite.logoUrl && (
+                        {heroComp?.favorite.logoUrl && (
                           <div className={`flex-shrink-0 h-14 w-14 sm:h-16 sm:w-16 rounded-2xl ${heroComp.favorite.bgColor} flex items-center justify-center`}>
                             <img src={heroComp.favorite.logoUrl} alt={heroComp.favorite.name} className="h-10 w-10 sm:h-12 sm:w-12 object-contain" />
                           </div>
                         )}
                         <div>
-                          <span className="text-3xl sm:text-4xl md:text-5xl font-black text-foreground dark:text-primary block leading-none">{heroComp.favorite.name}</span>
-                          <span className="text-[10px] uppercase tracking-widest mt-1 font-bold text-muted-foreground">Projected favorite</span>
+                          <span className="text-3xl sm:text-4xl md:text-5xl font-black text-foreground dark:text-primary block leading-none">{heroCompLabel}</span>
+                          <span className="text-[10px] uppercase tracking-widest mt-1 font-bold text-muted-foreground">{heroComp ? "Projected favorite" : ""}</span>
                         </div>
                       </div>
-                      {heroComp.contenders.length > 0 && (
+                      {heroComp && heroComp.contenders.length > 0 && (
                         <div className="flex items-center gap-3 mt-3">
                           <span className="text-[10px] text-muted-foreground/60 uppercase tracking-wider font-bold">Also in the mix</span>
                           {heroComp.contenders.map((c) => (
@@ -344,7 +366,8 @@ export default async function LandingPage() {
               const pct2 = q2.confidence !== null ? Math.round(q2.confidence * 100) : 0;
               const ans2 = q2.direction && q2.confidence !== null
                 ? getAnswerState({ direction: q2.direction, confidence: q2.confidence, category: q2.category, disagreement: 0 }) : null;
-              const comp2 = isCompetitionQuestion(q2.question_text) ? getCompetitionAnswer(q2.slug) : null;
+              const isComp2 = q2.question_type === "competition";
+              const { comp: comp2, label: compLabel2 } = isComp2 ? getCompetitionDisplay(q2) : { comp: null, label: "" };
               const team2 = comp2 ? null : getTeamEntity(q2.question_text);
               return (
                 <Link href={q2.href} className="lg:col-span-4">
@@ -360,13 +383,13 @@ export default async function LandingPage() {
                       <h2 className="text-lg sm:text-xl font-bold text-foreground tracking-tight leading-tight mb-3">{q2.question_text}</h2>
                     </div>
                     <div className="relative z-10">
-                      {comp2 ? (
+                      {isComp2 ? (
                         <div>
                           <div className="flex items-center gap-2 mb-1">
-                            {comp2.favorite.logoUrl && <img src={comp2.favorite.logoUrl} alt={comp2.favorite.name} className="h-7 w-7 object-contain" />}
-                            <span className={`text-xl font-black ${a2.text}`}>{comp2.favorite.name}</span>
+                            {comp2?.favorite.logoUrl && <img src={comp2.favorite.logoUrl} alt={comp2.favorite.name} className="h-7 w-7 object-contain" />}
+                            <span className={`text-xl font-black ${a2.text}`}>{compLabel2}</span>
                           </div>
-                          {comp2.contenders.length > 0 && (
+                          {comp2 && comp2.contenders.length > 0 && (
                             <div className="flex items-center gap-2 mt-1">
                               {comp2.contenders.slice(0, 2).map((c) => (
                                 <div key={c.shortName} className="flex items-center gap-1">
@@ -422,6 +445,8 @@ export default async function LandingPage() {
             const q = featured[0];
             const a = CAT_ACCENT[q.category ?? ""] ?? DEFAULT_ACCENT;
             const photo = getCatPhoto(q.category, q.slug);
+            const isFeatComp = q.question_type === "competition";
+            const { label: featCompLabel } = isFeatComp ? getCompetitionDisplay(q) : { label: "" };
             const ans = q.direction && q.confidence !== null
               ? getAnswerState({ direction: q.direction, confidence: q.confidence, category: q.category, disagreement: 0 }) : null;
             const pct = q.confidence !== null ? Math.round(q.confidence * 100) : 0;
@@ -443,7 +468,9 @@ export default async function LandingPage() {
                     <h3 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight leading-tight mb-4">{q.question_text}</h3>
                     <div className="flex justify-between items-end">
                       <div>
-                        {ans && <span className={`text-sm font-bold ${ans.colorClass}`}>{ans.label}</span>}
+                        {isFeatComp
+                          ? <span className={`text-sm font-bold ${a.text}`}>{featCompLabel}</span>
+                          : ans && <span className={`text-sm font-bold ${ans.colorClass}`}>{ans.label}</span>}
                         {q.snapshot_published_at && <p className="text-[10px] text-muted-foreground/50 mt-1">{timeAgo(q.snapshot_published_at)}</p>}
                       </div>
                       <div className="text-right">
@@ -460,6 +487,8 @@ export default async function LandingPage() {
           {featured[1] && (() => {
             const q = featured[1];
             const a = CAT_ACCENT[q.category ?? ""] ?? DEFAULT_ACCENT;
+            const isFeat2Comp = q.question_type === "competition";
+            const { label: feat2CompLabel } = isFeat2Comp ? getCompetitionDisplay(q) : { label: "" };
             const ans = q.direction && q.confidence !== null
               ? getAnswerState({ direction: q.direction, confidence: q.confidence, category: q.category, disagreement: 0 }) : null;
             const pct = q.confidence !== null ? Math.round(q.confidence * 100) : 0;
@@ -475,7 +504,7 @@ export default async function LandingPage() {
                   {/* Progress bars */}
                   <div className="space-y-3">
                     <div className="flex justify-between items-center text-xs font-medium">
-                      <span className={`${a.text} font-bold`}>{ans?.label ?? "Tracking"}</span>
+                      <span className={`${a.text} font-bold`}>{isFeat2Comp ? feat2CompLabel : (ans?.label ?? "Tracking")}</span>
                       <span className={`${a.text} font-bold`}>{pct}%</span>
                     </div>
                     <div className="h-1.5 w-full rounded-full bg-border/20 dark:bg-white/10 overflow-hidden">
@@ -496,7 +525,8 @@ export default async function LandingPage() {
               ? getAnswerState({ direction: q.direction, confidence: q.confidence, category: q.category, disagreement: 0 }) : null;
             const pct = q.confidence !== null ? Math.round(q.confidence * 100) : 0;
             const photo = getCatPhoto(q.category, q.slug);
-            const comp = isCompetitionQuestion(q.question_text) ? getCompetitionAnswer(q.slug) : null;
+            const isComp = q.question_type === "competition";
+            const { comp, label: compLabel } = isComp ? getCompetitionDisplay(q) : { comp: null, label: "" };
             const team = comp ? null : getTeamEntity(q.question_text);
 
             // Alternate card sizes: 4-8, 8-4, 4-4-4, etc.
@@ -538,10 +568,10 @@ export default async function LandingPage() {
                       <span className={`text-[10px] font-bold uppercase tracking-[0.2em] ${a.text}`}>{a.label}</span>
                     </div>
                     <h3 className={`${isWide ? "text-xl sm:text-2xl" : "text-lg"} font-bold text-foreground tracking-tight leading-tight mb-2`}>{q.question_text}</h3>
-                    {comp ? (
+                    {isComp ? (
                       <div className="flex items-center gap-2">
-                        <span className={`text-sm font-black ${a.text}`}>{comp.favorite.name}</span>
-                        {comp.contenders.slice(0, 2).map((c) => (
+                        <span className={`text-sm font-black ${a.text}`}>{compLabel}</span>
+                        {comp && comp.contenders.slice(0, 2).map((c) => (
                           <span key={c.shortName} className="text-[10px] text-muted-foreground">{c.shortName}</span>
                         ))}
                       </div>
@@ -553,7 +583,7 @@ export default async function LandingPage() {
 
                   {/* Visual element -- show team logo for competition, % for others */}
                   <div className={`${isWide ? "flex-shrink-0 text-right" : "mt-4"} relative z-10`}>
-                    {comp?.favorite.logoUrl ? (
+                    {isComp && comp?.favorite.logoUrl ? (
                       <img src={comp.favorite.logoUrl} alt={comp.favorite.name} className={`${isWide ? "h-14 w-14" : "h-12 w-12"} object-contain mx-auto`} loading="lazy" />
                     ) : (
                       <>
@@ -578,7 +608,8 @@ export default async function LandingPage() {
                   const ans = q.direction && q.confidence !== null
                     ? getAnswerState({ direction: q.direction, confidence: q.confidence, category: q.category, disagreement: 0 }) : null;
                   const pct = q.confidence !== null ? Math.round(q.confidence * 100) : 0;
-                  const tickerComp = isCompetitionQuestion(q.question_text) ? getCompetitionAnswer(q.slug) : null;
+                  const isTickerComp = q.question_type === "competition";
+                  const { comp: tickerComp, label: tickerCompLabel } = isTickerComp ? getCompetitionDisplay(q) : { comp: null, label: "" };
                   const tickerTeam = tickerComp ? null : getTeamEntity(q.question_text);
                   const tickerLogo = tickerComp?.favorite.logoUrl ?? tickerTeam?.logoUrl;
                   const tickerBg = tickerComp?.favorite.bgColor ?? tickerTeam?.bgColor;
@@ -595,8 +626,8 @@ export default async function LandingPage() {
                         <p className="text-sm font-semibold text-foreground truncate">{q.question_text}</p>
                         <div className="flex items-center gap-2 mt-0.5">
                           <span className={`text-[10px] uppercase tracking-wider ${a.text} font-bold`}>{a.label}</span>
-                          {tickerComp
-                            ? <span className={`text-[10px] font-bold ${a.text}`}>{tickerComp.favorite.name}</span>
+                          {isTickerComp
+                            ? <span className={`text-[10px] font-bold ${a.text}`}>{tickerCompLabel}</span>
                             : ans && <span className={`text-[10px] font-bold ${ans.colorClass}`}>{ans.label}</span>
                           }
                         </div>

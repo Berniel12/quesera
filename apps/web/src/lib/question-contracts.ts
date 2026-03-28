@@ -191,9 +191,14 @@ interface SignalLike {
   metadata?: Record<string, unknown> | null;
 }
 
+// Micro-interval market noise pattern: "Bitcoin Up or Down - March 25, 6:30PM-6:45PM ET"
+// These 15-minute interval markets carry no predictive value for question pages.
+const MICRO_INTERVAL_PATTERN = /\b(up or down|up\/down)\b.*\d{1,2}:\d{2}\s*(AM|PM)/i;
+
 /**
  * Filter signals according to the contract.
- * Removes disallowed families, resolved markets, and zero-probability noise.
+ * Removes disallowed families, resolved markets, zero-probability noise,
+ * and micro-interval market noise.
  */
 export function filterSignalsByContract<T extends SignalLike>(
   signals: T[],
@@ -211,6 +216,12 @@ export function filterSignalsByContract<T extends SignalLike>(
 
     // Filter zero probability markets (no information)
     if (contract.filterZero && s.source_family === "prediction_market" && s.current_value <= 0.001) return false;
+
+    // Filter micro-interval market noise (15-minute "up or down" bets)
+    if (s.source_family === "prediction_market" && s.metadata) {
+      const question = String(s.metadata.question ?? s.metadata.slug ?? "");
+      if (MICRO_INTERVAL_PATTERN.test(question)) return false;
+    }
 
     return true;
   });

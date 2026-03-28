@@ -353,19 +353,48 @@ export function SignalGroup({ familyKey, signals }: SignalGroupProps) {
 // ── COMPETITION LEADERBOARD ──
 // For "who will win?" topics: ranked list instead of individual signal cards
 
+/**
+ * Extract a clean entity name from a prediction market question.
+ * Handles sports ("Will X win"), tech ("Will X have the best"), and other patterns.
+ * Returns null if the question doesn't match any competition pattern.
+ */
+function extractCompetitionEntity(question: string): string | null {
+  // "Will X win..."
+  const winMatch = question.match(/^Will (.+?) win\b/i);
+  if (winMatch) return winMatch[1].trim();
+
+  // "Will X have the best..."
+  const bestMatch = question.match(/^Will (.+?) have the best\b/i);
+  if (bestMatch) return bestMatch[1].trim();
+
+  // "Will X lead..." / "Will X be the..."
+  const leadMatch = question.match(/^Will (.+?) (?:lead|be the|dominate|finish)\b/i);
+  if (leadMatch) return leadMatch[1].trim();
+
+  // "X to win..." (odds-style)
+  const toWinMatch = question.match(/^(.+?) to win\b/i);
+  if (toWinMatch) return toWinMatch[1].trim();
+
+  // Generic "Will [subject] [verb]"
+  const genericWill = question.match(/^Will (.+?) (?:beat|reach|hit|score|qualify|advance|place|rank)\b/i);
+  if (genericWill) return genericWill[1].trim();
+
+  return null;
+}
+
 function CompetitionLeaderboard({ signals }: { signals: SignalData[] }) {
   // Extract contenders from market signals, ranked by probability
   const contenders = signals
     .filter((s) => s.source_family === "prediction_market" || s.source_family === "forecasting")
     .map((s) => {
-      // Extract the subject from the question (e.g., "Will Argentina win..." -> "Argentina")
       const q = String((s.metadata as Record<string, unknown>)?.question ?? "");
-      const match = q.match(/Will (.+?) win/i);
-      const name = match?.[1]?.trim() ?? q.slice(0, 40);
+      const name = extractCompetitionEntity(q);
+      // Skip signals where we can't extract a clean entity name
+      if (!name) return null;
       const pct = Math.round(s.current_value * 100);
       return { name, pct, question: q };
     })
-    .filter((c) => c.pct > 0) // Only show non-zero contenders
+    .filter((c): c is { name: string; pct: number; question: string } => c !== null && c.pct > 0)
     .sort((a, b) => b.pct - a.pct);
 
   // Deduplicate by name (in case multiple markets for same contender)

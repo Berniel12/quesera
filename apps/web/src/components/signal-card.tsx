@@ -358,26 +358,31 @@ export function SignalGroup({ familyKey, signals }: SignalGroupProps) {
  * Handles sports ("Will X win"), tech ("Will X have the best"), and other patterns.
  * Returns null if the question doesn't match any competition pattern.
  */
+/** Strip leading articles ("the", "a", "an") from entity names */
+function stripArticle(name: string): string {
+  return name.replace(/^(the|a|an)\s+/i, "");
+}
+
 function extractCompetitionEntity(question: string): string | null {
   // "Will X win..."
   const winMatch = question.match(/^Will (.+?) win\b/i);
-  if (winMatch) return winMatch[1].trim();
+  if (winMatch) return stripArticle(winMatch[1].trim());
 
   // "Will X have the best..."
   const bestMatch = question.match(/^Will (.+?) have the best\b/i);
-  if (bestMatch) return bestMatch[1].trim();
+  if (bestMatch) return stripArticle(bestMatch[1].trim());
 
   // "Will X lead..." / "Will X be the..."
   const leadMatch = question.match(/^Will (.+?) (?:lead|be the|dominate|finish)\b/i);
-  if (leadMatch) return leadMatch[1].trim();
+  if (leadMatch) return stripArticle(leadMatch[1].trim());
 
   // "X to win..." (odds-style)
   const toWinMatch = question.match(/^(.+?) to win\b/i);
-  if (toWinMatch) return toWinMatch[1].trim();
+  if (toWinMatch) return stripArticle(toWinMatch[1].trim());
 
   // Generic "Will [subject] [verb]"
   const genericWill = question.match(/^Will (.+?) (?:beat|reach|hit|score|qualify|advance|place|rank)\b/i);
-  if (genericWill) return genericWill[1].trim();
+  if (genericWill) return stripArticle(genericWill[1].trim());
 
   return null;
 }

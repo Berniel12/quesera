@@ -39,26 +39,31 @@ function timeAgo(dateStr: string): string {
  *   - Fallback: first capitalized phrase before a verb
  * Returns null if the question doesn't look like a competition contender.
  */
+/** Strip leading articles ("the", "a", "an") from entity names */
+function stripArticle(name: string): string {
+  return name.replace(/^(the|a|an)\s+/i, "");
+}
+
 function extractEntityName(question: string): string | null {
   // Pattern 1: "Will X win..."
   const winMatch = question.match(/^Will (.+?) win\b/i);
-  if (winMatch) return winMatch[1].trim();
+  if (winMatch) return stripArticle(winMatch[1].trim());
 
   // Pattern 2: "Will X have the best..."
   const bestMatch = question.match(/^Will (.+?) have the best\b/i);
-  if (bestMatch) return bestMatch[1].trim();
+  if (bestMatch) return stripArticle(bestMatch[1].trim());
 
   // Pattern 3: "Will X lead..." / "Will X be..."
   const leadMatch = question.match(/^Will (.+?) (?:lead|be the|dominate|finish)\b/i);
-  if (leadMatch) return leadMatch[1].trim();
+  if (leadMatch) return stripArticle(leadMatch[1].trim());
 
   // Pattern 4: "X to win..." (odds-style)
   const toWinMatch = question.match(/^(.+?) to win\b/i);
-  if (toWinMatch) return toWinMatch[1].trim();
+  if (toWinMatch) return stripArticle(toWinMatch[1].trim());
 
   // Pattern 5: Extract subject from "Will [subject] [verb]" generally
   const genericWill = question.match(/^Will (.+?) (?:win|beat|reach|hit|score|qualify|advance|place|rank)\b/i);
-  if (genericWill) return genericWill[1].trim();
+  if (genericWill) return stripArticle(genericWill[1].trim());
 
   return null;
 }

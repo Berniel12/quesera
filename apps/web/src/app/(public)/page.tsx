@@ -1,8 +1,12 @@
 import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { getAnswerState } from "@/lib/answer-state";
 import { getTeamEntity, getCompetitionAnswer, isCompetitionQuestion } from "@/lib/team-entities";
 import Link from "next/link";
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function db(client: SupabaseClient<any>) { return client as SupabaseClient<any>; }
 import {
   getInferredLocation,
   getTopicSuggestionsForLocation,
@@ -119,7 +123,19 @@ export default async function LandingPage() {
   };
   const suggestedSlugs = new Set(getTopicSuggestionsForLocation(effectiveLocation));
 
-  const { data: rawQuestions } = await supabase
+  // Question-first: load from questions table (product layer)
+  // Fall back to question_wrappers if questions table is empty (migration not yet run)
+  const { data: questionRows } = await db(supabase)
+    .from("questions")
+    .select("id, question_text, slug, category, primary_topic_id, sort_order")
+    .eq("status", "published")
+    .eq("is_featured", true)
+    .order("sort_order", { ascending: true });
+
+  const useQuestions = Array.isArray(questionRows) && questionRows.length > 0;
+
+  // Legacy fallback: if no questions exist yet, use wrappers
+  const { data: rawQuestions } = useQuestions ? { data: null } : await supabase
     .from("question_wrappers")
     .select(`question_text, display_context, is_featured, sort_order,
       topics!inner (id, slug, category, status, is_public)`)
@@ -141,24 +157,40 @@ export default async function LandingPage() {
   const seenSlugs = new Set<string>();
   const allQuestions: QuestionWithCard[] = [];
 
-  for (const raw of rawQuestions ?? []) {
-    const r = raw as unknown as {
-      question_text: string; display_context: string | null; is_featured: boolean; sort_order: number;
-      topics: Array<{ id: string; slug: string; category: string | null; status: string; is_public: boolean }> | { id: string; slug: string; category: string | null; status: string; is_public: boolean };
-    };
-    const topic = Array.isArray(r.topics) ? r.topics[0] : r.topics;
-    if (!topic || topic.status !== "active" || !topic.is_public) continue;
-    const card = cardByTopicId.get(topic.id);
-    if (!card) continue;
-    if (seenSlugs.has(topic.slug)) continue;
-    // Quality gate: skip topics with dead freshness or zero confidence (no real data)
-    if (card.freshness === "dead" || card.confidence === 0) continue;
-    seenSlugs.add(topic.slug);
-    allQuestions.push({
-      question_text: r.question_text, slug: topic.slug, category: topic.category,
-      direction: card.direction, confidence: card.confidence, freshness: card.freshness,
-      one_liner: card.one_liner, snapshot_published_at: card.snapshot_published_at, topic_id: topic.id,
-    });
+  if (useQuestions) {
+    // Question-first path: questions table -> topic cards
+    for (const q of (questionRows as Array<{ id: string; question_text: string; slug: string; category: string | null; primary_topic_id: string; sort_order: number }>) ?? []) {
+      const card = cardByTopicId.get(q.primary_topic_id);
+      if (!card) continue;
+      if (seenSlugs.has(q.slug)) continue;
+      if (card.freshness === "dead" || card.confidence === 0) continue;
+      seenSlugs.add(q.slug);
+      allQuestions.push({
+        question_text: q.question_text, slug: q.slug, category: q.category,
+        direction: card.direction, confidence: card.confidence, freshness: card.freshness,
+        one_liner: card.one_liner, snapshot_published_at: card.snapshot_published_at, topic_id: q.primary_topic_id,
+      });
+    }
+  } else {
+    // Legacy path: question_wrappers -> topics -> cards
+    for (const raw of rawQuestions ?? []) {
+      const r = raw as unknown as {
+        question_text: string; display_context: string | null; is_featured: boolean; sort_order: number;
+        topics: Array<{ id: string; slug: string; category: string | null; status: string; is_public: boolean }> | { id: string; slug: string; category: string | null; status: string; is_public: boolean };
+      };
+      const topic = Array.isArray(r.topics) ? r.topics[0] : r.topics;
+      if (!topic || topic.status !== "active" || !topic.is_public) continue;
+      const card = cardByTopicId.get(topic.id);
+      if (!card) continue;
+      if (seenSlugs.has(topic.slug)) continue;
+      if (card.freshness === "dead" || card.confidence === 0) continue;
+      seenSlugs.add(topic.slug);
+      allQuestions.push({
+        question_text: r.question_text, slug: topic.slug, category: topic.category,
+        direction: card.direction, confidence: card.confidence, freshness: card.freshness,
+        one_liner: card.one_liner, snapshot_published_at: card.snapshot_published_at, topic_id: topic.id,
+      });
+    }
   }
 
   allQuestions.sort((a, b) => {

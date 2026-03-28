@@ -65,7 +65,7 @@ export function QuestionCard({
   // ════════════════════════════════════════════
   if (variant === "hero") {
     return (
-      <Link href={`/topics/${slug}`}>
+      <Link href={`/questions/${slug}`}>
         <div className={`group relative overflow-hidden rounded-2xl animate-card-enter bg-gradient-to-br ${c.bg} bg-card card-shadow-rich border-t-2 ${c.border} dark:border dark:border-white/5 dark:border-t-2 hover-lift`}>
           {team && (
             <div className="absolute top-4 right-4 opacity-20 group-hover:opacity-30 transition-opacity">
@@ -115,7 +115,7 @@ export function QuestionCard({
   if (style === "gauge") {
     const r = 40, circ = 2 * Math.PI * r;
     return (
-      <Link href={`/topics/${slug}`}>
+      <Link href={`/questions/${slug}`}>
         <div className={`${base} p-5 bg-card card-shadow-rich ${dark} border-t-2 ${c.border}`} style={{ animationDelay: `${delay}ms`, opacity: 0 }}>
           <div className="flex items-center gap-5">
             <div className="flex-shrink-0 relative h-20 w-20">
@@ -143,7 +143,7 @@ export function QuestionCard({
   // ── BIGNUM — bold number in colored panel ──
   if (style === "bignum") {
     return (
-      <Link href={`/topics/${slug}`}>
+      <Link href={`/questions/${slug}`}>
         <div className={`${base} bg-card card-shadow-rich ${dark} overflow-hidden`} style={{ animationDelay: `${delay}ms`, opacity: 0 }}>
           <div className="flex items-stretch min-h-[120px]">
             <div className={`flex-shrink-0 w-24 sm:w-28 flex flex-col items-center justify-center bg-gradient-to-b ${c.bg} border-r ${c.border}`}>
@@ -167,7 +167,7 @@ export function QuestionCard({
   if (style === "arrow") {
     const isUp = direction === "up";
     return (
-      <Link href={`/topics/${slug}`}>
+      <Link href={`/questions/${slug}`}>
         <div className={`${base} p-5 bg-gradient-to-br ${c.bg} bg-card card-shadow-rich ${dark} border-l-[3px] ${c.border}`} style={{ animationDelay: `${delay}ms`, opacity: 0 }}>
           <div className="flex items-start gap-4">
             <div className={`flex-shrink-0 h-12 w-12 rounded-xl flex items-center justify-center ${isUp ? "bg-emerald-500/10 dark:bg-emerald-400/15" : "bg-red-500/10 dark:bg-red-400/15"}`}>
@@ -194,7 +194,7 @@ export function QuestionCard({
   // ── ALERT — bold red warning ──
   if (style === "alert") {
     return (
-      <Link href={`/topics/${slug}`}>
+      <Link href={`/questions/${slug}`}>
         <div className={`${base} bg-red-500/[0.05] dark:bg-red-500/[0.12] border-2 border-red-500/20 dark:border-red-400/30 card-shadow-rich overflow-hidden`} style={{ animationDelay: `${delay}ms`, opacity: 0 }}>
           <div className="bg-red-500/10 dark:bg-red-400/20 px-5 py-2 flex items-center gap-2">
             <span className="h-2 w-2 rounded-full bg-red-500 dark:bg-red-400 animate-pulse-live" />
@@ -214,7 +214,7 @@ export function QuestionCard({
   // ── BAR — full-width animated confidence bar ──
   if (style === "bar") {
     return (
-      <Link href={`/topics/${slug}`}>
+      <Link href={`/questions/${slug}`}>
         <div className={`${base} p-5 bg-card card-shadow-rich ${dark} border-t-2 ${c.border}`} style={{ animationDelay: `${delay}ms`, opacity: 0 }}>
           <div className="flex items-center gap-2 mb-2">
             <span className={`h-1.5 w-1.5 rounded-full ${c.dot}`} />
@@ -244,7 +244,7 @@ export function QuestionCard({
       : answerState?.colorClass.includes("positive") ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
       : `${c.fill}/10 ${c.text}`;
     return (
-      <Link href={`/topics/${slug}`}>
+      <Link href={`/questions/${slug}`}>
         <div className={`${base} p-5 bg-card card-shadow-rich ${dark} border-t-2 ${c.border}`} style={{ animationDelay: `${delay}ms`, opacity: 0 }}>
           <div className="flex items-center gap-2 mb-3">
             <span className={`h-1.5 w-1.5 rounded-full ${c.dot}`} />
@@ -266,7 +266,7 @@ export function QuestionCard({
   // ── SPLIT — two-tone verdict / question ──
   if (style === "split") {
     return (
-      <Link href={`/topics/${slug}`}>
+      <Link href={`/questions/${slug}`}>
         <div className={`${base} bg-card card-shadow-rich ${dark} overflow-hidden`} style={{ animationDelay: `${delay}ms`, opacity: 0 }}>
           <div className="flex flex-col sm:flex-row min-h-[120px]">
             <div className={`sm:w-2/5 p-5 flex flex-col justify-center bg-gradient-to-br ${c.bg}`}>
@@ -288,7 +288,7 @@ export function QuestionCard({
   // ── METER — horizontal thermometer-style ──
   if (style === "meter") {
     return (
-      <Link href={`/topics/${slug}`}>
+      <Link href={`/questions/${slug}`}>
         <div className={`${base} p-5 bg-card card-shadow-rich ${dark}`} style={{ animationDelay: `${delay}ms`, opacity: 0 }}>
           <div className="flex items-center gap-2 mb-2">
             <span className={`h-1.5 w-1.5 rounded-full ${c.dot}`} />
@@ -311,7 +311,7 @@ export function QuestionCard({
   // ── SPOTLIGHT — verdict dominates ──
   if (style === "spotlight") {
     return (
-      <Link href={`/topics/${slug}`}>
+      <Link href={`/questions/${slug}`}>
         <div className={`${base} p-5 bg-gradient-to-br ${c.bg} bg-card card-shadow-rich ${dark} border-t-2 ${c.border}`} style={{ animationDelay: `${delay}ms`, opacity: 0 }}>
           {answerState && <span className={`text-2xl font-black ${answerState.colorClass} leading-none mb-2 block`}>{answerState.headline}</span>}
           <p className="font-semibold text-sm text-foreground leading-snug mb-2">{questionText}</p>
@@ -328,7 +328,7 @@ export function QuestionCard({
 
   // ── TICKER — compact row ──
   return (
-    <Link href={`/topics/${slug}`}>
+    <Link href={`/questions/${slug}`}>
       <div className={`${base} bg-card card-shadow-rich ${dark} overflow-hidden border-l-[3px] ${c.border}`} style={{ animationDelay: `${delay}ms`, opacity: 0 }}>
         <div className="flex items-center p-4 gap-4">
           {team ? (

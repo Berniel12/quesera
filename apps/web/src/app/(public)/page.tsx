@@ -16,6 +16,7 @@ import {
 interface QuestionWithCard {
   question_text: string;
   slug: string;
+  href: string;              // full route path: /questions/slug or /topics/slug
   category: string | null;
   direction: string | null;
   confidence: number | null;
@@ -166,9 +167,10 @@ export default async function LandingPage() {
       if (card.freshness === "dead" || card.confidence === 0) continue;
       seenSlugs.add(q.slug);
       allQuestions.push({
-        question_text: q.question_text, slug: q.slug, category: q.category,
-        direction: card.direction, confidence: card.confidence, freshness: card.freshness,
-        one_liner: card.one_liner, snapshot_published_at: card.snapshot_published_at, topic_id: q.primary_topic_id,
+        question_text: q.question_text, slug: q.slug, href: `/questions/${q.slug}`,
+        category: q.category, direction: card.direction, confidence: card.confidence,
+        freshness: card.freshness, one_liner: card.one_liner,
+        snapshot_published_at: card.snapshot_published_at, topic_id: q.primary_topic_id,
       });
     }
   } else {
@@ -186,9 +188,10 @@ export default async function LandingPage() {
       if (card.freshness === "dead" || card.confidence === 0) continue;
       seenSlugs.add(topic.slug);
       allQuestions.push({
-        question_text: r.question_text, slug: topic.slug, category: topic.category,
-        direction: card.direction, confidence: card.confidence, freshness: card.freshness,
-        one_liner: card.one_liner, snapshot_published_at: card.snapshot_published_at, topic_id: topic.id,
+        question_text: r.question_text, slug: topic.slug, href: `/topics/${topic.slug}`,
+        category: topic.category, direction: card.direction, confidence: card.confidence,
+        freshness: card.freshness, one_liner: card.one_liner,
+        snapshot_published_at: card.snapshot_published_at, topic_id: topic.id,
       });
     }
   }
@@ -255,7 +258,7 @@ export default async function LandingPage() {
         return (
           <section className="grid grid-cols-1 lg:grid-cols-12 gap-6 pt-6 pb-8 animate-slide-up">
             {/* Main hero */}
-            <Link href={`/topics/${heroQ.slug}`} className="lg:col-span-8">
+            <Link href={heroQ.href} className="lg:col-span-8">
               <div className="relative overflow-hidden rounded-[2rem] p-8 sm:p-10 min-h-[320px] sm:min-h-[400px] flex flex-col justify-end
                 bg-card dark:bg-[#131B2E] card-shadow-rich dark:border dark:border-white/5 group hover-lift">
                 {/* Background photo */}
@@ -339,7 +342,7 @@ export default async function LandingPage() {
               const comp2 = isCompetitionQuestion(q2.question_text) ? getCompetitionAnswer(q2.slug) : null;
               const team2 = comp2 ? null : getTeamEntity(q2.question_text);
               return (
-                <Link href={`/topics/${q2.slug}`} className="lg:col-span-4">
+                <Link href={q2.href} className="lg:col-span-4">
                   <div className={`h-full rounded-[2rem] p-6 sm:p-8 flex flex-col justify-between relative overflow-hidden
                     bg-gradient-to-br ${a2.bg} bg-card dark:bg-[#131B2E] card-shadow-rich dark:border dark:border-white/5 hover-lift-sm`}>
                     {(comp2?.favorite.logoUrl || team2?.logoUrl) && (
@@ -418,7 +421,7 @@ export default async function LandingPage() {
               ? getAnswerState({ direction: q.direction, confidence: q.confidence, category: q.category, disagreement: 0 }) : null;
             const pct = q.confidence !== null ? Math.round(q.confidence * 100) : 0;
             return (
-              <Link href={`/topics/${q.slug}`} className="md:col-span-7 group">
+              <Link href={q.href} className="md:col-span-7 group">
                 <div className="h-full relative overflow-hidden rounded-[2rem] p-8 min-h-[260px] flex flex-col justify-between
                   bg-card dark:bg-[#131B2E] card-shadow-rich dark:border dark:border-white/5 hover-lift-sm animate-card-enter">
                   {/* Background photo */}
@@ -456,7 +459,7 @@ export default async function LandingPage() {
               ? getAnswerState({ direction: q.direction, confidence: q.confidence, category: q.category, disagreement: 0 }) : null;
             const pct = q.confidence !== null ? Math.round(q.confidence * 100) : 0;
             return (
-              <Link href={`/topics/${q.slug}`} className="md:col-span-5 group">
+              <Link href={q.href} className="md:col-span-5 group">
                 <div className={`h-full rounded-[2rem] p-8 flex flex-col justify-between
                   bg-card dark:bg-[#131B2E] card-shadow-rich dark:border dark:border-white/5 hover-lift-sm animate-card-enter`}
                   style={{ animationDelay: "100ms", opacity: 0 }}>
@@ -496,7 +499,7 @@ export default async function LandingPage() {
             const isWide = span.includes("8");
 
             return (
-              <Link key={q.topic_id} href={`/topics/${q.slug}`} className={`${span} group`}>
+              <Link key={q.topic_id} href={q.href} className={`${span} group`}>
                 <div
                   className={`h-full rounded-[2rem] p-6 flex ${isWide ? "flex-row items-center gap-6" : "flex-col justify-between"} min-h-[160px]
                     bg-card dark:bg-[#131B2E] card-shadow-rich dark:border dark:border-white/5 hover-lift-sm animate-card-enter
@@ -575,7 +578,7 @@ export default async function LandingPage() {
                   const tickerLogo = tickerComp?.favorite.logoUrl ?? tickerTeam?.logoUrl;
                   const tickerBg = tickerComp?.favorite.bgColor ?? tickerTeam?.bgColor;
                   return (
-                    <Link key={q.topic_id} href={`/topics/${q.slug}`} className="flex items-center gap-4 py-3 group hover:bg-muted/30 dark:hover:bg-white/5 -mx-3 px-3 rounded-xl transition-colors">
+                    <Link key={q.topic_id} href={q.href} className="flex items-center gap-4 py-3 group hover:bg-muted/30 dark:hover:bg-white/5 -mx-3 px-3 rounded-xl transition-colors">
                       {tickerLogo ? (
                         <div className={`h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0 ${tickerBg}`}>
                           <img src={tickerLogo} alt="" className="h-6 w-6 object-contain" loading="lazy" />

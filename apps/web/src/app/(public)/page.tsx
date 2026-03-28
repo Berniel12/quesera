@@ -126,12 +126,17 @@ export default async function LandingPage() {
 
   // Question-first: load from questions table (product layer)
   // Fall back to question_wrappers if questions table is empty (migration not yet run)
-  const { data: questionRows } = await db(supabase)
+  const { data: questionRows, error: questionsError } = await db(supabase)
     .from("questions")
     .select("id, question_text, slug, category, primary_topic_id, sort_order")
     .eq("status", "published")
     .eq("is_featured", true)
     .order("sort_order", { ascending: true });
+
+  // Log for debugging -- remove after confirming questions path works
+  if (questionsError) {
+    console.error("[HOMEPAGE] questions query error:", questionsError.message);
+  }
 
   const useQuestions = Array.isArray(questionRows) && questionRows.length > 0;
 

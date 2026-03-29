@@ -280,6 +280,26 @@ export function getSeedMapMatches(item: SourceItem): SeedMapEntry[] | null {
       "KXSPACEXMARS": [{ slug: "spacex-starship", confidence: 0.8 }],
     };
 
+    // Match by series_ticker first (highest confidence -- these are known series)
+    const seriesTicker = String(item.normalized_payload.series_ticker ?? "").toUpperCase();
+    const KALSHI_SERIES_MAP: Record<string, SeedMapEntry[]> = {
+      "KXFED": [{ slug: "us-federal-reserve-interest-rates", confidence: 0.95 }],
+      "KXCPI": [{ slug: "us-inflation-rate", confidence: 0.95 }],
+      "KXGDP": [{ slug: "global-recession-risk", confidence: 0.8 }, { slug: "us-stock-market", confidence: 0.5 }],
+      "KXBTC": [{ slug: "bitcoin-price", confidence: 0.9 }, { slug: "crypto-market", confidence: 0.6 }],
+      "KXWTI": [{ slug: "global-oil-prices", confidence: 0.95 }],
+      "KXMORTGAGERATE": [{ slug: "us-mortgage-rates", confidence: 0.95 }],
+      "KXNBA": [{ slug: "nba-season-2025-26", confidence: 0.95 }],
+      "KXUCL": [{ slug: "champions-league", confidence: 0.95 }],
+      "KXF1": [{ slug: "formula-1-2026", confidence: 0.95 }],
+      "KXLALIGA": [{ slug: "la-liga", confidence: 0.95 }],
+      "KXPREMIERLEAGUE": [{ slug: "premier-league", confidence: 0.95 }],
+      "KXNFL": [{ slug: "nfl-2026-season", confidence: 0.95 }],
+    };
+    if (seriesTicker && KALSHI_SERIES_MAP[seriesTicker]) {
+      return KALSHI_SERIES_MAP[seriesTicker];
+    }
+
     // Match by event ticker prefix
     for (const [prefix, entries] of Object.entries(KALSHI_EVENT_MAP)) {
       if (eventTicker.startsWith(prefix)) return entries;

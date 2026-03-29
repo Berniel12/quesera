@@ -3,23 +3,30 @@ import { fetchWithRetry } from "../utils/fetch-with-retry.js";
 
 // Kalshi: regulated US event contracts
 // Public market data works without auth. Auth only needed for trading.
-// Uses the EVENTS endpoint (not markets) to get real prediction events
-// and skip the 300k+ sports prop bet noise.
+//
+// TWO fetch strategies:
+// 1. SERIES MARKETS: Known series tickers (KXFED, KXCPI, KXNBA, etc.)
+//    These are high-value recurring markets that the events endpoint doesn't return.
+// 2. EVENTS: One-off prediction events (who will be Pope, AGI timeline, etc.)
+//    Filtered to non-sports categories.
 
-// Categories to fetch -- skip Sports (all props/combos)
-const KALSHI_CATEGORIES = [
-  "Economics",
-  "Politics",
-  "Elections",
-  "Climate and Weather",
-  "Science and Technology",
-  "Financials",
-  "Companies",
-  "World",
-  "Health",
-  "Entertainment",
-  "Social",
-  "Transportation",
+// Known series tickers with their topic mappings
+// These are the core Kalshi data -- high-volume, regularly traded markets
+const KALSHI_SERIES = [
+  // Macro/Economics
+  { ticker: "KXFED", category: "Economics" },
+  { ticker: "KXCPI", category: "Economics" },
+  { ticker: "KXGDP", category: "Economics" },
+  { ticker: "KXBTC", category: "Crypto" },
+  { ticker: "KXWTI", category: "Economics" },
+  { ticker: "KXMORTGAGERATE", category: "Economics" },
+  // Sports competitions
+  { ticker: "KXNBA", category: "Sports" },
+  { ticker: "KXUCL", category: "Sports" },
+  { ticker: "KXF1", category: "Sports" },
+  { ticker: "KXLALIGA", category: "Sports" },
+  { ticker: "KXPREMIERLEAGUE", category: "Sports" },
+  { ticker: "KXNFL", category: "Sports" },
 ];
 
 export class KalshiAdapter extends BaseAdapter {
@@ -35,14 +42,56 @@ export class KalshiAdapter extends BaseAdapter {
     }
 
     const items: RawItem[] = [];
-    let cursor: string | null = null;
+    const seenTickers = new Set<string>();
 
-    // Fetch events with nested markets (real predictions, not sports props)
-    for (let page = 0; page < 10; page++) {
-      let url = `${config.base_url}/events?limit=100&status=open&with_nested_markets=true`;
-      if (cursor) url += `&cursor=${cursor}`;
-
+    // Strategy 1: Fetch known series markets (Fed, CPI, GDP, NBA, F1, etc.)
+    for (const series of KALSHI_SERIES) {
       try {
+        const url = `${config.base_url}/markets?limit=100&status=open&series_ticker=${series.ticker}`;
+        const response = await fetchWithRetry({ url, headers, logger: this.logger });
+        const data = (await response.json()) as { markets: KalshiMarket[] };
+
+        for (const market of data.markets) {
+          if (seenTickers.has(market.ticker)) continue;
+          seenTickers.add(market.ticker);
+
+          const yesPrice = market.yes_bid_dollars ?? 0;
+          const lastPrice = market.last_price_dollars ?? 0;
+
+          items.push({
+            externalId: market.ticker,
+            payload: {
+              ticker: market.ticker,
+              title: market.title,
+              subtitle: market.yes_sub_title ?? "",
+              yes_price: yesPrice,
+              no_price: market.no_bid_dollars ?? 0,
+              last_price: lastPrice,
+              volume: market.volume_fp ?? 0,
+              open_interest: market.open_interest_fp ?? 0,
+              category: series.category,
+              event_ticker: market.event_ticker ?? "",
+              event_title: "",
+              close_time: market.close_time,
+              status: market.status,
+              question: market.title,
+              series_ticker: series.ticker,
+            },
+            occurredAt: market.close_time ? new Date(market.close_time) : undefined,
+          });
+        }
+      } catch (err) {
+        this.logger.warn({ series: series.ticker, err }, "Failed to fetch Kalshi series");
+      }
+    }
+
+    // Strategy 2: Fetch events (one-off predictions, non-sports)
+    let cursor: string | null = null;
+    for (let page = 0; page < 10; page++) {
+      try {
+        let url = `${config.base_url}/events?limit=100&status=open&with_nested_markets=true`;
+        if (cursor) url += `&cursor=${cursor}`;
+
         const response = await fetchWithRetry({ url, headers, logger: this.logger });
         const data = (await response.json()) as {
           events: KalshiEvent[];
@@ -50,11 +99,12 @@ export class KalshiAdapter extends BaseAdapter {
         };
 
         for (const event of data.events) {
-          // Skip sports category (all props/combos, no real predictions)
           if (event.category === "Sports") continue;
 
           for (const market of event.markets ?? []) {
-            // Skip markets with no real pricing
+            if (seenTickers.has(market.ticker)) continue;
+            seenTickers.add(market.ticker);
+
             const yesPrice = market.yes_bid_dollars ?? 0;
             const lastPrice = market.last_price_dollars ?? 0;
             if (yesPrice === 0 && lastPrice === 0) continue;
@@ -76,6 +126,7 @@ export class KalshiAdapter extends BaseAdapter {
                 close_time: market.close_time,
                 status: market.status,
                 question: market.title,
+                series_ticker: "",
               },
               occurredAt: market.close_time ? new Date(market.close_time) : undefined,
             });
@@ -90,7 +141,7 @@ export class KalshiAdapter extends BaseAdapter {
       }
     }
 
-    this.logger.info({ count: items.length }, "Kalshi: fetched non-sports prediction markets");
+    this.logger.info({ count: items.length, series: KALSHI_SERIES.length }, "Kalshi: fetched markets");
     return { items };
   }
 
@@ -121,6 +172,7 @@ export class KalshiAdapter extends BaseAdapter {
         event_title: p.event_title,
         close_time: p.close_time,
         question: p.question ?? p.title,
+        series_ticker: p.series_ticker,
       },
       content_hash: this.hashPayload(hashData),
       occurred_at: raw.occurredAt?.toISOString() ?? null,
@@ -137,6 +189,7 @@ interface KalshiMarket {
   last_price_dollars?: number;
   volume_fp?: number;
   open_interest_fp?: number;
+  event_ticker?: string;
   close_time: string;
   status: string;
 }

@@ -41,6 +41,8 @@ export function extractNumericSignal(
       return extractCrypto(normalizedPayload, externalId, timestamp);
     case "prediction_market":
       return extractPredictionMarket(normalizedPayload, externalId, timestamp);
+    case "forecasting":
+      return extractForecasting(normalizedPayload, externalId, timestamp);
     case "forecast_aggregator":
       return extractForecastAggregator(normalizedPayload, externalId, timestamp);
     case "sports_odds":
@@ -209,19 +211,39 @@ function extractPredictionMarket(
   externalId: string,
   timestamp: Date,
 ): ExtractedSignal | null {
-  // Extract Yes probability from outcome_prices array
-  const pricesRaw = payload.outcome_prices;
   let yesProb: number | null = null;
+  let sourceName = "polymarket";
+  let question = payload.question ?? payload.slug ?? "";
 
-  if (typeof pricesRaw === "string") {
-    try {
-      const parsed = JSON.parse(pricesRaw) as unknown[];
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        yesProb = parseFloat(String(parsed[0]));
-      }
-    } catch { /* ignore parse errors */ }
-  } else if (Array.isArray(pricesRaw) && pricesRaw.length > 0) {
-    yesProb = parseFloat(String(pricesRaw[0]));
+  // Kalshi: uses yes_price (0-1 decimal dollar price = probability)
+  if (payload.yes_price !== undefined && payload.yes_price !== null) {
+    const price = parseFloat(String(payload.yes_price));
+    if (!isNaN(price) && price > 0) {
+      yesProb = price; // Kalshi prices are already 0-1 probabilities
+      sourceName = "kalshi";
+      question = payload.title ?? payload.question ?? "";
+    }
+  }
+
+  // Polymarket: uses outcome_prices array
+  if (yesProb === null) {
+    const pricesRaw = payload.outcome_prices;
+    if (typeof pricesRaw === "string") {
+      try {
+        const parsed = JSON.parse(pricesRaw) as unknown[];
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          yesProb = parseFloat(String(parsed[0]));
+        }
+      } catch { /* ignore parse errors */ }
+    } else if (Array.isArray(pricesRaw) && pricesRaw.length > 0) {
+      yesProb = parseFloat(String(pricesRaw[0]));
+    }
+  }
+
+  // Manifold/PolyRouter: community_prediction or similar
+  if (yesProb === null && payload.community_prediction !== undefined) {
+    yesProb = parseFloat(String(payload.community_prediction));
+    sourceName = String(payload.source ?? "manifold");
   }
 
   if (yesProb === null || isNaN(yesProb)) return null;
@@ -230,12 +252,41 @@ function extractPredictionMarket(
     currentValue: yesProb,
     signalTimestamp: timestamp,
     signalType: "market_probability",
-    sourceName: "polymarket",
+    sourceName,
     externalId,
     metadata: {
-      question: payload.question,
+      question,
       slug: payload.slug,
       volume_24hr: payload.volume_24hr,
+      volume: payload.volume,
+      series_ticker: payload.series_ticker,
+    },
+  };
+}
+
+function extractForecasting(
+  payload: Record<string, unknown>,
+  externalId: string,
+  timestamp: Date,
+): ExtractedSignal | null {
+  // Metaculus: community_prediction is already a 0-1 probability
+  const pred = payload.community_prediction;
+  if (pred === null || pred === undefined) return null;
+
+  const prob = parseFloat(String(pred));
+  if (isNaN(prob)) return null;
+
+  return {
+    currentValue: prob,
+    signalTimestamp: timestamp,
+    signalType: "forecast_probability",
+    sourceName: "metaculus",
+    externalId,
+    metadata: {
+      question: payload.title,
+      question_id: payload.question_id,
+      forecasters_count: payload.forecasters_count,
+      url: payload.url,
     },
   };
 }

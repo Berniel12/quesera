@@ -304,8 +304,16 @@ export async function publishSnapshot(
       await supabase.from("public_topic_cards")
         .update({
           synthesis_phrased: phrased,
-          expert_line: phrased.bottom_line, // homepage card uses phrased bottom line
+          expert_line: phrased.bottom_line,
         })
+        .eq("topic_id", topic.id);
+    } else {
+      // Validation failed or LLM errored -- clear stale phrased output
+      await supabase.from("topic_snapshots")
+        .update({ synthesis_phrased: null })
+        .eq("id", snapshotId);
+      await supabase.from("public_topic_cards")
+        .update({ synthesis_phrased: null })
         .eq("topic_id", topic.id);
     }
   }

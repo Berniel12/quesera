@@ -219,7 +219,7 @@ export function ThresholdTemplate({ props }: { props: TemplateProps }) {
       {/* ── SOURCE COMPARISON ── */}
       {snapshot?.synthesis_json && (
         <AnimateOnScroll>
-          <SourceComparisonBlock comparison={snapshot.synthesis_json} accentClass={cat.accent} />
+          <SourceComparisonBlock comparison={snapshot.synthesis_json} phrased={snapshot.synthesis_phrased} accentClass={cat.accent} />
         </AnimateOnScroll>
       )}
 

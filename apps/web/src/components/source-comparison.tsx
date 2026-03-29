@@ -1,4 +1,4 @@
-import type { SourceComparison } from "@/components/templates/types";
+import type { SourceComparison, PhrasedSynthesis } from "@/components/templates/types";
 
 const PLATFORM_NAMES: Record<string, string> = {
   polymarket: "Polymarket",
@@ -15,10 +15,11 @@ const PLATFORM_NAMES: Record<string, string> = {
 
 interface SourceComparisonBlockProps {
   comparison: SourceComparison;
+  phrased?: PhrasedSynthesis | null;
   accentClass: string;
 }
 
-export function SourceComparisonBlock({ comparison, accentClass }: SourceComparisonBlockProps) {
+export function SourceComparisonBlock({ comparison, phrased, accentClass }: SourceComparisonBlockProps) {
   // Only show comparison when there's something to compare:
   // 2+ prediction platforms, or 1 platform + real grounding metric
   const hasMultiplePlatforms = comparison.platformBreakdown.length >= 2;
@@ -105,6 +106,31 @@ export function SourceComparisonBlock({ comparison, accentClass }: SourceCompari
             <p className="text-sm text-muted-foreground">Official data is neutral -- no clear signal either way.</p>
           )}
         </div>
+
+        {/* Layer B: LLM-phrased expert synthesis (whitelisted pages only) */}
+        {phrased && (
+          <div className="pt-4 border-t border-border/10 dark:border-white/5 space-y-3">
+            <div>
+              <h3 className="text-[10px] font-bold text-primary uppercase tracking-wide mb-1">Markets</h3>
+              <p className="text-sm text-foreground/90 leading-relaxed">{phrased.markets}</p>
+            </div>
+            {phrased.grounding && (
+              <div>
+                <h3 className="text-[10px] font-bold text-blue-400 uppercase tracking-wide mb-1">Official context</h3>
+                <p className="text-sm text-foreground/90 leading-relaxed">{phrased.grounding}</p>
+              </div>
+            )}
+            <div>
+              <h3 className="text-[10px] font-bold text-warning uppercase tracking-wide mb-1">
+                {comparison.agreementState === "consensus" ? "Consensus" : "Tension"}
+              </h3>
+              <p className="text-sm text-foreground/90 leading-relaxed">{phrased.tension}</p>
+            </div>
+            <div className="pt-2 border-t border-border/10 dark:border-white/5">
+              <p className="text-sm font-semibold text-foreground">{phrased.bottom_line}</p>
+            </div>
+          </div>
+        )}
       </div>
     </section>
   );

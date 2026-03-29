@@ -38,6 +38,15 @@ export interface TemplateSnapshot {
   published_at: string;
   version: number;
   synthesis_json: SourceComparison | null;
+  synthesis_phrased: PhrasedSynthesis | null;
+}
+
+/** LLM-phrased synthesis (Layer B, whitelisted pages only) */
+export interface PhrasedSynthesis {
+  markets: string;
+  grounding: string | null;
+  tension: string;
+  bottom_line: string;
 }
 
 /** Deterministic source comparison (computed by worker, no LLM) */

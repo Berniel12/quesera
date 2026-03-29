@@ -4,6 +4,8 @@ import { SCORING_VERSION } from "./types.js";
 import { resolvePack, checkSynthesisGate } from "../packs/resolve.js";
 import { FAMILY_DISPLAY, type QuestionType, type SourcePack } from "../packs/index.js";
 import { computeSourceComparison, expertLineFromComparison } from "./synthesis.js";
+import { phraseSynthesis, isLayerBEnabled } from "./synthesis-phrasing.js";
+import type { Logger } from "@signal-map/logger";
 
 interface TopicRow {
   id: string;
@@ -27,6 +29,7 @@ export async function publishSnapshot(
   topic: TopicRow,
   state: ScoredState,
   signals: ScoredSignal[],
+  logger?: Logger,
 ): Promise<PublishedSnapshot> {
   const now = new Date().toISOString();
 
@@ -279,6 +282,32 @@ export async function publishSnapshot(
       .from("topic_snapshots")
       .update({ synthesis_json: sourceComparison })
       .eq("id", snapshotId);
+  }
+
+  // Layer B: constrained LLM phrasing (whitelisted pages only)
+  if (sourceComparison && logger && isLayerBEnabled(topic.slug)) {
+    const questionRow = await supabase
+      .from("questions")
+      .select("question_text")
+      .eq("primary_topic_id", topic.id)
+      .eq("status", "published")
+      .limit(1)
+      .maybeSingle();
+    const qText = (questionRow.data as { question_text: string } | null)?.question_text ?? topic.canonical_name;
+
+    const phrased = await phraseSynthesis(sourceComparison, qText, topic.slug, logger);
+    if (phrased) {
+      // Write phrased synthesis to snapshot + card
+      await supabase.from("topic_snapshots")
+        .update({ synthesis_phrased: phrased })
+        .eq("id", snapshotId);
+      await supabase.from("public_topic_cards")
+        .update({
+          synthesis_phrased: phrased,
+          expert_line: phrased.bottom_line, // homepage card uses phrased bottom line
+        })
+        .eq("topic_id", topic.id);
+    }
   }
 
   return { id: snapshotId, version };

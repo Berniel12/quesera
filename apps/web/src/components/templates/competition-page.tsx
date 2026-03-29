@@ -270,6 +270,41 @@ export function CompetitionTemplate({ props }: { props: TemplateProps }) {
         </div>
       </section>
 
+      {/* ── GAP VISUALIZATION ── */}
+      {leader && challenger && (
+        <AnimateOnScroll>
+          <section className="mb-10">
+            <h2 className={`text-[10px] font-bold uppercase tracking-[0.2em] ${cat.accent} mb-3`}>The gap</h2>
+            <div className={`p-5 rounded-2xl bg-gradient-to-br ${cat.bg} border ${cat.border}`}>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  {(() => { const ll = findLogo(leader.name, competitionAnswer); return ll ? <div className={`h-10 w-10 rounded-xl ${ll.bgColor} flex items-center justify-center`}><img src={ll.logoUrl} alt="" className="h-7 w-7 object-contain" /></div> : null; })()}
+                  <div>
+                    <span className="text-lg font-black text-foreground">{leader.name}</span>
+                    <span className={`text-sm font-bold ${cat.accent} ml-2`}>{leader.pct}%</span>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className={`text-3xl font-black font-mono ${raceState?.color ?? "text-foreground"}`}>
+                    {leader.pct - challenger.pct > 0 ? "+" : ""}{leader.pct - challenger.pct}
+                  </span>
+                  <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold block">pt lead</span>
+                </div>
+              </div>
+              {/* Bar showing relative positions */}
+              <div className="relative h-3 rounded-full bg-border/20 dark:bg-white/10 overflow-hidden mb-3">
+                <div className={`absolute left-0 top-0 h-full rounded-full bg-current ${cat.accent}`} style={{ width: `${leader.pct}%` }} />
+                <div className="absolute top-0 h-full rounded-full bg-muted-foreground/30" style={{ left: `${challenger.pct}%`, width: `${Math.max(leader.pct - challenger.pct, 1)}%` }} />
+              </div>
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span className="font-medium">{challenger.name} -- {challenger.pct}%</span>
+                {ranking.length > 2 && <span className="text-muted-foreground/50">+{ranking.length - 2} more in the field</span>}
+              </div>
+            </div>
+          </section>
+        </AnimateOnScroll>
+      )}
+
       {/* ── LEADERBOARD: Full ranked list ── */}
       {signals.length > 0 && (
         <AnimateOnScroll>

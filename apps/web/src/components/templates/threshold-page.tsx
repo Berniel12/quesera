@@ -215,6 +215,49 @@ export function ThresholdTemplate({ props }: { props: TemplateProps }) {
         </div>
       </section>
 
+      {/* ── DISTANCE METER ── */}
+      {primaryMetric && target && distance && (
+        <AnimateOnScroll>
+          <section className="mb-10">
+            <h2 className={`text-[10px] font-bold uppercase tracking-[0.2em] ${cat.accent} mb-3`}>Distance to target</h2>
+            <div className={`p-5 rounded-2xl bg-gradient-to-br ${cat.bg} border ${cat.border}`}>
+              {/* Track from 0 to target with current position marked */}
+              {(() => {
+                const current = primaryMetric.current_value;
+                const tgt = target.value;
+                // Scale: 0% = 0, 100% = target * 1.2 (give headroom above target)
+                const scale = tgt * 1.2;
+                const currentPct = Math.min(Math.max((current / scale) * 100, 2), 98);
+                const targetPct = Math.min((tgt / scale) * 100, 98);
+                const isAbove = current >= tgt;
+                return (
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-bold text-foreground">Current: {metricValue}</span>
+                      <span className="text-sm font-bold text-muted-foreground">Target: {target.formatted}</span>
+                    </div>
+                    <div className="relative h-4 rounded-full bg-border/20 dark:bg-white/10 overflow-hidden mb-2">
+                      {/* Current position */}
+                      <div className={`absolute left-0 top-0 h-full rounded-full ${isAbove ? "bg-positive dark:bg-[#4EDEA3]" : `bg-current ${cat.accent}`}`} style={{ width: `${currentPct}%` }} />
+                      {/* Target line */}
+                      <div className="absolute top-0 h-full w-0.5 bg-foreground/60" style={{ left: `${targetPct}%` }} />
+                    </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className={`font-bold ${isAbove ? "text-positive dark:text-[#4EDEA3]" : distance.direction === "below" ? "text-foreground/70" : "text-positive dark:text-[#4EDEA3]"}`}>
+                        {distance.label}
+                      </span>
+                      {marketProb !== null && (
+                        <span className="text-muted-foreground">Markets: {marketProb}% chance</span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          </section>
+        </AnimateOnScroll>
+      )}
+
       {/* ── WHAT CHANGED + WHAT TO WATCH ── */}
       {snapshot && (snapshot.what_changed_text || snapshot.what_next_text) && (
         <AnimateOnScroll>

@@ -2,7 +2,8 @@ import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getAnswerState } from "@/lib/answer-state";
-import { getTeamEntity, getCompetitionAnswer } from "@/lib/team-entities";
+import { getWhyLine } from "@/lib/why-line";
+import { getTeamEntity, getCompetitionAnswer, getTopicLogo, findLogoByEntityName } from "@/lib/team-entities";
 import { deriveQuestionType } from "@/lib/question-contracts";
 import type { QuestionType } from "@/lib/question-contracts";
 import Link from "next/link";
@@ -28,7 +29,32 @@ interface QuestionWithCard {
   one_liner: string | null;
   snapshot_published_at: string | null;
   topic_id: string;
+  // Synthesis gate fields
+  synthesis_ready: boolean;
+  expert_line: string | null;
+  source_families: string[];
+  // Live competition data
+  competition_leader: string | null;
+  competition_leader_pct: number | null;
+  competition_challenger: string | null;
+  competition_gap: number | null;
 }
+
+// Source family display names for pills
+const FAMILY_PILL: Record<string, string> = {
+  macro_official: "Official Data",
+  crypto_market: "Crypto",
+  prediction_market: "Markets",
+  sports_odds: "Bookmakers",
+  forecasting: "Forecasts",
+  forecast_aggregator: "Forecasts",
+  political_official: "Congress",
+  news_evidence: "News",
+  hazard_weather: "Weather",
+  sports_official: "Sports Data",
+  sports_signal: "Sports",
+  defi_signal: "DeFi",
+};
 
 // Category colors for bento cards
 const CAT_ACCENT: Record<string, { label: string; border: string; text: string; glow: string; bg: string }> = {
@@ -116,10 +142,17 @@ function getCatPhoto(category: string | null, slug: string): string | null {
 
 /**
  * Get the competition display for a card.
- * Uses topic_slug (not question slug) to look up the static CompetitionAnswer.
- * Returns the favorite name for display, or "Race underway" if no data.
+ * Prefers LIVE leader data from card columns (populated by worker from signals).
+ * Falls back to static CompetitionAnswer map only for logo lookup.
  */
 function getCompetitionDisplay(q: QuestionWithCard): { comp: ReturnType<typeof getCompetitionAnswer>; label: string } {
+  // Live data from signals (populated by worker publish)
+  if (q.competition_leader) {
+    // Still use static map for logos, but leader name comes from live data
+    const comp = getCompetitionAnswer(q.topic_slug);
+    return { comp, label: q.competition_leader };
+  }
+  // Fallback to static map
   const comp = getCompetitionAnswer(q.topic_slug);
   if (comp) return { comp, label: comp.favorite.name };
   return { comp: null, label: "Race underway" };
@@ -163,16 +196,49 @@ export default async function LandingPage() {
     .eq("is_featured", true)
     .order("sort_order", { ascending: true });
 
+  // Load core card data (always available)
   const { data: allCards } = await supabase
     .from("public_topic_cards")
     .select("topic_id, canonical_name, slug, category, direction, confidence, freshness, one_liner, snapshot_published_at")
     .order("snapshot_published_at", { ascending: false });
+
+  // Try loading synthesis columns (graceful -- returns empty if migration not yet applied)
+  let synthMap = new Map<string, {
+    synthesis_ready: boolean | null; expert_line: string | null; source_families: string[] | null;
+    competition_leader: string | null; competition_leader_pct: number | null;
+    competition_challenger: string | null; competition_gap: number | null;
+  }>();
+  try {
+    const { data: synthData } = await supabase
+      .from("public_topic_cards")
+      .select("topic_id, synthesis_ready, expert_line, source_families, competition_leader, competition_leader_pct, competition_challenger, competition_gap");
+    if (synthData) {
+      synthMap = new Map((synthData as Array<Record<string, unknown>>).map((c) => [
+        c.topic_id as string,
+        {
+          synthesis_ready: (c.synthesis_ready as boolean | null) ?? null,
+          expert_line: (c.expert_line as string | null) ?? null,
+          source_families: (c.source_families as string[] | null) ?? null,
+          competition_leader: (c.competition_leader as string | null) ?? null,
+          competition_leader_pct: (c.competition_leader_pct as number | null) ?? null,
+          competition_challenger: (c.competition_challenger as string | null) ?? null,
+          competition_gap: (c.competition_gap as number | null) ?? null,
+        },
+      ]));
+    }
+  } catch {
+    // Synthesis columns not yet available -- proceed without them
+  }
 
   const cards = (allCards ?? []) as Array<{
     topic_id: string; canonical_name: string; slug: string; category: string | null;
     direction: string | null; confidence: number | null; freshness: string | null;
     one_liner: string | null; snapshot_published_at: string | null;
   }>;
+
+  // Synthesis gate rollout: only enforce when enough cards have been populated
+  const synthReadyCount = [...synthMap.values()].filter((c) => c.synthesis_ready === true).length;
+  const enforceSynthesisGate = synthReadyCount >= 5;
   const cardByTopicId = new Map(cards.map((c) => [c.topic_id, c]));
 
   const seenSlugs = new Set<string>();
@@ -185,6 +251,8 @@ export default async function LandingPage() {
       if (!card) continue;
       if (seenSlugs.has(q.slug)) continue;
       if (card.freshness === "dead" || card.confidence === 0) continue;
+      const synth = synthMap.get(q.primary_topic_id);
+      if (enforceSynthesisGate && synth?.synthesis_ready !== true) continue; // SYNTHESIS GATE
       seenSlugs.add(q.slug);
       // Derive question type: explicit DB value > topic override > text derivation
       const qt: QuestionType = (q.question_type && ["binary_event", "threshold", "competition"].includes(q.question_type))
@@ -196,6 +264,13 @@ export default async function LandingPage() {
         direction: card.direction, confidence: card.confidence,
         freshness: card.freshness, one_liner: card.one_liner,
         snapshot_published_at: card.snapshot_published_at, topic_id: q.primary_topic_id,
+        synthesis_ready: synth?.synthesis_ready ?? false,
+        expert_line: synth?.expert_line ?? null,
+        source_families: synth?.source_families ?? [],
+        competition_leader: synth?.competition_leader ?? null,
+        competition_leader_pct: synth?.competition_leader_pct ?? null,
+        competition_challenger: synth?.competition_challenger ?? null,
+        competition_gap: synth?.competition_gap ?? null,
       });
     }
   } else {
@@ -211,6 +286,8 @@ export default async function LandingPage() {
       if (!card) continue;
       if (seenSlugs.has(topic.slug)) continue;
       if (card.freshness === "dead" || card.confidence === 0) continue;
+      const synthLegacy = synthMap.get(topic.id);
+      if (enforceSynthesisGate && synthLegacy?.synthesis_ready !== true) continue; // SYNTHESIS GATE
       seenSlugs.add(topic.slug);
       allQuestions.push({
         question_text: r.question_text, slug: topic.slug, href: `/topics/${topic.slug}`,
@@ -218,6 +295,13 @@ export default async function LandingPage() {
         topic_slug: topic.slug, direction: card.direction, confidence: card.confidence,
         freshness: card.freshness, one_liner: card.one_liner,
         snapshot_published_at: card.snapshot_published_at, topic_id: topic.id,
+        synthesis_ready: synthLegacy?.synthesis_ready ?? false,
+        expert_line: synthLegacy?.expert_line ?? null,
+        source_families: synthLegacy?.source_families ?? [],
+        competition_leader: synthLegacy?.competition_leader ?? null,
+        competition_leader_pct: synthLegacy?.competition_leader_pct ?? null,
+        competition_challenger: synthLegacy?.competition_challenger ?? null,
+        competition_gap: synthLegacy?.competition_gap ?? null,
       });
     }
   }
@@ -235,38 +319,81 @@ export default async function LandingPage() {
     return (b.confidence ?? 0) - (a.confidence ?? 0);
   });
 
-  // Randomize which questions appear on each page load
-  // Shuffle using Fisher-Yates, seeded by current minute (changes every minute)
-  const shuffled = [...allQuestions];
-  const seed = Math.floor(Date.now() / 60000); // changes every minute
-  let rng = seed;
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    rng = (rng * 1103515245 + 12345) & 0x7fffffff;
-    const j = rng % (i + 1);
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  // ── Tension scoring ──
+  // Ranks questions by how interesting they are RIGHT NOW.
+  // Higher tension = better hero candidate + "What Moved" surface.
+  function tensionScore(q: QuestionWithCard): number {
+    let score = 0;
+    // Fresh + moving questions are the most interesting
+    if (q.freshness === "fresh") score += 30;
+    else if (q.freshness === "aging") score += 15;
+    // Active direction signals tension
+    if (q.direction === "up" || q.direction === "down") score += 20;
+    // Moderate confidence is more dramatic than very high or very low
+    const conf = q.confidence ?? 0;
+    if (conf >= 0.35 && conf <= 0.65) score += 15; // contested zone
+    else if (conf > 0.65) score += 8;
+    else if (conf > 0) score += 5;
+    // Recency bonus: fresher snapshots get more weight
+    if (q.snapshot_published_at) {
+      const hoursAgo = (Date.now() - new Date(q.snapshot_published_at).getTime()) / 3600000;
+      if (hoursAgo < 1) score += 20;
+      else if (hoursAgo < 6) score += 12;
+      else if (hoursAgo < 24) score += 6;
+    }
+    // Geo-relevance bonus
+    if (suggestedSlugs.has(q.slug)) score += 5;
+    return score;
   }
 
-  // Pick hero from top-confidence questions (not random — should be interesting)
-  const heroPool = allQuestions.filter((q) => q.confidence !== null && q.confidence > 0.3);
-  const heroIndex = heroPool.length > 0 ? Math.abs(seed) % heroPool.length : 0;
-  const heroQ = heroPool[heroIndex] ?? allQuestions[0];
+  // Score all questions for tension
+  const scored = allQuestions.map((q) => ({ q, tension: tensionScore(q) }));
+  scored.sort((a, b) => b.tension - a.tension);
 
-  // Rest of feed: shuffled, deduplicated, excluding hero topic
+  // Hero: highest-tension question, with rotation among top 3 to avoid staleness
+  const seed = Math.floor(Date.now() / 300000); // rotates every 5 minutes
+  const heroPool = scored.slice(0, Math.min(3, scored.length));
+  const heroQ = heroPool.length > 0 ? heroPool[Math.abs(seed) % heroPool.length].q : allQuestions[0];
+
+  // "What Moved" candidates: top tension questions with active direction, excluding hero
+  const movedQuestions = scored
+    .filter((s) => s.q.topic_id !== heroQ?.topic_id && (s.q.direction === "up" || s.q.direction === "down") && s.q.freshness !== "stale" && s.q.freshness !== "dead")
+    .slice(0, 4)
+    .map((s) => s.q);
+
+  // Remaining feed: sorted by tension, deduplicated, excluding hero
   const heroTopicId = heroQ?.topic_id ?? "";
   const heroSlug = heroQ?.slug ?? "";
-  const seenFeedSlugs = new Set([heroSlug]);
+  const movedSlugs = new Set(movedQuestions.map((q) => q.slug));
+  const seenFeedSlugs = new Set([heroSlug, ...movedSlugs]);
   const feed: QuestionWithCard[] = [];
-  for (const q of shuffled) {
+  for (const { q } of scored) {
     if (q.topic_id === heroTopicId || q.slug === heroSlug) continue;
     if (seenFeedSlugs.has(q.slug)) continue;
     seenFeedSlugs.add(q.slug);
     feed.push(q);
   }
 
-  // Split feed: first item goes to hero side card, rest to bento grid
-  const featured = feed.slice(1, 3);   // Two featured cards (skip [0], it's in hero side)
-  const grid = feed.slice(3, 11);      // Bento grid cards (up to 8)
-  const rest = feed.slice(11, 31);     // Ticker rows (up to 20 more)
+  // Split feed into template-grouped lanes
+  // feed[0] goes to hero side card
+  const laneSource = feed.slice(1);
+  const competitions: QuestionWithCard[] = [];
+  const thresholds: QuestionWithCard[] = [];
+  const binaryEvents: QuestionWithCard[] = [];
+  for (const q of laneSource) {
+    if (q.question_type === "competition") competitions.push(q);
+    else if (q.question_type === "threshold") thresholds.push(q);
+    else binaryEvents.push(q);
+  }
+
+  // Each lane gets up to 4 items; overflow goes to ticker
+  const raceCards = competitions.slice(0, 4);
+  const countdownCards = thresholds.slice(0, 4);
+  const tippingCards = binaryEvents.slice(0, 4);
+
+  // Ticker: everything not in a lane
+  const laneSlugs = new Set([...raceCards, ...countdownCards, ...tippingCards].map((q) => q.slug));
+  const rest = laneSource.filter((q) => !laneSlugs.has(q.slug)).slice(0, 20);
 
   return (
     <div className="mx-auto max-w-6xl px-4 sm:px-6 dark:horizon-glow">
@@ -276,7 +403,7 @@ export default async function LandingPage() {
         const a = CAT_ACCENT[heroQ.category ?? ""] ?? DEFAULT_ACCENT;
         const pct = heroQ.confidence !== null ? Math.round(heroQ.confidence * 100) : 0;
         const ans = heroQ.direction && heroQ.confidence !== null
-          ? getAnswerState({ direction: heroQ.direction, confidence: heroQ.confidence, category: heroQ.category, disagreement: 0 }) : null;
+          ? getAnswerState({ direction: heroQ.direction, confidence: heroQ.confidence, category: heroQ.category, disagreement: 0, questionType: heroQ.question_type }) : null;
 
         const heroPhoto = getCatPhoto(heroQ.category, heroQ.slug);
         const isComp = heroQ.question_type === "competition";
@@ -365,10 +492,11 @@ export default async function LandingPage() {
               const a2 = CAT_ACCENT[q2.category ?? ""] ?? DEFAULT_ACCENT;
               const pct2 = q2.confidence !== null ? Math.round(q2.confidence * 100) : 0;
               const ans2 = q2.direction && q2.confidence !== null
-                ? getAnswerState({ direction: q2.direction, confidence: q2.confidence, category: q2.category, disagreement: 0 }) : null;
+                ? getAnswerState({ direction: q2.direction, confidence: q2.confidence, category: q2.category, disagreement: 0, questionType: q2.question_type }) : null;
               const isComp2 = q2.question_type === "competition";
               const { comp: comp2, label: compLabel2 } = isComp2 ? getCompetitionDisplay(q2) : { comp: null, label: "" };
               const team2 = comp2 ? null : getTeamEntity(q2.question_text);
+              const whyLine2 = getWhyLine({ questionType: q2.question_type, direction: q2.direction, confidence: q2.confidence, freshness: q2.freshness, snapshotPublishedAt: q2.snapshot_published_at, leaderName: compLabel2 || null });
               return (
                 <Link href={q2.href} className="lg:col-span-4">
                   <div className={`h-full rounded-[2rem] p-6 sm:p-8 flex flex-col justify-between relative overflow-hidden
@@ -402,10 +530,11 @@ export default async function LandingPage() {
                         </div>
                       ) : (
                         <>
-                          {ans2 && <span className={`text-xl font-black ${ans2.colorClass} block mb-1`}>{ans2.label}</span>}
+                          {ans2 && <span className={`text-xl font-black ${ans2.colorClass} block mb-1`}>{ans2.cardVerdict}</span>}
                         </>
                       )}
-                      <div className="flex items-center gap-2">
+                      {whyLine2 && <p className="text-[11px] text-muted-foreground leading-snug mt-1">{whyLine2}</p>}
+                      <div className="flex items-center gap-2 mt-2">
                         <div className="h-1.5 flex-1 rounded-full bg-border/30 dark:bg-white/10 overflow-hidden">
                           <div className={`h-full rounded-full bg-current ${a2.text} animate-bar-fill`} style={{ width: `${pct2}%` }} />
                         </div>
@@ -436,216 +565,271 @@ export default async function LandingPage() {
         </form>
       </div>
 
-      {/* ── BENTO GRID ── */}
-      {feed.length > 0 && (
-        <section className="grid grid-cols-1 md:grid-cols-12 gap-5 pb-8">
-
-          {/* Two featured cards — asymmetric */}
-          {featured[0] && (() => {
-            const q = featured[0];
-            const a = CAT_ACCENT[q.category ?? ""] ?? DEFAULT_ACCENT;
-            const photo = getCatPhoto(q.category, q.slug);
-            const isFeatComp = q.question_type === "competition";
-            const { label: featCompLabel } = isFeatComp ? getCompetitionDisplay(q) : { label: "" };
-            const ans = q.direction && q.confidence !== null
-              ? getAnswerState({ direction: q.direction, confidence: q.confidence, category: q.category, disagreement: 0 }) : null;
-            const pct = q.confidence !== null ? Math.round(q.confidence * 100) : 0;
-            return (
-              <Link href={q.href} className="md:col-span-7 group">
-                <div className="h-full relative overflow-hidden rounded-[2rem] p-8 min-h-[260px] flex flex-col justify-between
-                  bg-card dark:bg-[#131B2E] card-shadow-rich dark:border dark:border-white/5 hover-lift-sm animate-card-enter">
-                  {/* Background photo */}
-                  {photo && (
-                    <div className="absolute inset-0 z-0">
-                      <img src={photo} alt="" className="w-full h-full object-cover opacity-15 dark:opacity-20 dark:brightness-50 grayscale group-hover:grayscale-0 group-hover:scale-105 transition-all duration-700" loading="lazy" />
-                      <div className="absolute inset-0 bg-gradient-to-t from-card dark:from-[#131B2E] via-card/80 dark:via-[#131B2E]/80 to-transparent" />
-                    </div>
-                  )}
-                  <div className="relative z-10">
-                    <span className={`text-[10px] font-bold uppercase tracking-[0.2em] ${a.text}`}>{a.label}</span>
-                  </div>
-                  <div className="relative z-10">
-                    <h3 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight leading-tight mb-4">{q.question_text}</h3>
-                    <div className="flex justify-between items-end">
-                      <div>
-                        {isFeatComp
-                          ? <span className={`text-sm font-bold ${a.text}`}>{featCompLabel}</span>
-                          : ans && <span className={`text-sm font-bold ${ans.colorClass}`}>{ans.label}</span>}
-                        {q.snapshot_published_at && <p className="text-[10px] text-muted-foreground/50 mt-1">{timeAgo(q.snapshot_published_at)}</p>}
+      {/* ── WHAT MOVED ── */}
+      {movedQuestions.length > 0 && (
+        <section className="pb-6 animate-fade-in">
+          <h2 className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-3">What moved</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {movedQuestions.map((q) => {
+              const ma = CAT_ACCENT[q.category ?? ""] ?? DEFAULT_ACCENT;
+              const mans = q.direction && q.confidence !== null
+                ? getAnswerState({ direction: q.direction, confidence: q.confidence, category: q.category, disagreement: 0, questionType: q.question_type }) : null;
+              const mWhyLine = getWhyLine({ questionType: q.question_type, direction: q.direction, confidence: q.confidence, freshness: q.freshness, snapshotPublishedAt: q.snapshot_published_at });
+              const isMovedComp = q.question_type === "competition";
+              const { label: movedCompLabel } = isMovedComp ? getCompetitionDisplay(q) : { label: "" };
+              const mTeam = getTeamEntity(q.question_text);
+              const mTopicLogo = getTopicLogo(q.topic_slug);
+              const mLogo = mTeam ? { logoUrl: mTeam.logoUrl } : mTopicLogo;
+              return (
+                <Link key={q.topic_id} href={q.href}>
+                  <div className={`rounded-2xl p-4 bg-card dark:bg-[#131B2E] border ${ma.border} hover-lift-sm transition-all group relative overflow-hidden`}>
+                    {mLogo && (
+                      <div className="absolute top-3 right-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <img src={mLogo.logoUrl} alt="" className="h-10 w-10 object-contain" loading="lazy" />
                       </div>
-                      <div className="text-right">
-                        <span className={`text-2xl font-bold ${a.text}`}>{pct}%</span>
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Confidence</p>
+                    )}
+                    <div className="flex items-center gap-2 mb-2 relative z-10">
+                      <span className={`h-1.5 w-1.5 rounded-full ${q.direction === "up" ? "bg-positive dark:bg-[#4EDEA3]" : "bg-destructive"}`} />
+                      <span className={`text-[9px] font-bold uppercase tracking-[0.2em] ${ma.text}`}>{ma.label}</span>
+                      {q.snapshot_published_at && <span className="text-[9px] text-muted-foreground/50 ml-auto">{timeAgo(q.snapshot_published_at)}</span>}
+                    </div>
+                    <p className="text-sm font-semibold text-foreground leading-snug mb-2 line-clamp-2">{q.question_text}</p>
+                    <div className="flex items-center justify-between">
+                      <span className={`text-xs font-bold ${mans?.colorClass ?? "text-foreground"}`}>
+                        {isMovedComp ? movedCompLabel : (mans?.cardVerdict ?? "Tracking")}
+                      </span>
+                      {mWhyLine && <span className="text-[10px] text-muted-foreground">{mWhyLine}</span>}
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {/* ── LANES ── */}
+
+      {/* Hot Races — competition questions with logos and contenders */}
+      {raceCards.length > 0 && (
+        <section className="pb-8 animate-fade-in">
+          <h2 className="text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-400 mb-4">Hot races</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {raceCards.map((q, i) => {
+              const a = CAT_ACCENT[q.category ?? ""] ?? DEFAULT_ACCENT;
+              const { comp, label: compLabel } = getCompetitionDisplay(q);
+              const team = comp ? null : getTeamEntity(q.question_text);
+              const raceWhyLine = getWhyLine({ questionType: q.question_type, direction: q.direction, confidence: q.confidence, freshness: q.freshness, snapshotPublishedAt: q.snapshot_published_at, leaderName: compLabel || null });
+              const ans = q.direction && q.confidence !== null
+                ? getAnswerState({ direction: q.direction, confidence: q.confidence, category: q.category, disagreement: 0, questionType: q.question_type }) : null;
+              return (
+                <Link key={q.topic_id} href={q.href} className="group">
+                  <div className="h-full rounded-2xl p-5 bg-card dark:bg-[#131B2E] card-shadow-rich dark:border dark:border-white/5 hover-lift-sm animate-card-enter relative overflow-hidden"
+                    style={{ animationDelay: `${i * 80}ms`, opacity: 0 }}>
+                    {/* Leader logo watermark */}
+                    {(comp?.favorite.logoUrl || team?.logoUrl) && (
+                      <div className="absolute top-3 right-3 opacity-15 group-hover:opacity-25 transition-opacity">
+                        <img src={(comp?.favorite.logoUrl ?? team?.logoUrl) as string} alt="" className="h-14 w-14 object-contain" loading="lazy" />
                       </div>
-                    </div>
-                  </div>
-                </div>
-              </Link>
-            );
-          })()}
-
-          {featured[1] && (() => {
-            const q = featured[1];
-            const a = CAT_ACCENT[q.category ?? ""] ?? DEFAULT_ACCENT;
-            const isFeat2Comp = q.question_type === "competition";
-            const { label: feat2CompLabel } = isFeat2Comp ? getCompetitionDisplay(q) : { label: "" };
-            const ans = q.direction && q.confidence !== null
-              ? getAnswerState({ direction: q.direction, confidence: q.confidence, category: q.category, disagreement: 0 }) : null;
-            const pct = q.confidence !== null ? Math.round(q.confidence * 100) : 0;
-            return (
-              <Link href={q.href} className="md:col-span-5 group">
-                <div className={`h-full rounded-[2rem] p-8 flex flex-col justify-between
-                  bg-card dark:bg-[#131B2E] card-shadow-rich dark:border dark:border-white/5 hover-lift-sm animate-card-enter`}
-                  style={{ animationDelay: "100ms", opacity: 0 }}>
-                  <div>
-                    <span className={`text-[10px] font-bold uppercase tracking-[0.2em] ${a.text} mb-4 block`}>{a.label}</span>
-                    <h3 className="text-xl sm:text-2xl font-bold text-foreground tracking-tight leading-tight mb-6">{q.question_text}</h3>
-                  </div>
-                  {/* Progress bars */}
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center text-xs font-medium">
-                      <span className={`${a.text} font-bold`}>{isFeat2Comp ? feat2CompLabel : (ans?.label ?? "Tracking")}</span>
-                      <span className={`${a.text} font-bold`}>{pct}%</span>
-                    </div>
-                    <div className="h-1.5 w-full rounded-full bg-border/20 dark:bg-white/10 overflow-hidden">
-                      <div className={`h-full bg-current ${a.text} animate-bar-fill`} style={{ width: `${pct}%` }} />
-                    </div>
-                    {q.one_liner && <p className="text-xs text-muted-foreground leading-relaxed mt-2">{q.one_liner}</p>}
-                    {q.snapshot_published_at && <p className="text-[10px] text-muted-foreground/50 mt-2">{timeAgo(q.snapshot_published_at)}</p>}
-                  </div>
-                </div>
-              </Link>
-            );
-          })()}
-
-          {/* Bento grid — mixed sizes */}
-          {grid.map((q, i) => {
-            const a = CAT_ACCENT[q.category ?? ""] ?? DEFAULT_ACCENT;
-            const ans = q.direction && q.confidence !== null
-              ? getAnswerState({ direction: q.direction, confidence: q.confidence, category: q.category, disagreement: 0 }) : null;
-            const pct = q.confidence !== null ? Math.round(q.confidence * 100) : 0;
-            const photo = getCatPhoto(q.category, q.slug);
-            const isComp = q.question_type === "competition";
-            const { comp, label: compLabel } = isComp ? getCompetitionDisplay(q) : { comp: null, label: "" };
-            const team = comp ? null : getTeamEntity(q.question_text);
-
-            // Alternate card sizes: 4-8, 8-4, 4-4-4, etc.
-            const span = i % 3 === 0 ? "md:col-span-4" : i % 3 === 1 ? "md:col-span-8" : "md:col-span-4";
-            const isWide = span.includes("8");
-
-            return (
-              <Link key={q.topic_id} href={q.href} className={`${span} group`}>
-                <div
-                  className={`h-full rounded-[2rem] p-6 flex ${isWide ? "flex-row items-center gap-6" : "flex-col justify-between"} min-h-[160px]
-                    bg-card dark:bg-[#131B2E] card-shadow-rich dark:border dark:border-white/5 hover-lift-sm animate-card-enter
-                    relative overflow-hidden`}
-                  style={{ animationDelay: `${(i + 2) * 80}ms`, opacity: 0 }}
-                >
-                  {/* Background photo on all cards */}
-                  {photo && (
-                    <div className="absolute inset-0 z-0">
-                      <img src={photo} alt="" className={`w-full h-full object-cover ${isWide ? "opacity-15 dark:opacity-20" : "opacity-10 dark:opacity-15"} dark:brightness-50 grayscale group-hover:grayscale-0 group-hover:scale-105 transition-all duration-700`} loading="lazy" />
-                      <div className={`absolute inset-0 ${isWide
-                        ? "bg-gradient-to-r from-card dark:from-[#131B2E] via-card/85 dark:via-[#131B2E]/85 to-card/50 dark:to-[#131B2E]/50"
-                        : "bg-gradient-to-t from-card dark:from-[#131B2E] via-card/80 dark:via-[#131B2E]/80 to-card/40 dark:to-[#131B2E]/40"
-                      }`} />
-                    </div>
-                  )}
-                  {/* Team logo watermark */}
-                  {team && !photo && (
-                    <div className="absolute top-4 right-4 z-[1] opacity-15">
-                      <img src={team.logoUrl} alt={team.name} className="h-16 w-16 object-contain" loading="lazy" />
-                    </div>
-                  )}
-
-                  <div className={`${isWide ? "flex-1" : ""} relative z-10`}>
-                    <div className="flex items-center gap-2 mb-2">
-                      {(comp?.favorite.logoUrl || team?.logoUrl) && (
-                        <div className={`h-6 w-6 rounded-md ${(comp?.favorite.bgColor ?? team?.bgColor) as string} flex items-center justify-center flex-shrink-0`}>
-                          <img src={(comp?.favorite.logoUrl ?? team?.logoUrl) as string} alt="" className="h-4 w-4 object-contain" />
-                        </div>
-                      )}
-                      <span className={`text-[10px] font-bold uppercase tracking-[0.2em] ${a.text}`}>{a.label}</span>
-                    </div>
-                    <h3 className={`${isWide ? "text-xl sm:text-2xl" : "text-lg"} font-bold text-foreground tracking-tight leading-tight mb-2`}>{q.question_text}</h3>
-                    {isComp ? (
-                      <div className="flex items-center gap-2">
+                    )}
+                    <div className="relative z-10">
+                      <span className={`text-[9px] font-bold uppercase tracking-[0.2em] ${a.text} block mb-2`}>{a.label}</span>
+                      <h3 className="text-base font-bold text-foreground leading-snug mb-3 pr-12">{q.question_text}</h3>
+                      <div className="flex items-center gap-2 mb-1">
+                        {comp?.favorite.logoUrl && (
+                          <div className={`h-7 w-7 rounded-lg ${comp.favorite.bgColor} flex items-center justify-center flex-shrink-0`}>
+                            <img src={comp.favorite.logoUrl} alt={comp.favorite.name} className="h-5 w-5 object-contain" />
+                          </div>
+                        )}
                         <span className={`text-sm font-black ${a.text}`}>{compLabel}</span>
-                        {comp && comp.contenders.slice(0, 2).map((c) => (
-                          <span key={c.shortName} className="text-[10px] text-muted-foreground">{c.shortName}</span>
-                        ))}
                       </div>
-                    ) : (
-                      ans && <span className={`text-sm font-bold ${ans.colorClass}`}>{ans.label}</span>
-                    )}
-                    {q.snapshot_published_at && <p className="text-[10px] text-muted-foreground/50 mt-1">{timeAgo(q.snapshot_published_at)}</p>}
-                  </div>
-
-                  {/* Visual element -- show team logo for competition, % for others */}
-                  <div className={`${isWide ? "flex-shrink-0 text-right" : "mt-4"} relative z-10`}>
-                    {isComp && comp?.favorite.logoUrl ? (
-                      <img src={comp.favorite.logoUrl} alt={comp.favorite.name} className={`${isWide ? "h-14 w-14" : "h-12 w-12"} object-contain mx-auto`} loading="lazy" />
-                    ) : (
-                      <>
-                        <span className={`${isWide ? "text-4xl" : "text-3xl"} font-black font-mono ${a.text}`}>{pct}%</span>
-                        <p className="text-[9px] text-muted-foreground uppercase tracking-widest font-bold">Confidence</p>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </Link>
-            );
-          })}
-
-          {/* Remaining compact cards as ticker rows */}
-          {rest.length > 0 && (
-            <div className="md:col-span-12 rounded-[2rem] p-6 bg-card dark:bg-[#131B2E] card-shadow-rich dark:border dark:border-white/5 animate-card-enter"
-              style={{ animationDelay: "600ms", opacity: 0 }}>
-              <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-4">More questions</h3>
-              <div className="divide-y divide-border/20 dark:divide-white/5">
-                {rest.map((q) => {
-                  const a = CAT_ACCENT[q.category ?? ""] ?? DEFAULT_ACCENT;
-                  const ans = q.direction && q.confidence !== null
-                    ? getAnswerState({ direction: q.direction, confidence: q.confidence, category: q.category, disagreement: 0 }) : null;
-                  const pct = q.confidence !== null ? Math.round(q.confidence * 100) : 0;
-                  const isTickerComp = q.question_type === "competition";
-                  const { comp: tickerComp, label: tickerCompLabel } = isTickerComp ? getCompetitionDisplay(q) : { comp: null, label: "" };
-                  const tickerTeam = tickerComp ? null : getTeamEntity(q.question_text);
-                  const tickerLogo = tickerComp?.favorite.logoUrl ?? tickerTeam?.logoUrl;
-                  const tickerBg = tickerComp?.favorite.bgColor ?? tickerTeam?.bgColor;
-                  return (
-                    <Link key={q.topic_id} href={q.href} className="flex items-center gap-4 py-3 group hover:bg-muted/30 dark:hover:bg-white/5 -mx-3 px-3 rounded-xl transition-colors">
-                      {tickerLogo ? (
-                        <div className={`h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0 ${tickerBg}`}>
-                          <img src={tickerLogo} alt="" className="h-6 w-6 object-contain" loading="lazy" />
+                      {comp && comp.contenders.length > 0 && (
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-[9px] text-muted-foreground/50 uppercase tracking-wider">vs</span>
+                          {comp.contenders.slice(0, 2).map((c) => (
+                            <div key={c.shortName} className="flex items-center gap-1">
+                              {c.logoUrl && <img src={c.logoUrl} alt={c.name} className="h-4 w-4 object-contain opacity-60" loading="lazy" />}
+                              <span className="text-[10px] text-muted-foreground font-medium">{c.shortName}</span>
+                            </div>
+                          ))}
                         </div>
-                      ) : (
-                        <span className={`text-lg font-black font-mono w-10 text-center ${a.text}`}>{pct}</span>
                       )}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-foreground truncate">{q.question_text}</p>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <span className={`text-[10px] uppercase tracking-wider ${a.text} font-bold`}>{a.label}</span>
-                          {isTickerComp
-                            ? <span className={`text-[10px] font-bold ${a.text}`}>{tickerCompLabel}</span>
-                            : ans && <span className={`text-[10px] font-bold ${ans.colorClass}`}>{ans.label}</span>
-                          }
+                      {q.expert_line
+                        ? <p className="text-[11px] text-muted-foreground leading-snug">{q.expert_line}</p>
+                        : raceWhyLine && <p className="text-[11px] text-muted-foreground leading-snug">{raceWhyLine}</p>
+                      }
+                      <div className="flex items-center justify-between mt-2">
+                        <div className="flex gap-1">
+                          {q.source_families.slice(0, 3).map((f) => (
+                            <span key={f} className="text-[8px] px-1.5 py-0.5 rounded-full bg-white/5 text-muted-foreground/70">{FAMILY_PILL[f] ?? f}</span>
+                          ))}
                         </div>
+                        {q.snapshot_published_at && <span className="text-[9px] text-muted-foreground/50">{timeAgo(q.snapshot_published_at)}</span>}
                       </div>
-                      {q.snapshot_published_at && <span className="text-[10px] text-muted-foreground/50 flex-shrink-0">{timeAgo(q.snapshot_published_at)}</span>}
-                    </Link>
-                  );
-                })}
-              </div>
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {/* Countdowns — threshold questions with progress toward target */}
+      {countdownCards.length > 0 && (
+        <section className="pb-8 animate-fade-in">
+          <h2 className="text-[10px] font-bold uppercase tracking-[0.2em] text-blue-400 mb-4">Countdowns</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {countdownCards.map((q, i) => {
+              const a = CAT_ACCENT[q.category ?? ""] ?? DEFAULT_ACCENT;
+              const pct = q.confidence !== null ? Math.round(q.confidence * 100) : 0;
+              const ans = q.direction && q.confidence !== null
+                ? getAnswerState({ direction: q.direction, confidence: q.confidence, category: q.category, disagreement: 0, questionType: q.question_type }) : null;
+              const cdWhyLine = getWhyLine({ questionType: q.question_type, direction: q.direction, confidence: q.confidence, freshness: q.freshness, snapshotPublishedAt: q.snapshot_published_at });
+              const team = getTeamEntity(q.question_text);
+              const topicLogo = getTopicLogo(q.topic_slug);
+              const cardLogo = team ? { logoUrl: team.logoUrl, bgColor: team.bgColor } : topicLogo;
+              return (
+                <Link key={q.topic_id} href={q.href} className="group">
+                  <div className="h-full rounded-2xl p-5 bg-card dark:bg-[#131B2E] card-shadow-rich dark:border dark:border-white/5 hover-lift-sm animate-card-enter relative overflow-hidden"
+                    style={{ animationDelay: `${i * 80}ms`, opacity: 0 }}>
+                    {cardLogo && (
+                      <div className="absolute top-3 right-3 opacity-15 group-hover:opacity-25 transition-opacity">
+                        <img src={cardLogo.logoUrl} alt="" className="h-12 w-12 object-contain" loading="lazy" />
+                      </div>
+                    )}
+                    <div className="relative z-10">
+                      <span className={`text-[9px] font-bold uppercase tracking-[0.2em] ${a.text} block mb-2`}>{a.label}</span>
+                      <h3 className="text-base font-bold text-foreground leading-snug mb-3 pr-10">{q.question_text}</h3>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className={`text-sm font-bold ${ans?.colorClass ?? "text-foreground"}`}>{ans?.cardVerdict ?? "Tracking"}</span>
+                        <span className={`text-lg font-black font-mono ${a.text}`}>{pct}%</span>
+                      </div>
+                      <div className="h-1.5 w-full rounded-full bg-border/20 dark:bg-white/10 overflow-hidden mb-2">
+                        <div className={`h-full bg-current ${a.text} animate-bar-fill`} style={{ width: `${pct}%` }} />
+                      </div>
+                      {q.expert_line
+                        ? <p className="text-[11px] text-muted-foreground leading-snug">{q.expert_line}</p>
+                        : cdWhyLine && <p className="text-[11px] text-muted-foreground leading-snug">{cdWhyLine}</p>
+                      }
+                      <div className="flex items-center justify-between mt-1">
+                        <div className="flex gap-1">
+                          {q.source_families.slice(0, 3).map((f) => (
+                            <span key={f} className="text-[8px] px-1.5 py-0.5 rounded-full bg-white/5 text-muted-foreground/70">{FAMILY_PILL[f] ?? f}</span>
+                          ))}
+                        </div>
+                        {q.snapshot_published_at && <span className="text-[9px] text-muted-foreground/50">{timeAgo(q.snapshot_published_at)}</span>}
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {/* Tipping Points — binary event questions with tension */}
+      {tippingCards.length > 0 && (
+        <section className="pb-8 animate-fade-in">
+          <h2 className="text-[10px] font-bold uppercase tracking-[0.2em] text-red-400 mb-4">Tipping points</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {tippingCards.map((q, i) => {
+              const a = CAT_ACCENT[q.category ?? ""] ?? DEFAULT_ACCENT;
+              const pct = q.confidence !== null ? Math.round(q.confidence * 100) : 0;
+              const ans = q.direction && q.confidence !== null
+                ? getAnswerState({ direction: q.direction, confidence: q.confidence, category: q.category, disagreement: 0, questionType: q.question_type }) : null;
+              const tipWhyLine = getWhyLine({ questionType: q.question_type, direction: q.direction, confidence: q.confidence, freshness: q.freshness, snapshotPublishedAt: q.snapshot_published_at });
+              const team = getTeamEntity(q.question_text);
+              const tipTopicLogo = getTopicLogo(q.topic_slug);
+              const tipCardLogo = team ? { logoUrl: team.logoUrl, bgColor: team.bgColor } : tipTopicLogo;
+              return (
+                <Link key={q.topic_id} href={q.href} className="group">
+                  <div className="h-full rounded-2xl p-5 bg-card dark:bg-[#131B2E] card-shadow-rich dark:border dark:border-white/5 hover-lift-sm animate-card-enter relative overflow-hidden"
+                    style={{ animationDelay: `${i * 80}ms`, opacity: 0 }}>
+                    {tipCardLogo && (
+                      <div className="absolute top-3 right-3 opacity-15 group-hover:opacity-25 transition-opacity">
+                        <img src={tipCardLogo.logoUrl} alt="" className="h-12 w-12 object-contain" loading="lazy" />
+                      </div>
+                    )}
+                    <div className="relative z-10">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className={`text-[9px] font-bold uppercase tracking-[0.2em] ${a.text}`}>{a.label}</span>
+                        <span className={`text-lg font-black font-mono ${a.text} ml-auto`}>{pct}%</span>
+                      </div>
+                      <h3 className="text-base font-bold text-foreground leading-snug mb-3">{q.question_text}</h3>
+                      <span className={`text-sm font-bold ${ans?.colorClass ?? "text-foreground"} block mb-1`}>{ans?.cardVerdict ?? "Tracking"}</span>
+                      {q.expert_line
+                        ? <p className="text-[11px] text-muted-foreground leading-snug">{q.expert_line}</p>
+                        : tipWhyLine && <p className="text-[11px] text-muted-foreground leading-snug">{tipWhyLine}</p>
+                      }
+                      <div className="flex items-center justify-between mt-1">
+                        <div className="flex gap-1">
+                          {q.source_families.slice(0, 3).map((f) => (
+                            <span key={f} className="text-[8px] px-1.5 py-0.5 rounded-full bg-white/5 text-muted-foreground/70">{FAMILY_PILL[f] ?? f}</span>
+                          ))}
+                        </div>
+                        {q.snapshot_published_at && <span className="text-[9px] text-muted-foreground/50">{timeAgo(q.snapshot_published_at)}</span>}
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {/* More questions — ticker for overflow */}
+      {rest.length > 0 && (
+        <section className="pb-8 animate-fade-in">
+          <div className="rounded-2xl p-6 bg-card dark:bg-[#131B2E] card-shadow-rich dark:border dark:border-white/5">
+            <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-4">More questions</h3>
+            <div className="divide-y divide-border/20 dark:divide-white/5">
+              {rest.map((q) => {
+                const a = CAT_ACCENT[q.category ?? ""] ?? DEFAULT_ACCENT;
+                const ans = q.direction && q.confidence !== null
+                  ? getAnswerState({ direction: q.direction, confidence: q.confidence, category: q.category, disagreement: 0, questionType: q.question_type }) : null;
+                const pct = q.confidence !== null ? Math.round(q.confidence * 100) : 0;
+                const isTickerComp = q.question_type === "competition";
+                const { comp: tickerComp, label: tickerCompLabel } = isTickerComp ? getCompetitionDisplay(q) : { comp: null, label: "" };
+                const tickerTeam = tickerComp ? null : getTeamEntity(q.question_text);
+                const tickerLogo = tickerComp?.favorite.logoUrl ?? tickerTeam?.logoUrl;
+                const tickerBg = tickerComp?.favorite.bgColor ?? tickerTeam?.bgColor;
+                const tickerWhyLine = getWhyLine({ questionType: q.question_type, direction: q.direction, confidence: q.confidence, freshness: q.freshness, snapshotPublishedAt: q.snapshot_published_at, leaderName: tickerCompLabel || null });
+                return (
+                  <Link key={q.topic_id} href={q.href} className="flex items-center gap-4 py-3 group hover:bg-muted/30 dark:hover:bg-white/5 -mx-3 px-3 rounded-xl transition-colors">
+                    {tickerLogo ? (
+                      <div className={`h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0 ${tickerBg}`}>
+                        <img src={tickerLogo} alt="" className="h-6 w-6 object-contain" loading="lazy" />
+                      </div>
+                    ) : (
+                      <span className={`text-lg font-black font-mono w-10 text-center ${a.text}`}>{pct}</span>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-foreground truncate">{q.question_text}</p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className={`text-[10px] uppercase tracking-wider ${a.text} font-bold`}>{a.label}</span>
+                        {isTickerComp
+                          ? <span className={`text-[10px] font-bold ${a.text}`}>{tickerCompLabel}</span>
+                          : ans && <span className={`text-[10px] font-bold ${ans.colorClass}`}>{ans.cardVerdict}</span>
+                        }
+                        {tickerWhyLine && <span className="text-[10px] text-muted-foreground">-- {tickerWhyLine}</span>}
+                      </div>
+                    </div>
+                    {q.snapshot_published_at && <span className="text-[10px] text-muted-foreground/50 flex-shrink-0">{timeAgo(q.snapshot_published_at)}</span>}
+                  </Link>
+                );
+              })}
             </div>
-          )}
+          </div>
         </section>
       )}
 
       {/* ── CTA ── */}
       <section className="py-12 text-center animate-fade-in">
         <p className="text-muted-foreground mb-6">
-          Follow the questions you care about. We keep watching them for you.
+          Live predictions. Real signals. See what changes next.
         </p>
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <Link href="/onboarding" className="inline-flex h-12 items-center justify-center rounded-full bg-foreground dark:bg-primary px-8 text-sm font-medium text-background dark:text-[#00171B] hover-lift">

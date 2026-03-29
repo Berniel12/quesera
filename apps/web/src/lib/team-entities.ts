@@ -30,15 +30,16 @@ export interface CompetitionAnswer {
 const COMPETITION_ANSWERS: Record<string, CompetitionAnswer> = {
   "fifa-world-cup-2026": {
     favorite: {
-      name: "Brazil",
-      shortName: "BRA",
-      logoUrl: "https://flagcdn.com/w160/br.png",
-      bgColor: "bg-yellow-900/30",
+      name: "Spain",
+      shortName: "ESP",
+      logoUrl: "https://a.espncdn.com/i/teamlogos/soccer/500/164.png",
+      bgColor: "bg-red-900/30",
     },
     contenders: [
-      { name: "Argentina", shortName: "ARG", logoUrl: "https://flagcdn.com/w160/ar.png", bgColor: "bg-sky-900/30" },
-      { name: "France", shortName: "FRA", logoUrl: "https://flagcdn.com/w160/fr.png", bgColor: "bg-blue-900/30" },
-      { name: "England", shortName: "ENG", logoUrl: "https://flagcdn.com/w160/gb-eng.png", bgColor: "bg-red-900/30" },
+      { name: "England", shortName: "ENG", logoUrl: "https://a.espncdn.com/i/teamlogos/soccer/500/166.png", bgColor: "bg-white/10" },
+      { name: "France", shortName: "FRA", logoUrl: "https://a.espncdn.com/i/teamlogos/soccer/500/168.png", bgColor: "bg-blue-900/30" },
+      { name: "Argentina", shortName: "ARG", logoUrl: "https://a.espncdn.com/i/teamlogos/soccer/500/65.png", bgColor: "bg-sky-900/30" },
+      { name: "Brazil", shortName: "BRA", logoUrl: "https://a.espncdn.com/i/teamlogos/soccer/500/205.png", bgColor: "bg-yellow-900/30" },
     ],
   },
   "nba-season-2025-26": {
@@ -160,6 +161,39 @@ const COMPETITION_ANSWERS: Record<string, CompetitionAnswer> = {
       { name: "Disney+", shortName: "DIS", logoUrl: logo("disneyplus.com"), bgColor: "bg-blue-900/30" },
       { name: "Apple TV+", shortName: "ATV", logoUrl: logo("tv.apple.com"), bgColor: "bg-slate-900/30" },
     ],
+  },
+  "la-liga": {
+    favorite: {
+      name: "Barcelona",
+      shortName: "BAR",
+      logoUrl: "https://a.espncdn.com/i/teamlogos/soccer/500/83.png",
+      bgColor: "bg-blue-900/30",
+    },
+    contenders: [
+      { name: "Real Madrid", shortName: "RMA", logoUrl: "https://a.espncdn.com/i/teamlogos/soccer/500/86.png", bgColor: "bg-violet-900/30" },
+      { name: "Atletico Madrid", shortName: "ATM", logoUrl: "https://a.espncdn.com/i/teamlogos/soccer/500/1068.png", bgColor: "bg-red-900/30" },
+    ],
+  },
+  "tennis-grand-slams": {
+    favorite: {
+      name: "Jannik Sinner",
+      shortName: "SIN",
+      logoUrl: logo("wimbledon.com"),
+      bgColor: "bg-emerald-900/30",
+    },
+    contenders: [
+      { name: "Carlos Alcaraz", shortName: "ALC", logoUrl: logo("rolandgarros.com"), bgColor: "bg-orange-900/30" },
+      { name: "Novak Djokovic", shortName: "DJO", logoUrl: logo("ausopen.com"), bgColor: "bg-blue-900/30" },
+    ],
+  },
+  "oscar-awards-2026": {
+    favorite: {
+      name: "TBD",
+      shortName: "TBD",
+      logoUrl: logo("oscars.org"),
+      bgColor: "bg-yellow-900/30",
+    },
+    contenders: [],
   },
   "spotify-vs-apple-music": {
     favorite: {
@@ -303,12 +337,14 @@ const TEAM_MAP: Array<{ pattern: RegExp; entity: TeamEntity }> = [
   { pattern: /\breal madrid\b/i, entity: COMPETITION_ANSWERS["champions-league"].favorite },
   { pattern: /\bdodgers\b/i, entity: COMPETITION_ANSWERS["mlb-season-2026"].favorite },
   { pattern: /\bferrari\b/i, entity: COMPETITION_ANSWERS["formula-1-2026"].favorite },
-  { pattern: /\bbrazil\b/i, entity: COMPETITION_ANSWERS["fifa-world-cup-2026"].favorite },
-  { pattern: /\bscotland\b/i, entity: { name: "Scotland", shortName: "SCO", logoUrl: "https://flagcdn.com/w160/gb-sct.png", bgColor: "bg-blue-900/30" } },
-  { pattern: /\bcroatia\b/i, entity: { name: "Croatia", shortName: "CRO", logoUrl: "https://flagcdn.com/w160/hr.png", bgColor: "bg-red-900/30" } },
-  { pattern: /\bmakhachev\b/i, entity: COMPETITION_ANSWERS["ufc-mma"].favorite },
-  { pattern: /\bargentin/i, entity: COMPETITION_ANSWERS["fifa-world-cup-2026"].contenders[0] },
+  { pattern: /\bspain\b/i, entity: COMPETITION_ANSWERS["fifa-world-cup-2026"].favorite },
+  { pattern: /\bbrazil\b/i, entity: { name: "Brazil", shortName: "BRA", logoUrl: "https://a.espncdn.com/i/teamlogos/soccer/500/205.png", bgColor: "bg-yellow-900/30" } },
+  { pattern: /\bengland\b/i, entity: COMPETITION_ANSWERS["fifa-world-cup-2026"].contenders[0] },
   { pattern: /\bfrance\b/i, entity: COMPETITION_ANSWERS["fifa-world-cup-2026"].contenders[1] },
+  { pattern: /\bargentin/i, entity: COMPETITION_ANSWERS["fifa-world-cup-2026"].contenders[2] },
+  { pattern: /\bscotland\b/i, entity: { name: "Scotland", shortName: "SCO", logoUrl: "https://a.espncdn.com/i/teamlogos/soccer/500/3691.png", bgColor: "bg-blue-900/30" } },
+  { pattern: /\bcroatia\b/i, entity: { name: "Croatia", shortName: "CRO", logoUrl: "https://a.espncdn.com/i/teamlogos/soccer/500/5765.png", bgColor: "bg-red-900/30" } },
+  { pattern: /\bmakhachev\b/i, entity: COMPETITION_ANSWERS["ufc-mma"].favorite },
   { pattern: /\bopenai\b/i, entity: COMPETITION_ANSWERS["ai-industry"].favorite },
   { pattern: /\bnetflix\b/i, entity: COMPETITION_ANSWERS["netflix-streaming-wars"].favorite },
   { pattern: /\bspotify\b/i, entity: COMPETITION_ANSWERS["spotify-vs-apple-music"].favorite },
@@ -324,5 +360,35 @@ export function getTeamEntity(questionText: string): TeamEntity | null {
       return entry.entity;
     }
   }
+  return null;
+}
+
+/**
+ * Find a logo for an entity name (e.g., "Spain", "Arsenal", "OpenAI").
+ * Searches across all COMPETITION_ANSWERS favorites/contenders and TEAM_MAP.
+ * Used for rendering logos on homepage cards when live competition_leader is known.
+ */
+export function findLogoByEntityName(name: string): { logoUrl: string; bgColor: string } | null {
+  const lower = name.toLowerCase();
+
+  // Search all competition entries
+  for (const comp of Object.values(COMPETITION_ANSWERS)) {
+    if (comp.favorite.name.toLowerCase() === lower) {
+      return { logoUrl: comp.favorite.logoUrl, bgColor: comp.favorite.bgColor };
+    }
+    for (const c of comp.contenders) {
+      if (c.name.toLowerCase() === lower) {
+        return { logoUrl: c.logoUrl, bgColor: c.bgColor };
+      }
+    }
+  }
+
+  // Search TEAM_MAP entries
+  for (const entry of TEAM_MAP) {
+    if (entry.entity.name.toLowerCase() === lower) {
+      return { logoUrl: entry.entity.logoUrl, bgColor: entry.entity.bgColor };
+    }
+  }
+
   return null;
 }

@@ -185,6 +185,7 @@ export function getSeedMapMatches(item: SourceItem): SeedMapEntry[] | null {
       "tennis_atp_us_open": [{ slug: "tennis-grand-slams", confidence: 0.9 }],
       "tennis_atp_aus_open": [{ slug: "tennis-grand-slams", confidence: 0.9 }],
       "motorsport_formula_one": [{ slug: "formula-1-2026", confidence: 0.9 }],
+      "motorsport_formula1": [{ slug: "formula-1-2026", confidence: 0.9 }],
     };
     const entries = SPORT_KEY_MAP[sportKey];
     if (entries) return entries;

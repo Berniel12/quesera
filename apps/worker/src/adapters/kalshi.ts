@@ -27,19 +27,25 @@ export class KalshiAdapter extends BaseAdapter {
       };
 
       for (const market of data.markets) {
+        // Skip sports multi-game combos (low signal, high noise)
+        if (market.ticker.startsWith("KXMVE")) continue;
+
         items.push({
           externalId: market.ticker,
           payload: {
             ticker: market.ticker,
             title: market.title,
-            subtitle: market.subtitle,
-            yes_price: market.yes_bid,
-            no_price: market.no_bid,
-            volume: market.volume,
-            open_interest: market.open_interest,
-            category: market.category,
+            subtitle: market.yes_sub_title ?? market.subtitle ?? "",
+            yes_price: market.yes_bid_dollars ?? market.yes_bid ?? 0,
+            no_price: market.no_bid_dollars ?? market.no_bid ?? 0,
+            last_price: market.last_price_dollars ?? 0,
+            volume: market.volume_fp ?? market.volume ?? 0,
+            open_interest: market.open_interest_fp ?? market.open_interest ?? 0,
+            category: market.category ?? "",
+            event_ticker: market.event_ticker ?? "",
             close_time: market.close_time,
             status: market.status,
+            question: market.title,
           },
           occurredAt: market.close_time ? new Date(market.close_time) : undefined,
         });
@@ -85,12 +91,19 @@ export class KalshiAdapter extends BaseAdapter {
 interface KalshiMarket {
   ticker: string;
   title: string;
-  subtitle: string;
-  yes_bid: number;
-  no_bid: number;
-  volume: number;
-  open_interest: number;
-  category: string;
+  subtitle?: string;
+  yes_sub_title?: string;
+  yes_bid?: number;
+  no_bid?: number;
+  yes_bid_dollars?: number;
+  no_bid_dollars?: number;
+  last_price_dollars?: number;
+  volume?: number;
+  volume_fp?: number;
+  open_interest?: number;
+  open_interest_fp?: number;
+  category?: string;
+  event_ticker?: string;
   close_time: string;
   status: string;
 }

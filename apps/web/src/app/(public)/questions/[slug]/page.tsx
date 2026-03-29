@@ -133,17 +133,32 @@ export default async function QuestionPage({ params }: QuestionPageProps) {
     );
   }
 
+  // Source diversity check: warn if page is single-source
+  const sourceFamilies = [...new Set(props.signals.map((s) => s.source_family))];
+  const isThinPage = sourceFamilies.length < 2 && props.signals.length < 5;
+
   // Template switch based on question type
   const questionType = props.contract.questionType;
 
+  const thinBanner = isThinPage ? (
+    <div className="mx-auto max-w-3xl px-6">
+      <div className="mb-6 p-3 rounded-xl bg-muted/30 dark:bg-white/5 border border-border/20 dark:border-white/10 text-center">
+        <p className="text-xs text-muted-foreground">
+          This question is currently tracked from {sourceFamilies.length === 1 ? "a single source" : "limited sources"}.
+          We are working to add more perspectives.
+        </p>
+      </div>
+    </div>
+  ) : null;
+
   if (questionType === "competition") {
-    return <CompetitionTemplate props={props} />;
+    return <>{thinBanner}<CompetitionTemplate props={props} /></>;
   }
 
   if (questionType === "threshold") {
-    return <ThresholdTemplate props={props} />;
+    return <>{thinBanner}<ThresholdTemplate props={props} /></>;
   }
 
   // Default: binary_event (also catches any unknown types)
-  return <BinaryEventTemplate props={props} />;
+  return <>{thinBanner}<BinaryEventTemplate props={props} /></>;
 }

@@ -1,6 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ScoredState, ScoredSignal } from "./types.js";
 import { SCORING_VERSION } from "./types.js";
+import { resolvePack, checkSynthesisGate } from "../packs/resolve.js";
+import { FAMILY_DISPLAY, type QuestionType, type SourcePack } from "../packs/index.js";
 
 interface TopicRow {
   id: string;
@@ -168,6 +170,71 @@ export async function publishSnapshot(
 
   const oneLiner = existingIsComputed ? computedOneLiner : existingOneLiner;
 
+  // ── Synthesis gate: compute source diversity + pack eligibility ──
+
+  // Count source families
+  const familyCounts = new Map<string, number>();
+  for (const s of signals) {
+    familyCounts.set(s.sourceFamily, (familyCounts.get(s.sourceFamily) ?? 0) + 1);
+  }
+  const sourceFamilies = [...familyCounts.keys()];
+  const sourceFamilyCount = sourceFamilies.length;
+  const signalCount = signals.length;
+
+  // Resolve question type: prefer explicit from questions table, fall back to derived
+  let questionType: QuestionType | null = null;
+  const { data: questionRow } = await supabase
+    .from("questions")
+    .select("question_type")
+    .eq("primary_topic_id", topic.id)
+    .eq("status", "published")
+    .limit(1)
+    .maybeSingle();
+
+  if (questionRow) {
+    const qt = (questionRow as { question_type: string | null }).question_type;
+    if (qt === "binary_event" || qt === "threshold" || qt === "competition") {
+      questionType = qt;
+    }
+  }
+  // Fallback: derive from category
+  if (!questionType) {
+    if (topic.category === "sports") questionType = "competition";
+    else if (topic.category === "macro" || topic.category === "crypto") questionType = "threshold";
+    else questionType = "binary_event";
+  }
+
+  // Resolve pack and check gate
+  const pack = resolvePack(questionType, topic.category);
+  const synthesisReady = pack
+    ? checkSynthesisGate(pack, signals.map((s) => ({ source_family: s.sourceFamily, source_name: s.sourceName })))
+    : false;
+
+  // Generate deterministic expert line
+  const expertLine = pack
+    ? generateExpertLine(signals, pack, questionType, state.direction, state.confidence)
+    : null;
+
+  // Extract competition leader/challenger from live signals
+  let competitionLeader: string | null = null;
+  let competitionLeaderPct: number | null = null;
+  let competitionChallenger: string | null = null;
+  let competitionGap: number | null = null;
+
+  if (questionType === "competition") {
+    const ranking = extractCompetitionRanking(signals);
+    const leader = ranking[0] ?? null;
+    const challenger = ranking[1] ?? null;
+    if (leader) {
+      competitionLeader = leader.name;
+      competitionLeaderPct = leader.pct;
+    }
+    if (leader && challenger) {
+      competitionChallenger = challenger.name;
+      competitionGap = leader.pct - challenger.pct;
+    }
+  }
+
   const { error: cardError } = await supabase
     .from("public_topic_cards")
     .upsert({
@@ -180,6 +247,17 @@ export async function publishSnapshot(
       freshness: state.freshness,
       one_liner: oneLiner,
       snapshot_published_at: now,
+      // Synthesis gate fields
+      source_family_count: sourceFamilyCount,
+      source_families: sourceFamilies,
+      signal_count: signalCount,
+      synthesis_ready: synthesisReady,
+      expert_line: expertLine,
+      // Live competition data
+      competition_leader: competitionLeader,
+      competition_leader_pct: competitionLeaderPct,
+      competition_challenger: competitionChallenger,
+      competition_gap: competitionGap,
     });
 
   if (cardError) {
@@ -305,4 +383,154 @@ function generateDeterministicOneLiner(
   if (signalCount > 10) return `Tracking ${signalCount} data points on ${topicLabel}. The picture is stable with no significant movement.`;
   if (signalCount > 0) return `Early signals are coming in on ${topicLabel} but no clear trend has emerged yet.`;
   return `We're watching ${topicLabel} across multiple sources. No strong signals yet, but we're tracking this.`;
+}
+
+// ── Expert Line Generation (Synthesis) ──────────────────────────────────
+// Produces a single sentence that synthesizes what multiple sources say.
+// Only mentions supporting families if they contributed meaningful signals.
+
+function generateExpertLine(
+  signals: ScoredSignal[],
+  pack: SourcePack,
+  questionType: QuestionType,
+  direction: string,
+  confidence: number,
+): string | null {
+  const families = new Map<string, ScoredSignal[]>();
+  for (const s of signals) {
+    const list = families.get(s.sourceFamily) ?? [];
+    list.push(s);
+    families.set(s.sourceFamily, list);
+  }
+
+  const predictiveSignals = signals.filter((s) => pack.predictiveSpine.includes(s.sourceFamily));
+  const strengtheningSignals = signals.filter((s) => pack.strengtheningLayer.includes(s.sourceFamily));
+
+  // Competition: leader + gap
+  if (questionType === "competition") {
+    const ranking = extractCompetitionRanking(signals);
+    const first = ranking[0] ?? null;
+    const second = ranking[1] ?? null;
+    if (first && second) {
+      const gap = first.pct - second.pct;
+      if (gap < 5) return `${first.name} and ${second.name} are separated by just ${gap} points.`;
+      if (gap < 15) return `${first.name} leads ${second.name} by ${gap} points.`;
+      return `${first.name} is pulling away with a ${gap}-point lead.`;
+    }
+    if (first) return `${first.name} leads at ${first.pct}%.`;
+    return null;
+  }
+
+  // Threshold: spine (market view) + strengthening (official data)
+  if (questionType === "threshold") {
+    const metric = strengtheningSignals.find((s) =>
+      s.sourceFamily === "macro_official" || s.sourceFamily === "crypto_market",
+    );
+    const market = predictiveSignals.find((s) =>
+      s.signalType === "market_probability" || s.signalType === "forecast_probability",
+    );
+    if (metric && market) {
+      const prob = Math.round(market.currentValue * 100);
+      return `Currently at ${formatMetricValue(metric)}. Markets give it ${prob}% odds of reaching target.`;
+    }
+    if (metric) return `Currently at ${formatMetricValue(metric)}. Market view not yet available.`;
+    if (market) {
+      const prob = Math.round(market.currentValue * 100);
+      return `Markets say ${prob}% chance. Official data not yet connected.`;
+    }
+    return null;
+  }
+
+  // Binary: predictive spine consensus + strengthening context
+  const probSignals = predictiveSignals.filter((s) =>
+    s.signalType === "market_probability" || s.signalType === "forecast_probability",
+  );
+
+  if (probSignals.length > 0) {
+    const avgProb = probSignals.reduce((sum, s) => sum + s.currentValue, 0) / probSignals.length;
+    const pct = Math.round(avgProb * 100);
+
+    // Only mention strengthening layer if it actually contributed meaningful signals
+    const meaningfulStrengthening = strengtheningSignals.filter((s) => s.currentValue !== null);
+    if (meaningfulStrengthening.length > 0) {
+      const stFamilies = [...new Set(meaningfulStrengthening.map((s) => s.sourceFamily))];
+      const supporting = stFamilies.map((f) => FAMILY_DISPLAY[f] ?? f).join(" and ");
+      return `Markets say ${pct}% yes, grounded by ${supporting}.`;
+    }
+
+    const platforms = new Set(probSignals.map((s) => s.sourceName));
+    if (platforms.size >= 2) {
+      return `Markets say ${pct}% yes across ${platforms.size} platforms.`;
+    }
+    return `Markets say ${pct}% yes. Context sources still thin.`;
+  }
+
+  return `Tracking across ${families.size} source types.`;
+}
+
+function formatMetricValue(signal: ScoredSignal): string {
+  if (signal.sourceFamily === "crypto_market") {
+    const price = signal.currentValue;
+    return price >= 1
+      ? `$${price.toLocaleString("en-US", { maximumFractionDigits: 0 })}`
+      : `$${price.toFixed(4)}`;
+  }
+  if (signal.sourceFamily === "macro_official") {
+    const v = signal.currentValue;
+    return v > 100 ? v.toLocaleString("en-US") : `${v.toFixed(2)}%`;
+  }
+  return signal.currentValue.toLocaleString("en-US", { maximumFractionDigits: 2 });
+}
+
+// ── Competition Ranking Extraction ──────────────────────────────────────
+// Extracts ranked contenders from market signals for competition questions.
+
+function stripArticle(name: string): string {
+  return name.replace(/^(the|a|an)\s+/i, "");
+}
+
+function extractEntityName(question: string): string | null {
+  const patterns = [
+    /^Will (.+?) win\b/i,
+    /^Will (.+?) have the best\b/i,
+    /^Will (.+?) (?:lead|be the|dominate|finish)\b/i,
+    /^(.+?) to win\b/i,
+    /^Will (.+?) (?:win|beat|reach|hit|score|qualify|advance|place|rank)\b/i,
+  ];
+  for (const pattern of patterns) {
+    const match = question.match(pattern);
+    const captured = match?.[1];
+    if (captured) return stripArticle(captured.trim());
+  }
+  return null;
+}
+
+function extractCompetitionRanking(
+  signals: ScoredSignal[],
+): Array<{ name: string; pct: number }> {
+  const contenders = signals
+    .filter(
+      (s) =>
+        s.sourceFamily === "prediction_market" ||
+        s.sourceFamily === "forecasting" ||
+        s.sourceFamily === "sports_odds",
+    )
+    .map((s) => {
+      const q = String(s.metadata?.question ?? "");
+      const extracted = extractEntityName(q);
+      if (!extracted) return null;
+      const pct = Math.round(s.currentValue * 100);
+      return { name: extracted, pct };
+    })
+    .filter((c): c is { name: string; pct: number } => c !== null && c.pct > 0)
+    .sort((a, b) => b.pct - a.pct);
+
+  // Deduplicate
+  const seen = new Set<string>();
+  return contenders.filter((c) => {
+    const key = c.name.toLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }

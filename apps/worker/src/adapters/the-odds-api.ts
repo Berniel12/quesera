@@ -2,7 +2,20 @@ import { BaseAdapter, type FetchResult, type RawItem, type NormalizedItem } from
 import { fetchWithRetry } from "../utils/fetch-with-retry.js";
 
 // The Odds API: aggregates odds from 70+ bookmakers across 40+ sports
-// Free tier: 500 requests/month
+// Free tier: 500 requests/month per key
+// Key rotation: multiple keys in THE_ODDS_API_KEYS (comma-separated) rotate per fetch
+
+function getOddsApiKey(): string | null {
+  // Try comma-separated key list first (rotation)
+  const keys = process.env.THE_ODDS_API_KEYS?.split(",").map((k) => k.trim()).filter(Boolean);
+  if (keys && keys.length > 0) {
+    // Rotate based on current minute to spread load across keys
+    const idx = Math.floor(Date.now() / 60000) % keys.length;
+    return keys[idx] ?? null;
+  }
+  // Fallback to single key
+  return process.env.THE_ODDS_API_KEY ?? null;
+}
 
 // Head-to-head match odds (individual games)
 const H2H_SPORT_KEYS = [
@@ -28,18 +41,25 @@ const OUTRIGHTS_SPORT_KEYS = [
 export class TheOddsApiAdapter extends BaseAdapter {
   async fetch(): Promise<FetchResult> {
     const config = this.sourceDefinition.config as { base_url: string };
-    const apiKey = process.env.THE_ODDS_API_KEY;
+    const apiKey = getOddsApiKey();
     if (!apiKey) {
-      this.logger.warn("THE_ODDS_API_KEY not set, skipping");
+      this.logger.warn("THE_ODDS_API_KEY(S) not set, skipping");
       return { items: [] };
     }
 
     const items: RawItem[] = [];
 
+    // All available keys for per-request rotation
+    const allKeys = process.env.THE_ODDS_API_KEYS?.split(",").map((k) => k.trim()).filter(Boolean) ?? [];
+    if (allKeys.length === 0 && apiKey) allKeys.push(apiKey);
+    let keyIndex = 0;
+    const nextKey = () => { const k = allKeys[keyIndex % allKeys.length]; keyIndex++; return k; };
+
     // Fetch head-to-head match odds
     for (const sport of H2H_SPORT_KEYS) {
       try {
-        const url = `${config.base_url}/sports/${sport}/odds/?apiKey=${apiKey}&regions=us,eu&markets=h2h&oddsFormat=decimal`;
+        const rotatedKey = nextKey();
+        const url = `${config.base_url}/sports/${sport}/odds/?apiKey=${rotatedKey}&regions=us,eu&markets=h2h&oddsFormat=decimal`;
         const response = await fetchWithRetry({ url, logger: this.logger });
         const events = (await response.json()) as OddsEvent[];
 
@@ -78,7 +98,8 @@ export class TheOddsApiAdapter extends BaseAdapter {
     // These are the competition signals -- who will win the league/cup
     for (const sport of OUTRIGHTS_SPORT_KEYS) {
       try {
-        const url = `${config.base_url}/sports/${sport}/odds/?apiKey=${apiKey}&regions=us,eu&markets=outrights&oddsFormat=decimal`;
+        const rotatedKey = nextKey();
+        const url = `${config.base_url}/sports/${sport}/odds/?apiKey=${rotatedKey}&regions=us,eu&markets=outrights&oddsFormat=decimal`;
         const response = await fetchWithRetry({ url, logger: this.logger });
         const events = (await response.json()) as OddsEvent[];
 

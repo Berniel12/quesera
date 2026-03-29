@@ -65,6 +65,7 @@ const BANNED_PHRASES = [
 function validatePhrasedSynthesis(
   phrased: PhrasedSynthesis,
   comparison: SourceComparison,
+  questionText: string,
 ): { valid: boolean; reason: string | null } {
   // 1. Markets section must name at least one platform
   const platformNames = comparison.platformBreakdown.map((p) => p.platform.toLowerCase());
@@ -124,6 +125,39 @@ function validatePhrasedSynthesis(
     }
   }
 
+  // 8. Bottom line must NOT be generic/interchangeable
+  const bottomLower = phrased.bottom_line.toLowerCase();
+  const GENERIC_BOTTOM_LINE_PATTERNS = [
+    "probabilities range from",
+    "probabilities for this outcome",
+    "predictions vary between",
+    "market estimates range",
+    "spread indicates",
+    "outlooks vary",
+    "divergence across",
+    "variance in their outlook",
+    "the analyzed platforms",
+    "across the 2 platforms",
+    "across platforms",
+    "significant volatility across",
+  ];
+  for (const pattern of GENERIC_BOTTOM_LINE_PATTERNS) {
+    if (bottomLower.includes(pattern)) {
+      return { valid: false, reason: `Bottom line is generic boilerplate: contains "${pattern}"` };
+    }
+  }
+
+  // 9. Bottom line must reference the question subject (not just numbers)
+  // Extract key nouns from question text for validation
+  const questionWords = questionText.toLowerCase().split(/\s+/).filter((w: string) => w.length > 3);
+  const subjectWords = questionWords.filter((w: string) =>
+    !["will", "does", "have", "this", "that", "what", "when", "where", "year", "2026", "2027"].includes(w),
+  );
+  const mentionsSubject = subjectWords.some((w: string) => bottomLower.includes(w));
+  if (!mentionsSubject) {
+    return { valid: false, reason: "Bottom line does not mention the question subject" };
+  }
+
   return { valid: true, reason: null };
 }
 
@@ -168,7 +202,7 @@ export async function phraseSynthesis(
     neutral: "Official data is neutral",
   }[comparison.groundingAlignment ?? "neutral"];
 
-  const prompt = `You are phrasing a structured source comparison for the prediction question:
+  const prompt = `You are writing a sharp, specific expert take on the prediction question:
 "${questionText}"
 
 COMPUTED DATA (do not reinterpret -- phrase it):
@@ -183,28 +217,31 @@ COMPUTED AGREEMENT: ${agreementLine}
 COMPUTED GROUNDING ALIGNMENT: ${groundingAlignLine}
 COMPARISON CONFIDENCE: ${comparison.comparisonConfidence}
 
-Write exactly 4 sections as JSON. Each section MUST:
-- Reference specific platform names (Polymarket, Kalshi, Metaculus) and their numbers
-- Contain at least one number
-- Be concise and direct
-- Not describe the topic generally or give background
+Write exactly 4 sections as JSON.
 
 {
-  "markets": "What do prediction markets say? Name each platform and its percentage. Note if they agree or diverge. Max 200 chars.",
-  "grounding": "What does official/context data say? Name the metric and value. If no grounding data, return null. Max 200 chars.",
-  "tension": "Phrase the computed agreement state. If markets agree, say so. If they diverge, name the gap. Do NOT manufacture disagreement if the computed state is consensus. Max 150 chars.",
-  "bottom_line": "One sentence synthesizing everything. Must contain a number. Max 100 chars."
+  "markets": "Name each platform with its number. Then say what the COMPARISON pattern means for THIS specific question. Not 'platforms diverge' -- say what the divergence implies about the prediction. Max 200 chars.",
+
+  "grounding": "Name the official metric and value. Say whether it supports or undermines the market view on THIS question. If no grounding data, return null. Max 200 chars.",
+
+  "tension": "State whether the market view on THIS question is settled, contested, split, or aligned. Describe the practical implication of the spread for someone following this question. Max 150 chars.",
+
+  "bottom_line": "One sentence a smart friend would say about THIS specific prediction. Must mention the question subject by name (e.g., 'Fed rates', 'Arsenal', 'ceasefire'). Must state whether the view is settled or contested. Must contain a number. Max 100 chars."
 }
 
 STRICT RULES:
-- Do NOT describe the topic or give background
-- Do NOT say "it remains to be seen" or "time will tell" or any filler
-- Do NOT restate the question
-- Do NOT decide agreement/disagreement yourself -- use the COMPUTED values
-- If computed agreement says "consensus", your tension MUST reflect agreement
-- If computed agreement says "sharp_divergence", your tension MUST reflect disagreement
-- Every non-null section must contain at least one number
-- Respond with valid JSON only, no markdown fences`;
+- The bottom_line MUST mention the specific subject of the question (team name, policy, person, metric)
+- The bottom_line MUST NOT be interchangeable with another question. It should fail if you could paste it onto a different question and it still makes sense.
+- Do NOT just restate the spread as your analysis. "Probabilities range from X to Y" is not insight.
+- Do NOT say "significant divergence" or "notable gap" without saying what that means for this prediction.
+- Do NOT describe the topic generally or give background.
+- Do NOT say "it remains to be seen", "time will tell", "outlooks vary", or any filler.
+- Do NOT decide agreement/disagreement yourself -- use the COMPUTED values.
+- If computed agreement says "consensus", your tension MUST reflect agreement.
+- If computed agreement says "sharp_divergence", your tension MUST reflect disagreement.
+- Every non-null section must contain at least one number.
+- You may describe the comparison PATTERN (settled, contested, split, one-sided) but you may NOT invent causes or explanations for WHY platforms disagree.
+- Respond with valid JSON only, no markdown fences.`;
 
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
@@ -236,7 +273,7 @@ STRICT RULES:
     parsed.bottom_line = parsed.bottom_line.slice(0, 120);
 
     // Validate against deterministic comparison
-    const validation = validatePhrasedSynthesis(parsed, comparison);
+    const validation = validatePhrasedSynthesis(parsed, comparison, questionText);
     if (!validation.valid) {
       logger.warn(
         { topicSlug, reason: validation.reason },

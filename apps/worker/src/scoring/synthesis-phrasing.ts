@@ -148,14 +148,75 @@ function validatePhrasedSynthesis(
   }
 
   // 9. Bottom line must reference the question subject (not just numbers)
-  // Extract key nouns from question text for validation
   const questionWords = questionText.toLowerCase().split(/\s+/).filter((w: string) => w.length > 3);
   const subjectWords = questionWords.filter((w: string) =>
-    !["will", "does", "have", "this", "that", "what", "when", "where", "year", "2026", "2027"].includes(w),
+    !["will", "does", "have", "this", "that", "what", "when", "where", "year", "2026", "2027", "keep", "break", "come"].includes(w),
   );
   const mentionsSubject = subjectWords.some((w: string) => bottomLower.includes(w));
   if (!mentionsSubject) {
     return { valid: false, reason: "Bottom line does not mention the question subject" };
+  }
+
+  // 10. Competition-specific validation: reject placeholder entity references
+  const isCompetition = questionText.toLowerCase().includes("who will win");
+  if (isCompetition) {
+    const COMPETITION_PLACEHOLDERS = [
+      "the winner",
+      "the outcome",
+      "the prediction",
+      "this market",
+      "the result",
+      "the field",
+    ];
+    for (const placeholder of COMPETITION_PLACEHOLDERS) {
+      // Only reject if placeholder is used WITHOUT a concrete anchor
+      const hasConcreteAnchor =
+        (comparison.competitionLeader && bottomLower.includes(comparison.competitionLeader.name.toLowerCase())) ||
+        bottomLower.includes("league") ||
+        bottomLower.includes("championship") ||
+        bottomLower.includes("title") ||
+        bottomLower.includes("trophy") ||
+        bottomLower.includes("race") ||
+        bottomLower.includes("cup") ||
+        bottomLower.includes("nba") ||
+        bottomLower.includes("f1") ||
+        bottomLower.includes("premier") ||
+        bottomLower.includes("champions") ||
+        bottomLower.includes("formula");
+      if (bottomLower.includes(placeholder) && !hasConcreteAnchor) {
+        return { valid: false, reason: `Competition bottom line uses placeholder "${placeholder}" without naming the competition or a contender` };
+      }
+    }
+
+    // Competition bottom lines must also classify the market shape
+    const classifiesShape =
+      bottomLower.includes("settled") ||
+      bottomLower.includes("contested") ||
+      bottomLower.includes("split") ||
+      bottomLower.includes("fragmented") ||
+      bottomLower.includes("clear favorite") ||
+      bottomLower.includes("wide open") ||
+      bottomLower.includes("narrow") ||
+      bottomLower.includes("dominant") ||
+      bottomLower.includes("one-sided") ||
+      bottomLower.includes("consensus");
+    if (!classifiesShape) {
+      return { valid: false, reason: "Competition bottom line must classify the market shape (settled, contested, split, clear favorite, etc.)" };
+    }
+  }
+
+  // 11. All bottom lines: reject pure range restatements even if they mention the subject
+  const RANGE_RESTATEMENT_PATTERNS = [
+    /priced between \d+% and \d+%/,
+    /ranging from \d+% to \d+%/,
+    /valued? between \d+% and \d+%/,
+    /currently value the outcome/,
+    /prediction markets currently/,
+  ];
+  for (const pattern of RANGE_RESTATEMENT_PATTERNS) {
+    if (pattern.test(bottomLower)) {
+      return { valid: false, reason: "Bottom line is a range restatement, not a takeaway" };
+    }
   }
 
   return { valid: true, reason: null };
@@ -184,6 +245,12 @@ export async function phraseSynthesis(
     const pct = Math.round(p.avgProbability * 100);
     return `- ${p.platform}: ${pct}% (${p.signalCount} signals)`;
   }).join("\n");
+
+  // Competition context for the prompt
+  const isCompQuestion = questionText.toLowerCase().includes("who will win");
+  const competitionContext = isCompQuestion && comparison.competitionLeader
+    ? `\nCOMPETITION CONTEXT:\n- Leader: ${comparison.competitionLeader.name} (${comparison.competitionLeader.pct}%)\n${comparison.competitionChallenger ? `- Challenger: ${comparison.competitionChallenger.name} (${comparison.competitionChallenger.pct}%)` : ""}\n${comparison.competitionGapPp !== null ? `- Gap: ${comparison.competitionGapPp}pp` : ""}\nIMPORTANT: For competition questions, the bottom_line MUST name the competition (e.g., "NBA title", "F1 championship", "Premier League") AND classify the market shape (settled, contested, split, wide open, clear favorite). Do NOT use generic placeholders like "the winner" or "the outcome".`
+    : "";
 
   const groundingLine = comparison.primaryGroundingMetric
     ? `${comparison.primaryGroundingMetric.name}: ${comparison.primaryGroundingMetric.formatted}${comparison.primaryGroundingMetric.deltaFormatted ? ` (${comparison.primaryGroundingMetric.deltaFormatted})` : ""}`
@@ -215,7 +282,7 @@ ${groundingLine}
 
 COMPUTED AGREEMENT: ${agreementLine}
 COMPUTED GROUNDING ALIGNMENT: ${groundingAlignLine}
-COMPARISON CONFIDENCE: ${comparison.comparisonConfidence}
+COMPARISON CONFIDENCE: ${comparison.comparisonConfidence}${competitionContext}
 
 Write exactly 4 sections as JSON.
 

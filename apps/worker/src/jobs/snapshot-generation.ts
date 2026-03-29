@@ -131,6 +131,7 @@ export async function handleSnapshotGeneration(
     topicRow,
     scoringResult.state,
     scoringResult.signals,
+    logger,
   );
 
   // 8. Enqueue summarization if material change or first snapshot

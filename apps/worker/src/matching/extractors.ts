@@ -246,6 +246,55 @@ export function getSeedMapMatches(item: SourceItem): SeedMapEntry[] | null {
     }
   }
 
+  // Kalshi event_ticker seed map: direct mapping for known event tickers
+  if (item.source_key === "kalshi" && item.source_item_type === "market") {
+    const eventTicker = String(item.normalized_payload.event_ticker ?? "").toUpperCase();
+    const title = String(item.normalized_payload.title ?? "").toLowerCase();
+
+    const KALSHI_EVENT_MAP: Record<string, SeedMapEntry[]> = {
+      // Economics
+      "KXU3MAX": [{ slug: "us-unemployment-rate", confidence: 0.9 }],
+      "CHINAUSGDP": [{ slug: "global-recession-risk", confidence: 0.7 }, { slug: "china-gdp-growth", confidence: 0.8 }],
+      // Politics
+      "KXDEBTGROWTH": [{ slug: "us-debt-ceiling", confidence: 0.8 }],
+      "KXBALANCE": [{ slug: "us-debt-ceiling", confidence: 0.7 }],
+      "KXGOVTCUTS": [{ slug: "us-congress-legislation", confidence: 0.7 }],
+      "KXEOTRUMPTERM": [{ slug: "us-congress-legislation", confidence: 0.6 }],
+      "KXIMPEACH": [{ slug: "us-congress-legislation", confidence: 0.7 }],
+      "KXSCOTUSRESIGN": [{ slug: "us-supreme-court", confidence: 0.9 }],
+      "KXSCOTUSPOWER": [{ slug: "us-supreme-court", confidence: 0.9 }],
+      "KXSCOTUSCHANGE": [{ slug: "us-supreme-court", confidence: 0.9 }],
+      // Geopolitics
+      "KXNEXTISRAELPM": [{ slug: "israel-palestine-conflict", confidence: 0.7 }],
+      "KXTAIWANLVL4": [{ slug: "china-taiwan-relations", confidence: 0.8 }],
+      "KXG7LEADEROUT": [{ slug: "european-union", confidence: 0.6 }],
+      // Tech / Companies
+      "KXAGICO": [{ slug: "ai-industry", confidence: 0.9 }],
+      "KXOAIANTH": [{ slug: "ai-industry", confidence: 0.9 }],
+      "KXUSTAKEOVER": [{ slug: "artificial-intelligence-policy", confidence: 0.8 }],
+      // Climate
+      "EVSHARE": [{ slug: "climate-change", confidence: 0.7 }],
+      "EUCLIMATE": [{ slug: "climate-change", confidence: 0.7 }],
+      "USCLIMATE": [{ slug: "climate-change", confidence: 0.7 }],
+      // SpaceX
+      "KXSPACEXMARS": [{ slug: "spacex-starship", confidence: 0.8 }],
+    };
+
+    // Match by event ticker prefix
+    for (const [prefix, entries] of Object.entries(KALSHI_EVENT_MAP)) {
+      if (eventTicker.startsWith(prefix)) return entries;
+    }
+
+    // Kalshi title keyword fallback for markets without mapped event tickers
+    if (title.includes("unemployment")) return [{ slug: "us-unemployment-rate", confidence: 0.7 }];
+    if (title.includes("china") && title.includes("gdp")) return [{ slug: "global-recession-risk", confidence: 0.6 }];
+    if (title.includes("trade") && title.includes("china")) return [{ slug: "us-trade-policy", confidence: 0.7 }];
+    if (title.includes("tariff")) return [{ slug: "us-trade-policy", confidence: 0.7 }];
+    if (title.includes("israel") && (title.includes("prime minister") || title.includes("normalize"))) return [{ slug: "israel-palestine-conflict", confidence: 0.6 }];
+    if (title.includes("taiwan")) return [{ slug: "china-taiwan-relations", confidence: 0.7 }];
+    if (title.includes("national debt")) return [{ slug: "us-debt-ceiling", confidence: 0.7 }];
+  }
+
   // Congress.gov bills: title keyword matching (word-boundary)
   if (item.source_item_type === "bill") {
     const title = String(item.normalized_payload.title ?? "").toLowerCase();

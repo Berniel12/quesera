@@ -19,9 +19,11 @@ export class CongressGovAdapter extends BaseAdapter {
       .single();
 
     const lastSuccess = (health as { last_success_at: string | null } | null)?.last_success_at;
-    const fromDateTime = lastSuccess
+    // Congress.gov rejects ISO dates with milliseconds -- strip them
+    const rawDate = lastSuccess
       ? new Date(lastSuccess).toISOString()
       : new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const fromDateTime = rawDate.replace(/\.\d{3}Z$/, "Z");
 
     let offset = 0;
     const limit = 100;

@@ -566,7 +566,7 @@ function extractEntityName(question: string): string | null {
 }
 
 // Individual award keywords -- markets with these are about player awards, not team championships
-const INDIVIDUAL_AWARD_PATTERN = /\b(mvp|most valuable|scoring title|assists leader|rebounds|defensive player|rookie of the year|sixth man|all[- ]star|ballon d'or|golden boot|golden glove|driver of the day|pole position|fastest lap)\b/i;
+const INDIVIDUAL_AWARD_PATTERN = /\b(mvp|most valuable|scoring title|assists leader|rebounds|defensive player|rookie of the year|sixth man|all[- ]star|ballon d'or|golden boot|golden glove|driver of the day|pole position|fastest lap|top goal scorer|top scorer|top assist|most goals|most assists|relegated|relegat|finish in [0-9]|placed? [0-9])\b/i;
 
 // Scoped entity alias maps per competition domain
 const ENTITY_ALIASES: Record<string, Record<string, string>> = {
@@ -630,6 +630,29 @@ function extractCompetitionRanking(
     .map((s) => {
       const q = String(s.metadata?.question ?? "");
       if (INDIVIDUAL_AWARD_PATTERN.test(q)) return null;
+      // Skip signals that mention a different competition than this topic
+      if (topicSlug) {
+        const ql = q.toLowerCase();
+        const COMPETITION_NAMES: Record<string, string[]> = {
+          "premier-league": ["premier league", "epl"],
+          "champions-league": ["champions league", "ucl"],
+          "la-liga": ["la liga", "primera division"],
+          "nba-season-2025-26": ["nba"],
+          "formula-1-2026": ["f1", "formula 1", "formula one"],
+          "fifa-world-cup-2026": ["world cup", "fifa"],
+        };
+        const thisCompNames = COMPETITION_NAMES[topicSlug];
+        if (thisCompNames) {
+          // Check if the question mentions a DIFFERENT competition
+          for (const [otherSlug, otherNames] of Object.entries(COMPETITION_NAMES)) {
+            if (otherSlug === topicSlug) continue;
+            if (otherNames.some((n) => ql.includes(n))) {
+              // This signal is about a different competition
+              return null;
+            }
+          }
+        }
+      }
       let extracted = extractEntityName(q);
       if (!extracted) return null;
       // Resolve aliases to canonical form

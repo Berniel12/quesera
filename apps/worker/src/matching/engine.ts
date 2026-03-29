@@ -22,7 +22,7 @@ const CATEGORY_DISALLOWED: Record<string, string[]> = {
   sports: ["political_official", "macro_official", "hazard_weather", "crypto_market", "defi_signal"],
   // threshold: disallow non-data families
   macro: ["sports_odds", "hazard_weather", "political_official"],
-  crypto: ["sports_odds", "hazard_weather", "political_official"],
+  crypto: ["sports_odds", "hazard_weather"],
   // binary_event: disallow only sports_odds (political_official is supporting, not disallowed)
   politics: ["sports_odds"],
   geopolitics: ["sports_odds"],

@@ -8,7 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getAnswerState } from "@/lib/answer-state";
 import { getTeamEntity, getCompetitionAnswer, getTopicLogo } from "@/lib/team-entities";
 import { getTopicImage } from "@/lib/topic-images";
-import { getContract, filterSignalsByContract, isPublishable } from "@/lib/question-contracts";
+import { getContract, filterSignalsByContract, filterSignalsByQuestionRelevance, isPublishable } from "@/lib/question-contracts";
 import type { QuestionType } from "@/lib/question-contracts";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type {
@@ -114,6 +114,7 @@ export async function loadTopicData(opts: {
     signals = (data ?? []) as TemplateSignal[];
   }
   signals = filterSignalsByContract(signals, contract);
+  signals = filterSignalsByQuestionRelevance(signals, questionSlug);
 
   const pagePublishable = isPublishable(
     { question_text: questionText, question_type: questionType },

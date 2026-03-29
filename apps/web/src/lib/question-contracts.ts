@@ -229,6 +229,49 @@ export function filterSignalsByContract<T extends SignalLike>(
   });
 }
 
+/**
+ * Question-level signal relevance filter.
+ * For questions where the topic is broader than the question (e.g., israel-palestine-conflict
+ * topic but "Will the Gaza war end?" question), filter signals whose market question
+ * is about a different aspect of the topic.
+ */
+const QUESTION_SIGNAL_KEYWORDS: Record<string, { require: string[]; reject: string[] }> = {
+  "will-there-be-a-ceasefire": {
+    require: ["gaza", "ceasefire", "hamas", "hostage", "war end"],
+    reject: [],
+  },
+  "will-the-iran-us-conflict-escalate-further": {
+    require: ["iran", "tehran", "persian"],
+    reject: [],
+  },
+};
+
+export function filterSignalsByQuestionRelevance<T extends SignalLike>(
+  signals: T[],
+  questionSlug: string,
+): T[] {
+  const keywords = QUESTION_SIGNAL_KEYWORDS[questionSlug];
+  if (!keywords) return signals; // no filter for this question
+
+  return signals.filter((s) => {
+    // Only filter prediction_market signals (not official data)
+    if (s.source_family !== "prediction_market" && s.source_family !== "forecasting") return true;
+
+    const question = String(s.metadata?.question ?? "").toLowerCase();
+    if (!question) return true;
+
+    // Must contain at least one of the required keywords
+    const hasRequired = keywords.require.some((kw) => question.includes(kw));
+    if (!hasRequired) return false;
+
+    // Must not contain any rejected keywords
+    const hasRejected = keywords.reject.some((kw) => question.includes(kw));
+    if (hasRejected) return false;
+
+    return true;
+  });
+}
+
 // ── Question Validity ──
 
 /**

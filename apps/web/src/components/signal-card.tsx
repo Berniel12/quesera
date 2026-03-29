@@ -467,7 +467,7 @@ export function EvidenceWall({ signals, isCompetition }: EvidenceWallProps) {
   }
 
   const totalSignals = signals.length;
-  const totalSources = byFamily.size;
+  const totalPlatforms = new Set(signals.map((s) => s.source_name)).size;
 
   if (totalSignals === 0) {
     return (
@@ -488,7 +488,7 @@ export function EvidenceWall({ signals, isCompetition }: EvidenceWallProps) {
           What the signals say
         </h2>
         <span className="text-xs text-muted-foreground">
-          {totalSignals} {totalSignals === 1 ? "signal" : "signals"} from {totalSources} {totalSources === 1 ? "source" : "sources"}
+          {totalSignals} {totalSignals === 1 ? "signal" : "signals"} from {totalPlatforms} {totalPlatforms === 1 ? "platform" : "platforms"}
         </span>
       </div>
       {isCompetition ? (

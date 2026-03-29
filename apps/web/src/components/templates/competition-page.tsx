@@ -74,29 +74,91 @@ function extractEntityName(question: string): string | null {
  * Returns leader + challengers with percentages.
  * Uses broadened entity extraction that works for non-sports too.
  */
-function extractRanking(signals: TemplateSignal[]): Array<{ name: string; pct: number }> {
+// Individual award / non-winner markets -- must be filtered from team competition rankings
+const AWARD_PATTERN = /\b(mvp|most valuable|scoring title|assists leader|rebounds|defensive player|rookie of the year|sixth man|all[- ]star|ballon d'or|golden boot|golden glove|driver of the day|pole position|fastest lap|top goal scorer|top scorer|top assist|most goals|most assists|relegated|relegat|finish in [0-9]|placed? [0-9])\b/i;
+
+// Entity alias maps -- must match worker's ENTITY_ALIASES
+const ENTITY_ALIASES: Record<string, Record<string, string>> = {
+  "premier-league": { "man city": "Manchester City", "manchester city": "Manchester City", "city": "Manchester City", "arsenal": "Arsenal", "liverpool": "Liverpool", "chelsea": "Chelsea" },
+  "nba-season-2025-26": { "boston": "Boston Celtics", "celtics": "Boston Celtics", "okc": "Oklahoma City Thunder", "thunder": "Oklahoma City Thunder", "oklahoma city": "Oklahoma City Thunder", "lakers": "Los Angeles Lakers", "knicks": "New York Knicks", "nuggets": "Denver Nuggets", "denver": "Denver Nuggets", "spurs": "San Antonio Spurs", "cavaliers": "Cleveland Cavaliers", "cavs": "Cleveland Cavaliers", "cleveland": "Cleveland Cavaliers", "pistons": "Detroit Pistons", "detroit": "Detroit Pistons", "rockets": "Houston Rockets", "houston": "Houston Rockets", "clippers": "Los Angeles Clippers" },
+  "formula-1-2026": { "verstappen": "Max Verstappen", "hamilton": "Lewis Hamilton", "leclerc": "Charles Leclerc", "antonelli": "Andrea Kimi Antonelli", "kimi antonelli": "Andrea Kimi Antonelli", "russell": "George Russell", "norris": "Lando Norris", "piastri": "Oscar Piastri", "mclaren": "McLaren", "red bull racing": "Red Bull Racing", "red bull": "Red Bull Racing" },
+  "champions-league": { "real": "Real Madrid", "real madrid": "Real Madrid", "barca": "Barcelona", "barcelona": "Barcelona", "bayern": "Bayern Munich", "bayern munich": "Bayern Munich", "arsenal": "Arsenal", "psg": "Paris Saint-Germain", "atletico": "Atletico Madrid", "atletico madrid": "Atletico Madrid", "sporting": "Sporting Lisbon", "sporting lisbon": "Sporting Lisbon" },
+  "fifa-world-cup-2026": { "usa": "United States", "england": "England", "spain": "Spain", "france": "France", "argentina": "Argentina", "brazil": "Brazil", "germany": "Germany" },
+  "ai-industry": { "openai": "OpenAI", "open ai": "OpenAI", "anthropic": "Anthropic", "google deepmind": "Google DeepMind", "deepmind": "Google DeepMind", "meta ai": "Meta AI" },
+};
+
+// Cross-competition names -- signals about a different competition are rejected
+const COMPETITION_NAMES: Record<string, string[]> = {
+  "premier-league": ["premier league", "epl"],
+  "champions-league": ["champions league", "ucl"],
+  "la-liga": ["la liga"],
+  "nba-season-2025-26": ["nba"],
+  "formula-1-2026": ["f1", "formula 1", "formula one"],
+  "fifa-world-cup-2026": ["world cup", "fifa"],
+};
+
+function extractRanking(signals: TemplateSignal[], topicSlug?: string): Array<{ name: string; pct: number }> {
+  const aliases = topicSlug ? ENTITY_ALIASES[topicSlug] : undefined;
+  const thisCompNames = topicSlug ? COMPETITION_NAMES[topicSlug] : undefined;
+
   const contenders = signals
     .filter((s) => s.source_family === "prediction_market" || s.source_family === "forecasting" || s.source_family === "sports_odds")
     .map((s) => {
       const q = String((s.metadata as Record<string, unknown>)?.question ?? "");
-      const extracted = extractEntityName(q);
-      // Only include signals where we could extract a clean entity name.
-      // Never show raw question text as a contender name.
+      // Filter individual awards
+      if (AWARD_PATTERN.test(q)) return null;
+      // Filter cross-competition signals
+      if (thisCompNames) {
+        const ql = q.toLowerCase();
+        for (const [otherSlug, otherNames] of Object.entries(COMPETITION_NAMES)) {
+          if (otherSlug === topicSlug) continue;
+          if (otherNames.some((n) => ql.includes(n))) return null;
+        }
+      }
+      let extracted = extractEntityName(q);
       if (!extracted) return null;
+      // Resolve aliases
+      if (aliases) {
+        extracted = aliases[extracted.toLowerCase()] ?? extracted;
+      }
       const pct = Math.round(s.current_value * 100);
       return { name: extracted, pct };
     })
     .filter((c): c is { name: string; pct: number } => c !== null && c.pct > 0)
     .sort((a, b) => b.pct - a.pct);
 
-  // Deduplicate
+  // Deduplicate (after alias resolution)
   const seen = new Set<string>();
-  return contenders.filter((c) => {
+  const deduped = contenders.filter((c) => {
     const key = c.name.toLowerCase();
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
   });
+
+  // Substring containment fallback
+  for (let i = 0; i < deduped.length; i++) {
+    for (let j = i + 1; j < deduped.length; j++) {
+      const a = deduped[i];
+      const b = deduped[j];
+      if (!a || !b) continue;
+      const al = a.name.toLowerCase();
+      const bl = b.name.toLowerCase();
+      if (al.includes(bl) || bl.includes(al)) {
+        if (a.name.length >= b.name.length) {
+          a.pct = Math.max(a.pct, b.pct);
+          deduped.splice(j, 1);
+        } else {
+          b.pct = Math.max(a.pct, b.pct);
+          deduped.splice(i, 1);
+          i--;
+        }
+        break;
+      }
+    }
+  }
+
+  return deduped;
 }
 
 /**
@@ -155,7 +217,7 @@ export function CompetitionTemplate({ props }: { props: TemplateProps }) {
 
   // Lead signal selection: only lead-eligible signals drive the hero ranking
   const { lead: leadSignals } = selectLeadSignals(signals, contract.questionType, question.question_text);
-  const ranking = extractRanking(leadSignals);
+  const ranking = extractRanking(leadSignals, topic.slug);
   const leader = ranking[0];
   const challenger = ranking[1];
   const raceState = leader ? getRaceState(leader, challenger) : null;

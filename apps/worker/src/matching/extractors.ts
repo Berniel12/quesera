@@ -285,7 +285,7 @@ export function getSeedMapMatches(item: SourceItem): SeedMapEntry[] | null {
     const KALSHI_SERIES_MAP: Record<string, SeedMapEntry[]> = {
       "KXFED": [{ slug: "us-federal-reserve-interest-rates", confidence: 0.95 }],
       "KXCPI": [{ slug: "us-inflation-rate", confidence: 0.95 }],
-      "KXGDP": [{ slug: "global-recession-risk", confidence: 0.8 }, { slug: "us-stock-market", confidence: 0.5 }],
+      "KXGDP": [{ slug: "global-recession-risk", confidence: 0.8 }],
       "KXBTC": [{ slug: "bitcoin-price", confidence: 0.9 }, { slug: "crypto-market", confidence: 0.6 }],
       "KXWTI": [{ slug: "global-oil-prices", confidence: 0.95 }],
       "KXMORTGAGERATE": [{ slug: "us-mortgage-rates", confidence: 0.95 }],

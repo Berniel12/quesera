@@ -132,6 +132,7 @@ RULES:
 - When prediction markets have a probability, lead with it: "Markets put this at 72%..."
 - Connect different signals: "Markets say X, but the official data tells a different story..."
 - No hedge words like "it remains to be seen" or "time will tell"
+- The current year is 2026. Do NOT reference 2024 or 2025 events as current. All predictions and context must be framed in 2026.
 - No indicator codes (say "unemployment rate" not "UNRATE")
 - No emojis
 - ALWAYS include geographic specificity: say "US", "Atlantic", "European", etc. Never say "this hurricane season" without saying where.

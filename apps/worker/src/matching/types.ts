@@ -76,8 +76,6 @@ export const FRED_SERIES_SEED_MAP: Record<string, SeedMapEntry[]> = {
   "PET.RWTC.W": [
     { slug: "global-oil-prices", confidence: 1.0 },
     { slug: "us-gas-prices", confidence: 0.7 },           // crude drives gas prices
-    { slug: "us-inflation-rate", confidence: 0.5 },
-    { slug: "global-recession-risk", confidence: 0.4 },
   ],
 
   // Gold & dollar

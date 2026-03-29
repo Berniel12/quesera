@@ -185,6 +185,10 @@ export async function publishSnapshot(
   const sourceFamilyCount = sourceFamilies.length;
   const signalCount = signals.length;
 
+  // Canonical platform count: unique source_name values (polymarket, kalshi, fred, etc.)
+  const platformNames = [...new Set(signals.map((s) => s.sourceName))];
+  const platformCount = platformNames.length;
+
   // Resolve question type: prefer explicit from questions table, fall back to derived
   let questionType: QuestionType | null = null;
   const { data: questionRow } = await supabase
@@ -233,7 +237,7 @@ export async function publishSnapshot(
   let competitionGap: number | null = null;
 
   if (questionType === "competition") {
-    const ranking = extractCompetitionRanking(signals);
+    const ranking = extractCompetitionRanking(signals, topic.slug);
     const leader = ranking[0] ?? null;
     const challenger = ranking[1] ?? null;
     if (leader) {
@@ -262,6 +266,8 @@ export async function publishSnapshot(
       source_family_count: sourceFamilyCount,
       source_families: sourceFamilies,
       signal_count: signalCount,
+      platform_count: platformCount,
+      platform_names: platformNames,
       synthesis_ready: synthesisReady,
       expert_line: expertLine,
       synthesis_json: sourceComparison,
@@ -562,8 +568,57 @@ function extractEntityName(question: string): string | null {
 // Individual award keywords -- markets with these are about player awards, not team championships
 const INDIVIDUAL_AWARD_PATTERN = /\b(mvp|most valuable|scoring title|assists leader|rebounds|defensive player|rookie of the year|sixth man|all[- ]star|ballon d'or|golden boot|golden glove|driver of the day|pole position|fastest lap)\b/i;
 
+// Scoped entity alias maps per competition domain
+const ENTITY_ALIASES: Record<string, Record<string, string>> = {
+  "nba-season-2025-26": {
+    "boston": "Boston Celtics", "celtics": "Boston Celtics",
+    "okc": "Oklahoma City Thunder", "thunder": "Oklahoma City Thunder", "oklahoma city": "Oklahoma City Thunder",
+    "lakers": "Los Angeles Lakers", "la lakers": "Los Angeles Lakers",
+    "knicks": "New York Knicks", "new york": "New York Knicks",
+    "nuggets": "Denver Nuggets", "denver": "Denver Nuggets",
+    "spurs": "San Antonio Spurs", "san antonio": "San Antonio Spurs",
+    "cavaliers": "Cleveland Cavaliers", "cavs": "Cleveland Cavaliers", "cleveland": "Cleveland Cavaliers",
+    "pistons": "Detroit Pistons", "detroit": "Detroit Pistons",
+    "rockets": "Houston Rockets", "houston": "Houston Rockets",
+    "clippers": "Los Angeles Clippers", "la clippers": "Los Angeles Clippers",
+  },
+  "premier-league": {
+    "arsenal": "Arsenal", "man city": "Manchester City", "manchester city": "Manchester City",
+    "city": "Manchester City", "liverpool": "Liverpool", "chelsea": "Chelsea",
+  },
+  "formula-1-2026": {
+    "verstappen": "Max Verstappen", "hamilton": "Lewis Hamilton", "leclerc": "Charles Leclerc",
+    "antonelli": "Andrea Kimi Antonelli", "kimi antonelli": "Andrea Kimi Antonelli",
+    "russell": "George Russell", "norris": "Lando Norris", "piastri": "Oscar Piastri",
+    "mclaren": "McLaren", "red bull racing": "Red Bull Racing", "red bull": "Red Bull Racing",
+  },
+  "champions-league": {
+    "real": "Real Madrid", "real madrid": "Real Madrid",
+    "barca": "Barcelona", "barcelona": "Barcelona",
+    "bayern": "Bayern Munich", "bayern munich": "Bayern Munich",
+    "arsenal": "Arsenal", "psg": "Paris Saint-Germain",
+  },
+  "fifa-world-cup-2026": {
+    "usa": "United States", "us": "United States",
+    "england": "England", "spain": "Spain", "france": "France",
+    "argentina": "Argentina", "brazil": "Brazil", "germany": "Germany",
+  },
+  "ai-industry": {
+    "openai": "OpenAI", "open ai": "OpenAI",
+    "anthropic": "Anthropic", "google deepmind": "Google DeepMind",
+    "deepmind": "Google DeepMind", "meta ai": "Meta AI",
+  },
+};
+
+function resolveEntity(name: string, topicSlug: string): string {
+  const aliases = ENTITY_ALIASES[topicSlug];
+  if (!aliases) return name;
+  return aliases[name.toLowerCase()] ?? name;
+}
+
 function extractCompetitionRanking(
   signals: ScoredSignal[],
+  topicSlug?: string,
 ): Array<{ name: string; pct: number }> {
   const contenders = signals
     .filter(
@@ -574,22 +629,48 @@ function extractCompetitionRanking(
     )
     .map((s) => {
       const q = String(s.metadata?.question ?? "");
-      // Skip individual award markets (MVP, scoring title, etc.)
       if (INDIVIDUAL_AWARD_PATTERN.test(q)) return null;
-      const extracted = extractEntityName(q);
+      let extracted = extractEntityName(q);
       if (!extracted) return null;
+      // Resolve aliases to canonical form
+      if (topicSlug) extracted = resolveEntity(extracted, topicSlug);
       const pct = Math.round(s.currentValue * 100);
       return { name: extracted, pct };
     })
     .filter((c): c is { name: string; pct: number } => c !== null && c.pct > 0)
     .sort((a, b) => b.pct - a.pct);
 
-  // Deduplicate
+  // Deduplicate (after alias resolution, so "Boston" and "Boston Celtics" merge)
   const seen = new Set<string>();
-  return contenders.filter((c) => {
+  const deduped = contenders.filter((c) => {
     const key = c.name.toLowerCase();
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
   });
+
+  // Substring containment fallback: merge entities where one name contains another
+  for (let i = 0; i < deduped.length; i++) {
+    for (let j = i + 1; j < deduped.length; j++) {
+      const a = deduped[i];
+      const b = deduped[j];
+      if (!a || !b) continue;
+      const al = a.name.toLowerCase();
+      const bl = b.name.toLowerCase();
+      if (al.includes(bl) || bl.includes(al)) {
+        // Keep the longer name, take the higher pct
+        if (a.name.length >= b.name.length) {
+          a.pct = Math.max(a.pct, b.pct);
+          deduped.splice(j, 1);
+        } else {
+          b.pct = Math.max(a.pct, b.pct);
+          deduped.splice(i, 1);
+          i--;
+        }
+        break;
+      }
+    }
+  }
+
+  return deduped;
 }

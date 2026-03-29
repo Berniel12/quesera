@@ -308,6 +308,7 @@ STRICT RULES:
 - If computed agreement says "sharp_divergence", your tension MUST reflect disagreement.
 - Every non-null section must contain at least one number.
 - You may describe the comparison PATTERN (settled, contested, split, one-sided) but you may NOT invent causes or explanations for WHY platforms disagree.
+- The current year is 2026. Do NOT reference 2024 or 2025 events as current.
 - Respond with valid JSON only, no markdown fences.`;
 
   try {

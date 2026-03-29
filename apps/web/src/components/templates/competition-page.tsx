@@ -149,6 +149,9 @@ export function CompetitionTemplate({ props }: { props: TemplateProps }) {
   } = props;
 
   const sourceFamilies = [...new Set(signals.map((s) => s.source_family))];
+  const platformNames = [...new Set(signals.map((s) => s.source_name))];
+  const PLAT_DISPLAY: Record<string, string> = { polymarket: "Polymarket", kalshi: "Kalshi", metaculus: "Metaculus", fred: "FRED", bls: "BLS", coingecko: "CoinGecko", congress_gov: "Congress", the_odds_api: "Bookmakers", eia: "EIA", espn: "ESPN" };
+  const platformLabel = platformNames.map((p) => PLAT_DISPLAY[p] ?? p).join(", ");
 
   // Lead signal selection: only lead-eligible signals drive the hero ranking
   const { lead: leadSignals } = selectLeadSignals(signals, contract.questionType, question.question_text);
@@ -255,7 +258,7 @@ export function CompetitionTemplate({ props }: { props: TemplateProps }) {
           <p className="mt-4 text-sm leading-relaxed text-foreground/90">
             {hasProse
               ? snapshot?.current_picture_text
-              : safeOneLiner ?? `Based on ${signals.length} signals from ${sourceFamilies.length} ${sourceFamilies.length === 1 ? "source" : "sources"}.`}
+              : safeOneLiner ?? `Based on ${signals.length} signals across ${platformLabel}.`}
           </p>
 
           {/* Follow + signal count */}
@@ -263,7 +266,7 @@ export function CompetitionTemplate({ props }: { props: TemplateProps }) {
             <FollowButton topicSlug={topic.slug} isAuthenticated={isAuthenticated} initialFollowing={isFollowing} />
             {signals.length > 0 && (
               <span className="text-[10px] text-muted-foreground">
-                Based on {signals.length} signals from {sourceFamilies.length} {sourceFamilies.length === 1 ? "source" : "sources"}
+                Based on {signals.length} signals across {platformLabel}
                 {marketPlatforms.length > 0 && ` -- including ${marketPlatforms.map((p) => PLATFORM_DISPLAY[p] ?? p).join(", ")}`}
               </span>
             )}

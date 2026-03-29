@@ -505,6 +505,9 @@ function extractEntityName(question: string): string | null {
   return null;
 }
 
+// Individual award keywords -- markets with these are about player awards, not team championships
+const INDIVIDUAL_AWARD_PATTERN = /\b(mvp|most valuable|scoring title|assists leader|rebounds|defensive player|rookie of the year|sixth man|all[- ]star|ballon d'or|golden boot|golden glove|driver of the day|pole position|fastest lap)\b/i;
+
 function extractCompetitionRanking(
   signals: ScoredSignal[],
 ): Array<{ name: string; pct: number }> {
@@ -517,6 +520,8 @@ function extractCompetitionRanking(
     )
     .map((s) => {
       const q = String(s.metadata?.question ?? "");
+      // Skip individual award markets (MVP, scoring title, etc.)
+      if (INDIVIDUAL_AWARD_PATTERN.test(q)) return null;
       const extracted = extractEntityName(q);
       if (!extracted) return null;
       const pct = Math.round(s.currentValue * 100);

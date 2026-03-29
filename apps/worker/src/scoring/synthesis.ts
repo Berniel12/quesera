@@ -202,11 +202,22 @@ export function computeSourceComparison(
     else agreementState = "sharp_divergence";
   }
 
-  // Primary grounding metric
+  // Primary grounding metric -- prefer the topic-specific lead metric
+  const PREFERRED_METRIC: Record<string, string> = {
+    "us-federal-reserve-interest-rates": "FEDFUNDS",
+    "us-inflation-rate": "CPIAUCSL",
+    "us-unemployment-rate": "UNRATE",
+    "us-mortgage-rates": "MORTGAGE30US",
+    "global-recession-risk": "UNRATE",
+    "us-stock-market": "DGS10",
+  };
   let primaryGroundingMetric: GroundingMetric | null = null;
-  const groundingSig = strengtheningSignals
-    .filter((s) => s.currentValue !== null)
-    .sort((a, b) => b.weight - a.weight)[0];
+  const preferredSeries = PREFERRED_METRIC[topicSlug];
+  const groundingSig = preferredSeries
+    ? strengtheningSignals.find(
+        (s) => String(s.metadata?.series_id ?? "") === preferredSeries && s.currentValue !== null,
+      ) ?? strengtheningSignals.filter((s) => s.currentValue !== null).sort((a, b) => b.weight - a.weight)[0]
+    : strengtheningSignals.filter((s) => s.currentValue !== null).sort((a, b) => b.weight - a.weight)[0];
 
   if (groundingSig) {
     const seriesId = String(groundingSig.metadata?.series_id ?? "");
@@ -235,6 +246,7 @@ export function computeSourceComparison(
     topicSlug,
     groundingSig?.delta ?? null,
     predictiveAvg,
+    groundingSig?.currentValue ?? null,
   );
 
   let groundingAlignment: SourceComparison["groundingAlignment"] = null;
@@ -338,18 +350,38 @@ function computeGroundingInterpretation(
   topicSlug: string,
   groundingDelta: number | null,
   marketProbability: number | null,
+  groundingValue: number | null,
 ): "supports_yes" | "supports_no" | "neutral" | null {
-  if (groundingDelta === null || marketProbability === null) return null;
-  if (Math.abs(groundingDelta) < 0.001) return "neutral";
+  if (marketProbability === null) return null;
 
   const meaning = GROUNDING_DIRECTION[topicSlug] ?? "ambiguous";
   if (meaning === "ambiguous") return "neutral";
 
-  const groundingSaysYes =
-    (meaning === "up_means_yes" && groundingDelta > 0) ||
-    (meaning === "up_means_no" && groundingDelta < 0);
+  // If we have delta, use it as the primary signal
+  if (groundingDelta !== null && Math.abs(groundingDelta) > 0.001) {
+    const groundingSaysYes =
+      (meaning === "up_means_yes" && groundingDelta > 0) ||
+      (meaning === "up_means_no" && groundingDelta < 0);
+    return groundingSaysYes ? "supports_yes" : "supports_no";
+  }
 
-  return groundingSaysYes ? "supports_yes" : "supports_no";
+  // If delta is zero/null but we have a value, assess position
+  // For "up_means_no" topics (like Fed rate): high value = harder for yes
+  // Markets say >50% = they expect yes. If metric is high = contradicts
+  if (groundingValue !== null) {
+    const marketSaysYes = marketProbability > 0.5;
+    // For topics where "up means no":
+    // high metric + market says yes = contradiction (metric doesn't support market optimism)
+    // For topics where "up means yes":
+    // low metric + market says yes = contradiction
+    // This is approximate but better than always returning neutral
+    if (meaning === "up_means_no" && marketSaysYes) return "supports_no";
+    if (meaning === "up_means_no" && !marketSaysYes) return "supports_yes";
+    if (meaning === "up_means_yes" && marketSaysYes) return "supports_yes";
+    if (meaning === "up_means_yes" && !marketSaysYes) return "supports_no";
+  }
+
+  return "neutral";
 }
 
 // ── Expert line from comparison ────────────────────────────────────────

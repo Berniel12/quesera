@@ -66,6 +66,7 @@ function validatePhrasedSynthesis(
   phrased: PhrasedSynthesis,
   comparison: SourceComparison,
   questionText: string,
+  questionType?: string,
 ): { valid: boolean; reason: string | null } {
   // 1. Markets section must name at least one platform
   const platformNames = comparison.platformBreakdown.map((p) => p.platform.toLowerCase());
@@ -219,6 +220,35 @@ function validatePhrasedSynthesis(
     }
   }
 
+  // 12. Template-specific validation
+  if (questionType === "binary_event") {
+    // Geopolitics binary: must not invent diplomatic analysis
+    const SPECULATIVE_PATTERNS = [
+      "retail traders expect",
+      "institutional traders distrust",
+      "investors are reacting to",
+      "diplomatic sources suggest",
+      "according to insiders",
+      "behind the scenes",
+    ];
+    for (const pattern of SPECULATIVE_PATTERNS) {
+      if (allText.includes(pattern)) {
+        return { valid: false, reason: `Binary event contains speculative analysis: "${pattern}"` };
+      }
+    }
+  }
+
+  if (questionType === "threshold") {
+    // Threshold: grounding section must name a metric if grounding data exists
+    if (comparison.primaryGroundingMetric && phrased.grounding) {
+      const groundingLower = phrased.grounding.toLowerCase();
+      const metricName = comparison.primaryGroundingMetric.name.toLowerCase();
+      if (!groundingLower.includes(metricName) && !groundingLower.includes(comparison.primaryGroundingMetric.source)) {
+        return { valid: false, reason: "Threshold grounding section does not name the primary metric" };
+      }
+    }
+  }
+
   return { valid: true, reason: null };
 }
 
@@ -229,6 +259,7 @@ export async function phraseSynthesis(
   questionText: string,
   topicSlug: string,
   logger: Logger,
+  questionType?: string,
 ): Promise<PhrasedSynthesis | null> {
   if (!isLayerBEnabled(topicSlug)) return null;
 
@@ -341,7 +372,7 @@ STRICT RULES:
     parsed.bottom_line = parsed.bottom_line.slice(0, 120);
 
     // Validate against deterministic comparison
-    const validation = validatePhrasedSynthesis(parsed, comparison, questionText);
+    const validation = validatePhrasedSynthesis(parsed, comparison, questionText, questionType);
     if (!validation.valid) {
       logger.warn(
         { topicSlug, reason: validation.reason },

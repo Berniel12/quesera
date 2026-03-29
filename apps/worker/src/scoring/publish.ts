@@ -301,7 +301,7 @@ export async function publishSnapshot(
       .maybeSingle();
     const qText = (questionRow.data as { question_text: string } | null)?.question_text ?? topic.canonical_name;
 
-    const phrased = await phraseSynthesis(sourceComparison, qText, topic.slug, logger);
+    const phrased = await phraseSynthesis(sourceComparison, qText, topic.slug, logger, questionType ?? undefined);
     if (phrased) {
       // Write phrased synthesis to snapshot + card
       await supabase.from("topic_snapshots")

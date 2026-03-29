@@ -66,6 +66,26 @@ export async function aggregateSignals(
     defMap.set(d.id, { source_family: d.source_family });
   }
 
+  // ── Per-topic signal allowlist: filter out irrelevant macro signals upstream ──
+  // This prevents GDP from appearing on S&P, unemployment from appearing on Fed, etc.
+  const TOPIC_SIGNAL_ALLOWLIST: Record<string, { allowedSeriesIds: string[] }> = {
+    "us-federal-reserve-interest-rates": { allowedSeriesIds: ["FEDFUNDS", "DGS10", "MORTGAGE30US"] },
+    "us-inflation-rate": { allowedSeriesIds: ["CPIAUCSL", "CUSR0000SA0", "CUUR0000SA0"] },
+    "us-unemployment-rate": { allowedSeriesIds: ["UNRATE", "LNS14000000", "CES0000000001"] },
+    "us-stock-market": { allowedSeriesIds: ["SP500", "DGS10"] },
+    "global-oil-prices": { allowedSeriesIds: ["PET.RWTC.W"] },
+    "us-mortgage-rates": { allowedSeriesIds: ["MORTGAGE30US", "DGS10"] },
+  };
+
+  // Look up topic slug for allowlist
+  const { data: topicRow } = await supabase
+    .from("topics")
+    .select("slug")
+    .eq("id", topicId)
+    .single();
+  const topicSlug = (topicRow as { slug: string } | null)?.slug ?? "";
+  const allowlist = TOPIC_SIGNAL_ALLOWLIST[topicSlug];
+
   // Load prior signals for comparison
   const priorSignalMap = new Map<string, PriorSignal>();
   if (priorSnapshotId) {
@@ -138,6 +158,14 @@ export async function aggregateSignals(
     const seriesId = String(item.normalized_payload.series_id ?? "");
     if (seriesId && processedSeries.has(seriesId)) continue;
     if (seriesId) processedSeries.add(seriesId);
+
+    // Per-topic allowlist: reject macro signals not in the allowed list
+    if (allowlist && def.source_family === "macro_official" && seriesId) {
+      if (!allowlist.allowedSeriesIds.includes(seriesId)) {
+        skippedCount++;
+        continue;
+      }
+    }
 
     const extracted = extractNumericSignal(
       def.source_family,

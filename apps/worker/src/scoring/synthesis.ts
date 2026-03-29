@@ -87,6 +87,21 @@ const METRIC_NAMES: Record<string, string> = {
   CPIAUCSL: "Consumer Price Index",
   UNRATE: "Unemployment Rate",
   GDP: "GDP Growth",
+  "CES0000000001": "Nonfarm Payrolls",
+  "LNS14000000": "Unemployment Rate",
+  "CUSR0000SA0": "Consumer Price Index",
+  "CUUR0000SA0": "Consumer Price Index",
+  "PET.RWTC.W": "Crude Oil Price (WTI)",
+  "SP500": "S&P 500 Index",
+};
+
+// Source-name to display name for grounding metrics
+const SOURCE_DISPLAY: Record<string, string> = {
+  fred: "Federal Reserve Data",
+  bls: "Bureau of Labor Statistics",
+  eia: "Energy Information Administration",
+  coingecko: "CoinGecko",
+  congress_gov: "Congressional Records",
 };
 
 function formatMetric(value: number, sourceFamily: string): string {
@@ -212,18 +227,23 @@ export function computeSourceComparison(
     "us-stock-market": "DGS10",
   };
   let primaryGroundingMetric: GroundingMetric | null = null;
+  // Filter out political_official from grounding metric candidates --
+  // bill counts are context, not measurable data
+  const metricCandidates = strengtheningSignals.filter(
+    (s) => s.currentValue !== null && s.sourceFamily !== "political_official",
+  );
   const preferredSeries = PREFERRED_METRIC[topicSlug];
   const groundingSig = preferredSeries
-    ? strengtheningSignals.find(
-        (s) => String(s.metadata?.series_id ?? "") === preferredSeries && s.currentValue !== null,
-      ) ?? strengtheningSignals.filter((s) => s.currentValue !== null).sort((a, b) => b.weight - a.weight)[0]
-    : strengtheningSignals.filter((s) => s.currentValue !== null).sort((a, b) => b.weight - a.weight)[0];
+    ? metricCandidates.find(
+        (s) => String(s.metadata?.series_id ?? "") === preferredSeries,
+      ) ?? metricCandidates.sort((a, b) => b.weight - a.weight)[0]
+    : metricCandidates.sort((a, b) => b.weight - a.weight)[0];
 
   if (groundingSig) {
     const seriesId = String(groundingSig.metadata?.series_id ?? "");
     const metricName =
       METRIC_NAMES[seriesId] ??
-      String(groundingSig.metadata?.name ?? groundingSig.sourceName);
+      String(groundingSig.metadata?.name ?? SOURCE_DISPLAY[groundingSig.sourceName] ?? groundingSig.sourceName);
 
     primaryGroundingMetric = {
       source: groundingSig.sourceName,

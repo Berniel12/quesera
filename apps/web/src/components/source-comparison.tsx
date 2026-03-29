@@ -19,7 +19,11 @@ interface SourceComparisonBlockProps {
 }
 
 export function SourceComparisonBlock({ comparison, accentClass }: SourceComparisonBlockProps) {
-  if (comparison.platformBreakdown.length < 2 && !comparison.primaryGroundingMetric) {
+  // Only show comparison when there's something to compare:
+  // 2+ prediction platforms, or 1 platform + real grounding metric
+  const hasMultiplePlatforms = comparison.platformBreakdown.length >= 2;
+  const hasRealGrounding = comparison.primaryGroundingMetric !== null;
+  if (!hasMultiplePlatforms && !hasRealGrounding) {
     return null;
   }
 

@@ -42,7 +42,7 @@ export interface SourcePack {
 const COMPETITION_SPORTS: SourcePack = {
   id: "competition_sports",
   questionTypes: ["competition"],
-  categories: ["sports", "entertainment"],
+  categories: ["sports", "entertainment", "tech"],
   predictiveSpine: ["prediction_market", "sports_odds"],
   strengtheningLayer: ["sports_official", "sports_signal", "news_evidence"],
   minPredictiveSources: 2,

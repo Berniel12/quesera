@@ -3,6 +3,7 @@ import type { ScoredState, ScoredSignal } from "./types.js";
 import { SCORING_VERSION } from "./types.js";
 import { resolvePack, checkSynthesisGate } from "../packs/resolve.js";
 import { FAMILY_DISPLAY, type QuestionType, type SourcePack } from "../packs/index.js";
+import { computeSourceComparison, expertLineFromComparison } from "./synthesis.js";
 
 interface TopicRow {
   id: string;
@@ -210,10 +211,17 @@ export async function publishSnapshot(
     ? checkSynthesisGate(pack, signals.map((s) => ({ source_family: s.sourceFamily, source_name: s.sourceName })))
     : false;
 
-  // Generate deterministic expert line
-  const expertLine = pack
-    ? generateExpertLine(signals, pack, questionType, state.direction, state.confidence)
+  // Compute structured source comparison (deterministic, no LLM)
+  const sourceComparison = (synthesisReady && pack)
+    ? computeSourceComparison(signals, pack, questionType, topic.slug, state.direction)
     : null;
+
+  // Generate expert line: prefer comparison-driven, fall back to template-based
+  const comparisonExpertLine = sourceComparison
+    ? expertLineFromComparison(sourceComparison)
+    : null;
+  const expertLine = comparisonExpertLine
+    ?? (pack ? generateExpertLine(signals, pack, questionType, state.direction, state.confidence) : null);
 
   // Extract competition leader/challenger from live signals
   let competitionLeader: string | null = null;
@@ -253,6 +261,7 @@ export async function publishSnapshot(
       signal_count: signalCount,
       synthesis_ready: synthesisReady,
       expert_line: expertLine,
+      synthesis_json: sourceComparison,
       // Live competition data
       competition_leader: competitionLeader,
       competition_leader_pct: competitionLeaderPct,
@@ -262,6 +271,14 @@ export async function publishSnapshot(
 
   if (cardError) {
     throw new Error(`Failed to update topic card: ${cardError.message}`);
+  }
+
+  // Write synthesis_json to snapshot too (for detail page rendering)
+  if (sourceComparison) {
+    await supabase
+      .from("topic_snapshots")
+      .update({ synthesis_json: sourceComparison })
+      .eq("id", snapshotId);
   }
 
   return { id: snapshotId, version };

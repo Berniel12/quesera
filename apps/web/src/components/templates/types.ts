@@ -37,6 +37,35 @@ export interface TemplateSnapshot {
   structured_data: Record<string, unknown>;
   published_at: string;
   version: number;
+  synthesis_json: SourceComparison | null;
+}
+
+/** Deterministic source comparison (computed by worker, no LLM) */
+export interface SourceComparison {
+  predictivePlatforms: string[];
+  strengtheningFamilies: string[];
+  predictiveAvgProbability: number | null;
+  predictiveSpreadPp: number | null;
+  platformBreakdown: Array<{
+    platform: string;
+    displayName: string;
+    avgProbability: number;
+    signalCount: number;
+    topQuestion: string;
+  }>;
+  primaryGroundingMetric: {
+    source: string;
+    name: string;
+    value: number;
+    formatted: string;
+    delta: number | null;
+    deltaFormatted: string | null;
+  } | null;
+  groundingAlignment: "supports" | "neutral" | "contradicts" | null;
+  groundingInterpretation: "supports_yes" | "supports_no" | "neutral" | null;
+  agreementState: "consensus" | "mild_divergence" | "sharp_divergence" | "insufficient_data";
+  comparisonConfidence: "high" | "medium" | "low";
+  leadPlatform: string | null;
 }
 
 // ── History entry (for timeline) ──

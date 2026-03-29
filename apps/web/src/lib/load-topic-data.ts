@@ -93,7 +93,7 @@ export async function loadTopicData(opts: {
   let snapshot: TemplateSnapshot | null = null;
   if (snapshotId) {
     const { data } = await supabase.from("topic_snapshots")
-      .select("direction, confidence, disagreement, freshness, staleness_seconds, current_picture_text, what_changed_text, what_next_text, structured_data, published_at, version")
+      .select("direction, confidence, disagreement, freshness, staleness_seconds, current_picture_text, what_changed_text, what_next_text, structured_data, published_at, version, synthesis_json")
       .eq("id", snapshotId).single();
     snapshot = data as TemplateSnapshot | null;
   }

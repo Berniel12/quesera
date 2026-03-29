@@ -14,6 +14,7 @@ import { AnimateOnScroll } from "@/components/animate-on-scroll";
 import { getAnswerState } from "@/lib/answer-state";
 import { getTeamEntity } from "@/lib/team-entities";
 import { selectLeadSignals, checkProseCoherence } from "@/lib/signal-selection";
+import { SourceComparisonBlock } from "@/components/source-comparison";
 import Link from "next/link";
 import type { TemplateProps, TemplateSignal } from "./types";
 
@@ -168,6 +169,13 @@ export function BinaryEventTemplate({ props }: { props: TemplateProps }) {
           </div>
         )}
       </section>
+
+      {/* ── SOURCE COMPARISON ── */}
+      {snapshot?.synthesis_json && (
+        <AnimateOnScroll>
+          <SourceComparisonBlock comparison={snapshot.synthesis_json} accentClass={cat.accent} />
+        </AnimateOnScroll>
+      )}
 
       {/* ── THE CASE: For vs Against ── */}
       {(forSignals.length > 0 || againstSignals.length > 0) && (

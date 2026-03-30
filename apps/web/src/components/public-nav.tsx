@@ -25,9 +25,15 @@ export function PublicNav() {
           </Link>
           <Link
             href="/login"
-            className="h-11 inline-flex items-center rounded-2xl bg-navy dark:bg-[#00DAF3] px-5 text-xs font-medium text-white dark:text-[#00171B] transition-colors hover:opacity-90"
+            className="hidden sm:flex h-11 items-center rounded-2xl bg-secondary dark:bg-[#222A3E] px-4 text-xs text-muted-foreground transition-colors hover:text-foreground"
           >
             Sign In
+          </Link>
+          <Link
+            href="/login?mode=signup"
+            className="h-11 inline-flex items-center rounded-2xl bg-navy dark:bg-[#00DAF3] px-5 text-xs font-medium text-white dark:text-[#00171B] transition-colors hover:opacity-90"
+          >
+            Get Started
           </Link>
         </div>
       </div>

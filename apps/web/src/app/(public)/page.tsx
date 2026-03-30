@@ -465,6 +465,16 @@ export default async function LandingPage() {
   return (
     <div className="mx-auto max-w-6xl px-4 sm:px-6 dark:horizon-glow">
 
+      {/* ── INTRO: What is QUESERA ── */}
+      <section className="pt-6 pb-4 animate-fade-in">
+        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight leading-tight">
+          See what the world thinks will happen next.
+        </h1>
+        <p className="text-sm sm:text-base text-muted-foreground mt-2 max-w-xl leading-relaxed">
+          QUESERA reads prediction markets, official data, and forecasting platforms so you do not have to. Every question shows where the signals agree, where they split, and what changed.
+        </p>
+      </section>
+
       {/* ── HERO SECTION ── */}
       {heroQ && (() => {
         const a = CAT_ACCENT[heroQ.category ?? ""] ?? DEFAULT_ACCENT;
@@ -847,7 +857,7 @@ export default async function LandingPage() {
       {/* ── CTA ── */}
       <section className="py-12 text-center animate-fade-in">
         <p className="text-muted-foreground mb-6">
-          Live predictions. Real signals. See what changes next.
+          QUESERA -- Que Sera, Sera
         </p>
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <Link href="/onboarding" className="inline-flex h-12 items-center justify-center rounded-full bg-foreground dark:bg-primary px-8 text-sm font-medium text-background dark:text-[#00171B] hover-lift">

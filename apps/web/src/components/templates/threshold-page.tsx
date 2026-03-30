@@ -7,6 +7,7 @@
  */
 
 import { FollowButton } from "@/components/follow-button";
+import { ShareButton } from "@/components/share-button";
 import { EvidenceWall } from "@/components/signal-card";
 import { ConfidenceTimeline } from "@/components/confidence-timeline";
 import { EvidenceDrawer } from "@/components/evidence-drawer";
@@ -209,6 +210,7 @@ export function ThresholdTemplate({ props }: { props: TemplateProps }) {
           {/* Follow + signal count */}
           <div className="mt-4 flex items-center gap-3">
             <FollowButton topicSlug={topic.slug} isAuthenticated={isAuthenticated} initialFollowing={isFollowing} />
+            <ShareButton questionText={question.question_text} verdict={oneLiner} />
             {signals.length > 0 && (
               <span className="text-[10px] text-muted-foreground">
                 Based on {signals.length} signals across {platformLabel}

@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { AuthPrompt } from "./auth-prompt";
 
 interface FollowButtonProps {
   topicSlug: string;
@@ -17,11 +16,11 @@ export function FollowButton({
 }: FollowButtonProps) {
   const [following, setFollowing] = useState(initialFollowing);
   const [loading, setLoading] = useState(false);
-  const [showAuthPrompt, setShowAuthPrompt] = useState(false);
 
   async function handleClick() {
+    // Not logged in: go straight to login. No dialog, no bait-and-switch.
     if (!isAuthenticated) {
-      setShowAuthPrompt(true);
+      window.location.href = "/login";
       return;
     }
 
@@ -44,26 +43,19 @@ export function FollowButton({
   }
 
   return (
-    <>
-      <Button
-        onClick={handleClick}
-        disabled={loading}
-        variant={following ? "outline" : "default"}
-        className="rounded-full h-10 px-6"
-      >
-        {loading
-          ? "..."
-          : following
-            ? "Following"
-            : isAuthenticated
-              ? "Follow"
-              : "Follow This Topic"}
-      </Button>
-      <AuthPrompt
-        open={showAuthPrompt}
-        onClose={() => setShowAuthPrompt(false)}
-        action="follow this topic"
-      />
-    </>
+    <Button
+      onClick={handleClick}
+      disabled={loading}
+      variant={following ? "outline" : "default"}
+      className="rounded-full h-10 px-6"
+    >
+      {loading
+        ? "..."
+        : following
+          ? "Following"
+          : isAuthenticated
+            ? "Follow"
+            : "Sign in to follow"}
+    </Button>
   );
 }

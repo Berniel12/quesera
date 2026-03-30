@@ -15,6 +15,7 @@
  */
 
 import { FollowButton } from "@/components/follow-button";
+import { ShareButton } from "@/components/share-button";
 import { EmailCapture } from "@/components/email-capture";
 import Link from "next/link";
 import type { TemplateProps } from "./types";
@@ -150,6 +151,10 @@ export function SmartFriendTemplate({ props }: { props: TemplateProps }) {
             topicSlug={topic.slug}
             isAuthenticated={isAuthenticated}
             initialFollowing={isFollowing}
+          />
+          <ShareButton
+            questionText={question.question_text}
+            verdict={oneLiner}
           />
           {platformLabel && (
             <span className="text-[11px] text-muted-foreground/70">

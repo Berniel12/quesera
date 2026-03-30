@@ -105,34 +105,46 @@ export function SmartFriendTemplate({ props }: { props: TemplateProps }) {
     .filter((_, i) => i < 4)
     .join(", ");
 
+  // Key probability number for the hero
+  const keyPct = avgProb !== null && avgProb !== undefined ? Math.round(avgProb * 100) : null;
+
   return (
     <div className="mx-auto max-w-[640px] px-4 sm:px-6 py-6">
 
-      {/* ── Category pill ── */}
-      <div className="mb-2">
+      {/* ── Hero banner with gradient ── */}
+      <div className={`-mx-4 sm:-mx-6 -mt-6 mb-6 px-6 sm:px-8 pt-10 pb-8 bg-gradient-to-b ${cat.bg}`}>
         <span className={`text-[10px] font-bold uppercase tracking-[0.15em] ${cat.accent}`}>
           {catLabel}
         </span>
-      </div>
+        <h1 className="text-[24px] sm:text-[28px] font-bold tracking-tight leading-tight mt-2 mb-4">
+          {question.question_text}
+        </h1>
 
-      {/* ── Question heading ── */}
-      <h1 className="text-[22px] sm:text-2xl font-bold tracking-tight leading-tight mb-6">
-        {question.question_text}
-      </h1>
-
-      {/* ── THE ANSWER (full-bleed, not a card) ── */}
-      <section className="mb-8">
-        <p className="text-lg sm:text-xl font-medium leading-relaxed text-foreground">
-          {answerSentence}
-        </p>
-        <div className="mt-3 flex items-center gap-4">
-          <DirectionIndicator direction={snapshot?.direction ?? "stable"} delta={directionDelta} />
-          {publishedAt && (
-            <span className="text-[11px] text-muted-foreground">
-              Updated {timeAgo(publishedAt)}
-            </span>
+        {/* Big probability number + answer sentence */}
+        <div className="flex items-start gap-4">
+          {keyPct !== null && (
+            <div className="flex-shrink-0">
+              <span className={`text-[48px] sm:text-[56px] font-black leading-none tabular-nums ${cat.accent}`}>
+                {keyPct}
+              </span>
+              <span className={`text-lg font-bold ${cat.accent}`}>%</span>
+            </div>
           )}
+          <div className="pt-2 flex-1 min-w-0">
+            <p className="text-sm sm:text-base leading-relaxed text-foreground/80">
+              {answerSentence}
+            </p>
+            <div className="mt-2 flex items-center gap-3">
+              <DirectionIndicator direction={snapshot?.direction ?? "stable"} delta={directionDelta} />
+              {publishedAt && (
+                <span className="text-[11px] text-muted-foreground">
+                  {timeAgo(publishedAt)}
+                </span>
+              )}
+            </div>
+          </div>
         </div>
+
         <div className="mt-4 flex items-center gap-3">
           <FollowButton
             topicSlug={topic.slug}
@@ -140,12 +152,12 @@ export function SmartFriendTemplate({ props }: { props: TemplateProps }) {
             initialFollowing={isFollowing}
           />
           {platformLabel && (
-            <span className="text-[11px] text-muted-foreground">
+            <span className="text-[11px] text-muted-foreground/70">
               Based on {signals.length} signals across {platformLabel}
             </span>
           )}
         </div>
-      </section>
+      </div>
 
       {/* ── Card 1: What markets say ── */}
       {platformBreakdown.length > 0 && (
@@ -166,9 +178,9 @@ export function SmartFriendTemplate({ props }: { props: TemplateProps }) {
                       {pct}%
                     </span>
                   </div>
-                  <div className="w-full h-1.5 rounded-full bg-secondary dark:bg-white/10">
+                  <div className="w-full h-2.5 rounded-full bg-secondary dark:bg-white/10">
                     <div
-                      className="h-full rounded-full bg-[#00DAF3]"
+                      className="h-full rounded-full bg-[#00DAF3] dark:bg-[#00DAF3] bg-blue-500"
                       style={{ width: `${pct}%` }}
                     />
                   </div>

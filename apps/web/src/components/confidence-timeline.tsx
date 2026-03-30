@@ -29,6 +29,10 @@ export function ConfidenceTimeline({ history }: ConfidenceTimelineProps) {
 
   // Reverse so oldest is first (left) and newest is last (right)
   const entries = [...history].reverse();
+
+  // Don't show timeline if all entries are from the same day -- just dots, no trend
+  const uniqueDays = new Set(entries.map((e) => e.published_at.slice(0, 10)));
+  if (uniqueDays.size < 2) return null;
   const count = entries.length;
 
   const W = 300;
@@ -69,14 +73,22 @@ export function ConfidenceTimeline({ history }: ConfidenceTimelineProps) {
         <text x={PAD_X - 2} y={H / 2 + 2} fontSize="6" fill="hsl(var(--muted-foreground))" textAnchor="end" opacity="0.5">Mid</text>
         <text x={PAD_X - 2} y={H - PAD_Y + 3} fontSize="6" fill="hsl(var(--muted-foreground))" textAnchor="end" opacity="0.5">Low</text>
 
+        {/* Area fill under the line */}
+        <polygon
+          points={`${points[0].x},${H - PAD_Y} ${polylinePoints} ${lastPoint?.x ?? 0},${H - PAD_Y}`}
+          fill="hsl(var(--primary))"
+          opacity="0.08"
+        />
+
         {/* Connecting line */}
         <polyline
           points={polylinePoints}
           fill="none"
-          stroke="hsl(var(--border))"
-          strokeWidth="1.5"
+          stroke="hsl(var(--primary))"
+          strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"
+          opacity="0.5"
         />
 
         {/* Data points */}

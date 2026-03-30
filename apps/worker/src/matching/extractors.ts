@@ -287,12 +287,45 @@ export function getSeedMapMatches(item: SourceItem): SeedMapEntry[] | null {
     // Match by series_ticker first (highest confidence -- these are known series)
     const seriesTicker = String(item.normalized_payload.series_ticker ?? "").toUpperCase();
     const KALSHI_SERIES_MAP: Record<string, SeedMapEntry[]> = {
+      // Macro/Economics
       "KXFED": [{ slug: "us-federal-reserve-interest-rates", confidence: 0.95 }],
       "KXCPI": [{ slug: "us-inflation-rate", confidence: 0.95 }],
       "KXGDP": [{ slug: "global-recession-risk", confidence: 0.8 }],
       "KXBTC": [{ slug: "bitcoin-price", confidence: 0.9 }, { slug: "crypto-market", confidence: 0.6 }],
       "KXWTI": [{ slug: "global-oil-prices", confidence: 0.95 }],
       "KXMORTGAGERATE": [{ slug: "us-mortgage-rates", confidence: 0.95 }],
+      // S&P 500
+      "KXINX": [{ slug: "us-stock-market", confidence: 0.95 }],
+      "KXINXHIGH": [{ slug: "us-stock-market", confidence: 0.95 }],
+      "KXINXAB": [{ slug: "us-stock-market", confidence: 0.95 }],
+      "KXINXPOS": [{ slug: "us-stock-market", confidence: 0.95 }],
+      "KXINXMAXY": [{ slug: "us-stock-market", confidence: 0.9 }],
+      "KXINXMINY": [{ slug: "us-stock-market", confidence: 0.9 }],
+      "INX": [{ slug: "us-stock-market", confidence: 0.95 }],
+      "INXAB": [{ slug: "us-stock-market", confidence: 0.95 }],
+      "INXY": [{ slug: "us-stock-market", confidence: 0.9 }],
+      // Nasdaq
+      "KXNASDAQ100": [{ slug: "us-stock-market", confidence: 0.7 }],
+      "KXNASDAQ100POS": [{ slug: "us-stock-market", confidence: 0.7 }],
+      "NASDAQ100": [{ slug: "us-stock-market", confidence: 0.7 }],
+      // Iran
+      "KXIRANMEET": [{ slug: "iran-us-tensions", confidence: 0.9 }],
+      "KXUSAIRANAGREEMENT": [{ slug: "iran-us-tensions", confidence: 0.95 }],
+      "KXIRANVISITUSA": [{ slug: "iran-us-tensions", confidence: 0.9 }],
+      "KXELECTIRAN": [{ slug: "iran-us-tensions", confidence: 0.8 }],
+      "KXOFAC": [{ slug: "iran-us-tensions", confidence: 0.9 }],
+      "KXIAEAIRANAGREEMENT": [{ slug: "iran-us-tensions", confidence: 0.95 }],
+      "KXIRANEMBASSY": [{ slug: "iran-us-tensions", confidence: 0.9 }],
+      "KXTRUMPIRAN": [{ slug: "iran-us-tensions", confidence: 0.85 }],
+      "KXNEXTIRANLEADER": [{ slug: "iran-us-tensions", confidence: 0.8 }],
+      "KXVISITIRAN": [{ slug: "iran-us-tensions", confidence: 0.85 }],
+      "KXIRANIMPORTS": [{ slug: "iran-us-tensions", confidence: 0.7 }],
+      "KXIRANCPI": [{ slug: "iran-us-tensions", confidence: 0.6 }],
+      // Russia-Ukraine
+      "KXZELENSKYPUTIN": [{ slug: "russia-ukraine-war", confidence: 0.9 }],
+      "KXPUTINZELENSKYYLOCATION": [{ slug: "russia-ukraine-war", confidence: 0.8 }],
+      "KXPUTINDJTLOCATION": [{ slug: "russia-ukraine-war", confidence: 0.7 }],
+      // Sports
       "KXNBA": [{ slug: "nba-season-2025-26", confidence: 0.95 }],
       "KXUCL": [{ slug: "champions-league", confidence: 0.95 }],
       "KXF1": [{ slug: "formula-1-2026", confidence: 0.95 }],

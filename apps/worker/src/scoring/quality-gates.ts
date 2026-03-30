@@ -511,12 +511,16 @@ export function gateSignalContentCoherence(
     }
   }
 
-  // For all page types: sample the top 5 signals and check if any look
-  // completely unrelated to the question text
-  const questionWords = questionText.toLowerCase().split(/\s+/).filter((w) => w.length > 3);
-  const topicWords = questionWords.filter(
-    (w) => !["will", "does", "have", "this", "that", "what", "when", "year", "keep", "going"].includes(w),
-  );
+  // For all page types: check if signals relate to the question's subject
+  // Include short words that are proper nouns/acronyms (nba, f1, fed, s&p, ai)
+  const KNOWN_SHORT_TOPICS = ["nba", "nfl", "f1", "fed", "ai", "s&p", "gdp", "cpi", "uk", "us", "eu", "un"];
+  const questionLower = questionText.toLowerCase();
+  const questionWords = questionLower.split(/\s+/);
+  const topicWords = questionWords.filter((w) => {
+    if (KNOWN_SHORT_TOPICS.includes(w)) return true;
+    if (w.length <= 3) return false;
+    return !["will", "does", "have", "this", "that", "what", "when", "year", "keep", "going", "before"].includes(w);
+  });
 
   if (topicWords.length === 0) {
     return { gate, pass: true, severity: "minor", reason: null };

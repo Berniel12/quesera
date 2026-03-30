@@ -212,9 +212,11 @@ export default async function LandingPage() {
     .order("sort_order", { ascending: true });
 
   // Load core card data (always available)
+  // Filter out blocked pages -- quality gates determined these shouldn't render
   const { data: allCards } = await supabase
     .from("public_topic_cards")
-    .select("topic_id, canonical_name, slug, category, direction, confidence, freshness, one_liner, snapshot_published_at")
+    .select("topic_id, canonical_name, slug, category, direction, confidence, freshness, one_liner, snapshot_published_at, rendering_mode")
+    .neq("rendering_mode", "blocked")
     .order("snapshot_published_at", { ascending: false });
 
   // Try loading synthesis columns (graceful -- returns empty if migration not yet applied)

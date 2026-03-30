@@ -31,6 +31,21 @@ export default function RootLayout({
       className={`${inter.variable} ${jetbrainsMono.variable} h-full`}
       suppressHydrationWarning
     >
+      <head>
+        {process.env.NEXT_PUBLIC_POSTHOG_KEY && (
+          <script
+            async
+            src="https://us-assets.i.posthog.com/static/array.js"
+          />
+        )}
+        {process.env.NEXT_PUBLIC_POSTHOG_KEY && (
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `window.posthog=window.posthog||[];window.posthog.init('${process.env.NEXT_PUBLIC_POSTHOG_KEY}',{api_host:'https://us.i.posthog.com',person_profiles:'identified_only'});`,
+            }}
+          />
+        )}
+      </head>
       <body className="min-h-full flex flex-col">
         <ThemeInit />
         {children}

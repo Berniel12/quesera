@@ -6,6 +6,7 @@ import { FollowButton } from "@/components/follow-button";
 import { CompetitionTemplate } from "@/components/templates/competition-page";
 import { ThresholdTemplate } from "@/components/templates/threshold-page";
 import { BinaryEventTemplate } from "@/components/templates/binary-event-page";
+import { SmartFriendTemplate } from "@/components/templates/smart-friend-page";
 import type { QuestionType } from "@/lib/question-contracts";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -34,20 +35,29 @@ export async function generateMetadata({ params }: QuestionPageProps): Promise<M
 
   const { data } = await db(supabase)
     .from("questions")
-    .select("question_text, category")
+    .select("question_text, category, primary_topic_id")
     .eq("slug", slug)
     .eq("status", "published")
     .maybeSingle();
 
-  const q = data as { question_text: string; category: string | null } | null;
+  const q = data as { question_text: string; category: string | null; primary_topic_id: string } | null;
   if (!q) return { title: "QUESERA" };
+
+  // Try to get the one-liner for a better OG description
+  const { data: card } = await db(supabase)
+    .from("public_topic_cards")
+    .select("one_liner, expert_line")
+    .eq("topic_id", q.primary_topic_id)
+    .maybeSingle();
+  const cardData = card as { one_liner: string | null; expert_line: string | null } | null;
+  const ogDescription = cardData?.one_liner ?? cardData?.expert_line ?? `See what prediction markets and data say about: ${q.question_text}`;
 
   return {
     title: `${q.question_text} -- QUESERA`,
-    description: `QUESERA prediction: ${q.question_text}`,
+    description: ogDescription,
     openGraph: {
       title: q.question_text,
-      description: `See what prediction markets, forecasters, and data say about: ${q.question_text}`,
+      description: ogDescription,
       siteName: "QUESERA",
     },
   };
@@ -60,7 +70,7 @@ export default async function QuestionPage({ params }: QuestionPageProps) {
   // Load the question
   const { data } = await db(supabase)
     .from("questions")
-    .select("id, question_text, slug, question_type, status, category, primary_topic_id")
+    .select("id, question_text, slug, question_type, status, category, primary_topic_id, is_featured")
     .eq("slug", slug)
     .maybeSingle();
 
@@ -74,6 +84,7 @@ export default async function QuestionPage({ params }: QuestionPageProps) {
     status: string;
     category: string | null;
     primary_topic_id: string;
+    is_featured: boolean;
   };
 
   // Only show published or resolved questions
@@ -133,11 +144,15 @@ export default async function QuestionPage({ params }: QuestionPageProps) {
     );
   }
 
-  // Source diversity check: warn if page is single-source
+  // Featured questions use the SmartFriendTemplate (legibility-first)
+  if (question.is_featured) {
+    return <SmartFriendTemplate props={props} />;
+  }
+
+  // Non-featured: original type-specific templates
   const sourceFamilies = [...new Set(props.signals.map((s) => s.source_family))];
   const isThinPage = sourceFamilies.length < 2 && props.signals.length < 5;
 
-  // Template switch based on question type
   const questionType = props.contract.questionType;
 
   const thinBanner = isThinPage ? (

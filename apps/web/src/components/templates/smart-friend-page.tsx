@@ -167,9 +167,12 @@ export function SmartFriendTemplate({ props }: { props: TemplateProps }) {
       {/* ── Card 1: What markets say ── */}
       {platformBreakdown.length > 0 && (
         <div className="bg-card border border-border/30 rounded-xl p-4 mb-3">
-          <h3 className="text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground mb-3">
+          <h3 className="text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground mb-1">
             What markets say
           </h3>
+          <p className="text-[10px] text-muted-foreground/60 mb-3">
+            Prediction markets let people bet on outcomes. Higher % = more people think it will happen.
+          </p>
           <div className="space-y-3">
             {platformBreakdown.map((p) => {
               const pct = Math.round(p.avgProbability * 100);
@@ -199,9 +202,12 @@ export function SmartFriendTemplate({ props }: { props: TemplateProps }) {
       {/* ── Card 2: What the data says ── */}
       {groundingMetric && (
         <div className="bg-card border border-border/30 rounded-xl p-4 mb-3">
-          <h3 className="text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground mb-3">
+          <h3 className="text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground mb-1">
             What the data says
           </h3>
+          <p className="text-[10px] text-muted-foreground/60 mb-3">
+            Official government and financial data that grounds the prediction in reality.
+          </p>
           <div className="text-[28px] font-bold tabular-nums leading-none">
             {groundingMetric.formatted}
           </div>
@@ -216,9 +222,12 @@ export function SmartFriendTemplate({ props }: { props: TemplateProps }) {
 
       {/* ── Card 3: What changed ── */}
       <div className="bg-card border border-border/30 rounded-xl p-4 mb-8">
-        <h3 className="text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground mb-3">
+        <h3 className="text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground mb-1">
           What changed this week
         </h3>
+        <p className="text-[10px] text-muted-foreground/60 mb-3">
+          Recent events and data releases that moved the signals.
+        </p>
         {whatChanged ? (
           <p className="text-[13px] text-muted-foreground leading-relaxed">
             {whatChanged}

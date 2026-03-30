@@ -269,11 +269,11 @@ export default function OnboardingClient({ questions }: Props) {
               </>
             ) : (
               <h1 className="text-2xl font-bold tracking-tight text-navy mb-2">
-                Where are you? (optional)
+                Where in the world are you?
               </h1>
             )}
             <p className="text-muted-foreground mb-6">
-              Helps us surface relevant local questions where available.
+              Totally optional. If you share your city, we can highlight questions that matter most in your area. You can always skip this.
             </p>
             <div className="max-w-sm mx-auto mb-8">
               <Input value={city} onChange={(e) => setCity(e.target.value)} placeholder="Tel Aviv, New York, London..." className="rounded-full h-12 text-center text-base" />

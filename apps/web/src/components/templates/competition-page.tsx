@@ -8,6 +8,7 @@
 
 import { FollowButton } from "@/components/follow-button";
 import { ShareButton } from "@/components/share-button";
+import { QuickPoll } from "@/components/quick-poll";
 import { EvidenceWall } from "@/components/signal-card";
 import { ConfidenceTimeline } from "@/components/confidence-timeline";
 import { EvidenceDrawer } from "@/components/evidence-drawer";
@@ -350,6 +351,15 @@ export function CompetitionTemplate({ props }: { props: TemplateProps }) {
             )}
           </div>
         </div>
+      </section>
+
+      {/* ── Quick poll ── */}
+      <section className="mb-6">
+        <QuickPoll
+          questionSlug={question.slug}
+          questionText={question.question_text}
+          currentConfidence={snapshot?.confidence ?? null}
+        />
       </section>
 
       {/* ── GAP VISUALIZATION ── */}

@@ -17,6 +17,7 @@
 import { FollowButton } from "@/components/follow-button";
 import { ShareButton } from "@/components/share-button";
 import { EmailCapture } from "@/components/email-capture";
+import { QuickPoll } from "@/components/quick-poll";
 import Link from "next/link";
 import type { TemplateProps } from "./types";
 
@@ -238,6 +239,14 @@ export function SmartFriendTemplate({ props }: { props: TemplateProps }) {
           </p>
         )}
       </div>
+
+      {/* ── Email capture ── */}
+      {/* ── Quick poll: what do you think? ── */}
+      <QuickPoll
+        questionSlug={question.slug}
+        questionText={question.question_text}
+        currentConfidence={snapshot?.confidence ?? null}
+      />
 
       {/* ── Email capture ── */}
       <EmailCapture questionSlug={question.slug} />

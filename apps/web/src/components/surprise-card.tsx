@@ -32,10 +32,10 @@ export function SurpriseCard({ data }: SurpriseCardProps) {
   if (!data || data.spreadPp < 10) return null;
 
   const editorialLine = data.spreadPp >= 25
-    ? "That is a massive gap. Someone is wrong."
+    ? "That is a wide gap. These platforms are reading the situation very differently."
     : data.spreadPp >= 15
-      ? "A real disagreement. The market has not settled this."
-      : "Not a consensus. Platforms see this differently.";
+      ? "A meaningful disagreement. Worth watching which side moves."
+      : "Not yet settled. Platforms see this differently.";
 
   return (
     <section className="pb-6 animate-fade-in">

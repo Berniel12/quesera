@@ -52,6 +52,10 @@ export function BriefingStrip({ items }: BriefingStripProps) {
 /**
  * Build briefing items from featured card data.
  * Called in the homepage server component.
+ *
+ * Prefers structured deltas (direction + competition leader changes)
+ * over static prose (expert_line, one_liner). Structured deltas feel
+ * more like "what changed" than a general description.
  */
 export function buildBriefingItems(
   cards: Array<{
@@ -61,28 +65,48 @@ export function buildBriefingItems(
     expert_line: string | null;
     one_liner: string | null;
     snapshot_published_at: string | null;
+    competition_leader: string | null;
+    competition_leader_pct: number | null;
+    confidence: number | null;
   }>,
 ): BriefingItem[] {
   const items: BriefingItem[] = [];
 
   for (const card of cards) {
-    // Only include cards with active direction and recent data
-    if (!card.direction || card.direction === "stable" || card.direction === "unknown") continue;
     if (!card.snapshot_published_at) continue;
 
     // Must be from the last 48 hours
     const ageH = (Date.now() - new Date(card.snapshot_published_at).getTime()) / 3600000;
     if (ageH > 48) continue;
 
-    // Build change line from expert_line (most specific) or one_liner
-    const changeLine = card.expert_line ?? card.one_liner ?? null;
+    // Build change line -- prefer structured delta over static prose
+    let changeLine: string | null = null;
+
+    // Competition cards: "[Leader] leads [question] at [pct]%"
+    if (card.competition_leader && card.competition_leader_pct) {
+      const pct = Math.round(card.competition_leader_pct);
+      changeLine = `${card.competition_leader} leads at ${pct}% -- ${card.question_text.replace("Who will win the ", "").replace("?", "")}`;
+    }
+    // Cards with active direction: construct from direction + confidence
+    else if (card.direction === "up" || card.direction === "down") {
+      const pct = card.confidence !== null ? Math.round(card.confidence * 100) : null;
+      const verb = card.direction === "up" ? "trending up" : "trending down";
+      changeLine = pct !== null
+        ? `${card.question_text.replace("?", "")} -- ${verb} at ${pct}% signal strength`
+        : `${card.question_text.replace("?", "")} -- ${verb}`;
+    }
+    // Fallback: expert_line or one_liner (static prose)
+    else if (card.expert_line) {
+      changeLine = card.expert_line;
+    }
+
     if (!changeLine) continue;
 
     items.push({
       slug: card.slug,
       questionText: card.question_text,
       changeLine,
-      direction: card.direction,
+      direction: card.direction ?? "stable",
     });
   }
 

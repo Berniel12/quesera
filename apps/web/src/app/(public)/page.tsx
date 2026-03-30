@@ -340,6 +340,17 @@ export default async function LandingPage() {
     return (b.confidence ?? 0) - (a.confidence ?? 0);
   });
 
+  // ── Micro-rule: no card without a clear takeaway ──
+  // If a card cannot produce one human-readable sentence, it should not appear.
+  const filteredQuestions = allQuestions.filter((q) => {
+    // Competition cards need a leader name
+    if (q.question_type === "competition") return !!q.competition_leader;
+    // Non-competition cards need expert_line or one_liner
+    return !!(q.expert_line || q.one_liner);
+  });
+  // Replace allQuestions reference for downstream use
+  const displayQuestions = filteredQuestions.length >= 4 ? filteredQuestions : allQuestions;
+
   // ── Tension scoring ──
   // Ranks questions by how interesting they are RIGHT NOW.
   // Higher tension = better hero candidate + "What Moved" surface.
@@ -368,13 +379,13 @@ export default async function LandingPage() {
   }
 
   // Score all questions for tension
-  const scored = allQuestions.map((q) => ({ q, tension: tensionScore(q) }));
+  const scored = displayQuestions.map((q) => ({ q, tension: tensionScore(q) }));
   scored.sort((a, b) => b.tension - a.tension);
 
   // Hero: highest-tension question, with rotation among top 3 to avoid staleness
   const seed = Math.floor(Date.now() / 300000); // rotates every 5 minutes
   const heroPool = scored.slice(0, Math.min(3, scored.length));
-  const heroQ = heroPool.length > 0 ? heroPool[Math.abs(seed) % heroPool.length].q : allQuestions[0];
+  const heroQ = heroPool.length > 0 ? heroPool[Math.abs(seed) % heroPool.length].q : displayQuestions[0];
 
   // "What Moved" candidates: questions that genuinely changed recently
   // Must have active direction AND a recent snapshot (< 24h) to avoid showing stale "movement"
@@ -427,21 +438,24 @@ export default async function LandingPage() {
   const laneSlugs = new Set([...raceCards, ...countdownCards, ...tippingCards].map((q) => q.slug));
   const rest = laneSource.filter((q) => !laneSlugs.has(q.slug)).slice(0, 20);
 
-  // Briefing strip: what changed recently
+  // Briefing strip: what changed recently (prefers structured deltas)
   const briefingItems = buildBriefingItems(
-    allQuestions.map((q) => ({
+    displayQuestions.map((q) => ({
       slug: q.slug,
       question_text: q.question_text,
       direction: q.direction,
       expert_line: q.expert_line,
       one_liner: q.one_liner,
       snapshot_published_at: q.snapshot_published_at,
+      competition_leader: q.competition_leader,
+      competition_leader_pct: q.competition_leader_pct,
+      confidence: q.confidence,
     })),
   );
 
   // Surprise card: biggest market split
   const surpriseData = findBiggestSplit(
-    allQuestions.map((q) => ({
+    displayQuestions.map((q) => ({
       slug: q.slug,
       question_text: q.question_text,
       synthesis_json: synthMap.get(q.topic_id)?.synthesis_json ?? null,
@@ -846,7 +860,7 @@ export default async function LandingPage() {
       </section>
 
       {/* Empty state */}
-      {allQuestions.length === 0 && (
+      {displayQuestions.length === 0 && (
         <section className="text-center py-20 animate-fade-in">
           <p className="text-lg text-muted-foreground">We are updating our signals. Check back in a few hours.</p>
         </section>

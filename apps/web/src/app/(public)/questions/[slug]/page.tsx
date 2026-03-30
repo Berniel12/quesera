@@ -43,14 +43,30 @@ export async function generateMetadata({ params }: QuestionPageProps): Promise<M
   const q = data as { question_text: string; category: string | null; primary_topic_id: string } | null;
   if (!q) return { title: "QUESERA" };
 
-  // Try to get the one-liner for a better OG description
+  // Load card data for OG description + image
   const { data: card } = await db(supabase)
     .from("public_topic_cards")
-    .select("one_liner, expert_line")
+    .select("one_liner, expert_line, competition_leader, competition_leader_pct, confidence, direction")
     .eq("topic_id", q.primary_topic_id)
     .maybeSingle();
-  const cardData = card as { one_liner: string | null; expert_line: string | null } | null;
+  const cardData = card as {
+    one_liner: string | null; expert_line: string | null;
+    competition_leader: string | null; competition_leader_pct: number | null;
+    confidence: number | null; direction: string | null;
+  } | null;
   const ogDescription = cardData?.one_liner ?? cardData?.expert_line ?? `See what prediction markets and data say about: ${q.question_text}`;
+
+  // Build dynamic OG image URL
+  const ogParams = new URLSearchParams({ q: q.question_text });
+  if (q.category) ogParams.set("c", q.category);
+  if (cardData?.expert_line) ogParams.set("v", cardData.expert_line.slice(0, 80));
+  if (cardData?.competition_leader) {
+    ogParams.set("l", cardData.competition_leader);
+    if (cardData.competition_leader_pct) ogParams.set("n", `${Math.round(cardData.competition_leader_pct)}%`);
+  } else if (cardData?.confidence !== null && cardData?.confidence !== undefined) {
+    ogParams.set("n", `${Math.round(cardData.confidence * 100)}%`);
+  }
+  const ogImageUrl = `/api/og?${ogParams.toString()}`;
 
   return {
     title: `${q.question_text} -- QUESERA`,
@@ -59,6 +75,13 @@ export async function generateMetadata({ params }: QuestionPageProps): Promise<M
       title: q.question_text,
       description: ogDescription,
       siteName: "QUESERA",
+      images: [{ url: ogImageUrl, width: 1200, height: 630, alt: q.question_text }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: q.question_text,
+      description: ogDescription,
+      images: [ogImageUrl],
     },
   };
 }

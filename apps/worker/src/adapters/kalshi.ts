@@ -68,7 +68,7 @@ export class KalshiAdapter extends BaseAdapter {
     const discoveredSeries: KalshiSeries[] = [];
     for (const category of KALSHI_CATEGORIES) {
       try {
-        const url = `${config.base_url}/series?limit=200&category=${encodeURIComponent(category)}`;
+        const url = `${config.base_url}/series?limit=1000&category=${encodeURIComponent(category)}`;
         const response = await fetchWithRetry({ url, headers, logger: this.logger });
         const data = (await response.json()) as { series: KalshiSeries[] };
 
@@ -99,12 +99,12 @@ export class KalshiAdapter extends BaseAdapter {
       }
     }
 
-    // Cap total series to fetch markets for (avoid hitting rate limits)
-    // Priority series always included. Fill remaining budget from others.
-    const MAX_SERIES_FETCH = 200;
+    // Cap NON-PRIORITY series to fetch markets for (avoid hitting rate limits)
+    // Priority series always included regardless of cap.
+    const MAX_OTHER_SERIES = 100;
     const seriesToFetch = [
       ...prioritySeries,
-      ...otherSeries.slice(0, Math.max(0, MAX_SERIES_FETCH - prioritySeries.length)),
+      ...otherSeries.slice(0, MAX_OTHER_SERIES),
     ];
 
     this.logger.info(
@@ -131,8 +131,8 @@ export class KalshiAdapter extends BaseAdapter {
           if (seenTickers.has(market.ticker)) continue;
           seenTickers.add(market.ticker);
 
-          const yesPrice = market.yes_bid_dollars ?? 0;
-          const lastPrice = market.last_price_dollars ?? 0;
+          const yesPrice = Number(market.yes_bid_dollars) || 0;
+          const lastPrice = Number(market.last_price_dollars) || 0;
 
           items.push({
             externalId: market.ticker,
@@ -141,10 +141,10 @@ export class KalshiAdapter extends BaseAdapter {
               title: market.title,
               subtitle: market.yes_sub_title ?? "",
               yes_price: yesPrice,
-              no_price: market.no_bid_dollars ?? 0,
+              no_price: Number(market.no_bid_dollars) || 0,
               last_price: lastPrice,
-              volume: market.volume_fp ?? 0,
-              open_interest: market.open_interest_fp ?? 0,
+              volume: Number(market.volume_fp) || 0,
+              open_interest: Number(market.open_interest_fp) || 0,
               category: series.category,
               event_ticker: market.event_ticker ?? "",
               event_title: "",

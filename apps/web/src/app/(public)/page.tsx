@@ -372,9 +372,20 @@ export default async function LandingPage() {
   const heroPool = scored.slice(0, Math.min(3, scored.length));
   const heroQ = heroPool.length > 0 ? heroPool[Math.abs(seed) % heroPool.length].q : allQuestions[0];
 
-  // "What Moved" candidates: top tension questions with active direction, excluding hero
+  // "What Moved" candidates: questions that genuinely changed recently
+  // Must have active direction AND a recent snapshot (< 24h) to avoid showing stale "movement"
   const movedQuestions = scored
-    .filter((s) => s.q.topic_id !== heroQ?.topic_id && (s.q.direction === "up" || s.q.direction === "down") && s.q.freshness !== "stale" && s.q.freshness !== "dead")
+    .filter((s) => {
+      if (s.q.topic_id === heroQ?.topic_id) return false;
+      if (s.q.direction !== "up" && s.q.direction !== "down") return false;
+      if (s.q.freshness === "stale" || s.q.freshness === "dead") return false;
+      // Must have been published in the last 24 hours to count as "moved"
+      if (s.q.snapshot_published_at) {
+        const ageH = (Date.now() - new Date(s.q.snapshot_published_at).getTime()) / 3600000;
+        if (ageH > 24) return false;
+      }
+      return true;
+    })
     .slice(0, 4)
     .map((s) => s.q);
 
@@ -450,7 +461,7 @@ export default async function LandingPage() {
                 <div className="relative z-10">
                   <div className="flex items-center gap-2 mb-4">
                     <span className="h-2 w-2 rounded-full bg-positive dark:bg-[#4EDEA3] animate-pulse-live" />
-                    <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-positive dark:text-[#4EDEA3]">Live Projection</span>
+                    <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-positive dark:text-[#4EDEA3]">Live</span>
                   </div>
                   <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-foreground leading-[1] tracking-tight mb-6">
                     {heroQ.question_text}
@@ -494,8 +505,11 @@ export default async function LandingPage() {
                           {ans?.headline ?? ans?.label ?? "Tracking"}
                         </span>
                       </div>
-                      <div className="flex-1 h-2 mb-4 rounded-full overflow-hidden bg-border/30 dark:bg-white/10">
-                        <div className={`h-full bg-primary animate-bar-fill`} style={{ width: `${pct}%` }} />
+                      <div className="flex-1 mb-4 flex items-center gap-2">
+                        <div className="flex-1 h-2 rounded-full overflow-hidden bg-border/30 dark:bg-white/10">
+                          <div className={`h-full bg-primary animate-bar-fill`} style={{ width: `${pct}%` }} />
+                        </div>
+                        <span className="text-xs font-mono font-bold text-muted-foreground tabular-nums">{pct}%</span>
                       </div>
                     </div>
                   )}
@@ -693,19 +707,19 @@ export default async function LandingPage() {
       )}
 
       {/* Countdowns — threshold questions with progress toward target */}
-      {countdownCards.length > 0 && (
+      {countdownCards.length >= 2 && (
         <section className="pb-8 animate-fade-in">
           <h2 className="text-[10px] font-bold uppercase tracking-[0.2em] text-blue-400 mb-4">Countdowns</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {countdownCards.map((q, i) => {
               const a = CAT_ACCENT[q.category ?? ""] ?? DEFAULT_ACCENT;
-              const pct = q.confidence !== null ? Math.round(q.confidence * 100) : 0;
               const ans = q.direction && q.confidence !== null
                 ? getAnswerState({ direction: q.direction, confidence: q.confidence, category: q.category, disagreement: 0, questionType: q.question_type }) : null;
-              const cdWhyLine = getWhyLine({ questionType: q.question_type, direction: q.direction, confidence: q.confidence, freshness: q.freshness, snapshotPublishedAt: q.snapshot_published_at });
               const team = getTeamEntity(q.question_text);
               const topicLogo = getTopicLogo(q.topic_slug);
               const cardLogo = team ? { logoUrl: team.logoUrl, bgColor: team.bgColor } : topicLogo;
+              // Use question-specific one-liner instead of generic verdict
+              const cardDescription = q.expert_line ?? q.one_liner ?? ans?.cardVerdict ?? "Tracking";
               return (
                 <Link key={q.topic_id} href={q.href} className="group">
                   <div className="h-full rounded-2xl p-5 bg-card dark:bg-[#131B2E] card-shadow-rich dark:border dark:border-white/5 hover-lift-sm animate-card-enter relative overflow-hidden"
@@ -718,18 +732,9 @@ export default async function LandingPage() {
                     <div className="relative z-10">
                       <span className={`text-[9px] font-bold uppercase tracking-[0.2em] ${a.text} block mb-2`}>{a.label}</span>
                       <h3 className="text-base font-bold text-foreground leading-snug mb-3 pr-10">{q.question_text}</h3>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className={`text-sm font-bold ${ans?.colorClass ?? "text-foreground"}`}>{ans?.cardVerdict ?? "Tracking"}</span>
-                        <span className={`text-lg font-black font-mono ${a.text}`}>{pct}%</span>
-                      </div>
-                      <div className="h-1.5 w-full rounded-full bg-border/20 dark:bg-white/10 overflow-hidden mb-2">
-                        <div className={`h-full bg-current ${a.text} animate-bar-fill`} style={{ width: `${pct}%` }} />
-                      </div>
-                      {q.expert_line
-                        ? <p className="text-[11px] text-muted-foreground leading-snug">{q.expert_line}</p>
-                        : cdWhyLine && <p className="text-[11px] text-muted-foreground leading-snug">{cdWhyLine}</p>
-                      }
-                      <div className="flex items-center justify-between mt-1">
+                      <span className={`text-sm font-bold ${ans?.colorClass ?? "text-foreground"} block mb-2`}>{ans?.cardVerdict ?? "Tracking"}</span>
+                      <p className="text-[11px] text-muted-foreground leading-snug">{cardDescription}</p>
+                      <div className="flex items-center justify-between mt-2">
                         <div className="flex gap-1">
                           {q.source_families.slice(0, 3).map((f) => (
                             <span key={f} className="text-[8px] px-1.5 py-0.5 rounded-full bg-white/5 text-muted-foreground/70">{FAMILY_PILL[f] ?? f}</span>
@@ -747,19 +752,19 @@ export default async function LandingPage() {
       )}
 
       {/* Tipping Points — binary event questions with tension */}
-      {tippingCards.length > 0 && (
+      {tippingCards.length >= 2 && (
         <section className="pb-8 animate-fade-in">
           <h2 className="text-[10px] font-bold uppercase tracking-[0.2em] text-red-400 mb-4">Tipping points</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {tippingCards.map((q, i) => {
               const a = CAT_ACCENT[q.category ?? ""] ?? DEFAULT_ACCENT;
-              const pct = q.confidence !== null ? Math.round(q.confidence * 100) : 0;
               const ans = q.direction && q.confidence !== null
                 ? getAnswerState({ direction: q.direction, confidence: q.confidence, category: q.category, disagreement: 0, questionType: q.question_type }) : null;
-              const tipWhyLine = getWhyLine({ questionType: q.question_type, direction: q.direction, confidence: q.confidence, freshness: q.freshness, snapshotPublishedAt: q.snapshot_published_at });
               const team = getTeamEntity(q.question_text);
               const tipTopicLogo = getTopicLogo(q.topic_slug);
               const tipCardLogo = team ? { logoUrl: team.logoUrl, bgColor: team.bgColor } : tipTopicLogo;
+              // Use question-specific one-liner instead of generic verdict
+              const cardDescription = q.expert_line ?? q.one_liner ?? ans?.cardVerdict ?? "Tracking";
               return (
                 <Link key={q.topic_id} href={q.href} className="group">
                   <div className="h-full rounded-2xl p-5 bg-card dark:bg-[#131B2E] card-shadow-rich dark:border dark:border-white/5 hover-lift-sm animate-card-enter relative overflow-hidden"
@@ -770,17 +775,11 @@ export default async function LandingPage() {
                       </div>
                     )}
                     <div className="relative z-10">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className={`text-[9px] font-bold uppercase tracking-[0.2em] ${a.text}`}>{a.label}</span>
-                        <span className={`text-lg font-black font-mono ${a.text} ml-auto`}>{pct}%</span>
-                      </div>
+                      <span className={`text-[9px] font-bold uppercase tracking-[0.2em] ${a.text} block mb-2`}>{a.label}</span>
                       <h3 className="text-base font-bold text-foreground leading-snug mb-3">{q.question_text}</h3>
                       <span className={`text-sm font-bold ${ans?.colorClass ?? "text-foreground"} block mb-1`}>{ans?.cardVerdict ?? "Tracking"}</span>
-                      {q.expert_line
-                        ? <p className="text-[11px] text-muted-foreground leading-snug">{q.expert_line}</p>
-                        : tipWhyLine && <p className="text-[11px] text-muted-foreground leading-snug">{tipWhyLine}</p>
-                      }
-                      <div className="flex items-center justify-between mt-1">
+                      <p className="text-[11px] text-muted-foreground leading-snug">{cardDescription}</p>
+                      <div className="flex items-center justify-between mt-2">
                         <div className="flex gap-1">
                           {q.source_families.slice(0, 3).map((f) => (
                             <span key={f} className="text-[8px] px-1.5 py-0.5 rounded-full bg-white/5 text-muted-foreground/70">{FAMILY_PILL[f] ?? f}</span>

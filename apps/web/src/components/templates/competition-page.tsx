@@ -266,54 +266,68 @@ export function CompetitionTemplate({ props }: { props: TemplateProps }) {
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground leading-tight">{question.question_text}</h1>
         </div>
 
-        {/* RACE CARD: Leader + Challenger + Gap */}
-        <div className={`p-5 rounded-2xl bg-gradient-to-br ${cat.bg} border ${cat.border}`}>
+        {/* RACE CARD: Head-to-head matchup graphic */}
+        <div className={`p-5 sm:p-6 rounded-2xl bg-gradient-to-br ${cat.bg} border ${cat.border}`}>
 
-          {/* Leader -- ALWAYS from live ranking. Static map only provides logo. */}
-          {leader ? (
-            <div className="flex items-center gap-4">
+          {leader && challenger ? (
+            <>
+              {/* Head-to-head: two sides facing each other */}
+              <div className="flex items-center justify-between gap-3">
+                {/* Leader side */}
+                <div className="flex-1 text-center">
+                  {leaderLogo && (
+                    <div className={`mx-auto h-16 w-16 sm:h-20 sm:w-20 rounded-2xl ${leaderLogo.bgColor} flex items-center justify-center mb-2`}>
+                      <img src={leaderLogo.logoUrl} alt={leader.name} className="h-11 w-11 sm:h-14 sm:w-14 object-contain" />
+                    </div>
+                  )}
+                  <span className={`text-base sm:text-lg font-black ${cat.accent} block leading-tight`}>{leader.name}</span>
+                  <span className="text-2xl sm:text-3xl font-black text-foreground block mt-1">{leader.pct}%</span>
+                </div>
+
+                {/* VS divider */}
+                <div className="flex flex-col items-center gap-1 px-2">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">vs</span>
+                  <span className={`text-sm font-black ${cat.accent}`}>{leader.pct - challenger.pct}pp</span>
+                </div>
+
+                {/* Challenger side */}
+                <div className="flex-1 text-center">
+                  {challengerLogo && (
+                    <div className={`mx-auto h-16 w-16 sm:h-20 sm:w-20 rounded-2xl ${challengerLogo.bgColor} flex items-center justify-center mb-2`}>
+                      <img src={challengerLogo.logoUrl} alt={challenger.name} className="h-11 w-11 sm:h-14 sm:w-14 object-contain" />
+                    </div>
+                  )}
+                  <span className="text-base sm:text-lg font-bold text-foreground/70 block leading-tight">{challenger.name}</span>
+                  <span className="text-2xl sm:text-3xl font-bold text-foreground/50 block mt-1">{challenger.pct}%</span>
+                </div>
+              </div>
+
+              {/* Race state below the matchup */}
+              {raceState && (
+                <div className="mt-4 text-center">
+                  <span className={`text-xs font-black uppercase tracking-widest ${raceState.color}`}>{raceState.label}</span>
+                </div>
+              )}
+            </>
+          ) : leader ? (
+            <div className="text-center">
               {leaderLogo && (
-                <div className={`flex-shrink-0 h-20 w-20 rounded-2xl ${leaderLogo.bgColor} flex items-center justify-center`}>
+                <div className={`mx-auto h-20 w-20 rounded-2xl ${leaderLogo.bgColor} flex items-center justify-center mb-3`}>
                   <img src={leaderLogo.logoUrl} alt={leader.name} className="h-14 w-14 object-contain" />
                 </div>
               )}
-              <div>
-                <span className={`text-3xl sm:text-4xl font-black ${cat.accent} block leading-tight`}>{leader.name}</span>
-                <span className="text-lg font-bold text-foreground/70">{leader.pct}%</span>
-              </div>
+              <span className={`text-3xl font-black ${cat.accent} block`}>{leader.name}</span>
+              <span className="text-xl font-bold text-foreground/70">{leader.pct}%</span>
+              {raceState && (
+                <div className="mt-3">
+                  <span className={`text-xs font-black uppercase tracking-widest ${raceState.color}`}>{raceState.label}</span>
+                </div>
+              )}
             </div>
           ) : (
-            /* No usable ranking -- show "Wide open" instead of a wrong static favorite */
-            <div>
-              <span className={`text-3xl sm:text-4xl font-black text-muted-foreground block leading-tight`}>Wide open</span>
+            <div className="text-center py-4">
+              <span className="text-3xl font-black text-muted-foreground block">Wide open</span>
               <span className="text-sm text-muted-foreground">No clear leader in available signals</span>
-            </div>
-          )}
-
-          {/* Challenger + gap -- from live ranking */}
-          {challenger && leader && (
-            <div className="mt-4 pt-4 border-t border-border/10 dark:border-white/5 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                {challengerLogo && (
-                  <div className={`flex-shrink-0 h-10 w-10 rounded-xl ${challengerLogo.bgColor} flex items-center justify-center`}>
-                    <img src={challengerLogo.logoUrl} alt="" className="h-7 w-7 object-contain" />
-                  </div>
-                )}
-                <div>
-                  <span className="text-sm font-bold text-foreground">{challenger.name}</span>
-                  <span className="text-sm text-foreground/60 ml-2">{challenger.pct}%</span>
-                </div>
-              </div>
-              <span className="text-xs font-bold text-muted-foreground">
-                {leader.pct - challenger.pct}pp gap
-              </span>
-            </div>
-          )}
-
-          {/* Race state */}
-          {raceState && (
-            <div className="mt-3">
-              <span className={`text-xs font-black uppercase tracking-widest ${raceState.color}`}>{raceState.label}</span>
             </div>
           )}
 

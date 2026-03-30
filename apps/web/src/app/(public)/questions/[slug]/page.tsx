@@ -144,15 +144,8 @@ export default async function QuestionPage({ params }: QuestionPageProps) {
     );
   }
 
-  // Featured questions use the SmartFriendTemplate (legibility-first)
-  if (question.is_featured) {
-    return <SmartFriendTemplate props={props} />;
-  }
-
-  // Non-featured: original type-specific templates
   const sourceFamilies = [...new Set(props.signals.map((s) => s.source_family))];
   const isThinPage = sourceFamilies.length < 2 && props.signals.length < 5;
-
   const questionType = props.contract.questionType;
 
   const thinBanner = isThinPage ? (
@@ -166,8 +159,15 @@ export default async function QuestionPage({ params }: QuestionPageProps) {
     </div>
   ) : null;
 
+  // Competition pages always use CompetitionTemplate (logos, leaderboard, race card)
+  // SmartFriendTemplate is for threshold/binary pages where the smart-friend voice fits
   if (questionType === "competition") {
     return <>{thinBanner}<CompetitionTemplate props={props} /></>;
+  }
+
+  // Featured non-competition questions use SmartFriendTemplate
+  if (question.is_featured) {
+    return <SmartFriendTemplate props={props} />;
   }
 
   if (questionType === "threshold") {

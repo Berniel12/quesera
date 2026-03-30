@@ -618,12 +618,25 @@ interface QuestionRelevanceRule {
   context: string[];
   /** If ANY of these appear, the signal is rejected regardless */
   reject: string[];
+  /** Regex patterns that reject signals (for game-level bets etc.) */
+  rejectPatterns?: RegExp[];
 }
+
+// Game-level bet patterns: spreads, over/unders, moneylines, head-to-head matchups
+// These are NOT about "who wins the championship" -- they're about individual games
+const GAME_BET_PATTERNS: RegExp[] = [
+  /\bspread\b/i,
+  /\bo\/u\b/i,
+  /\bover\/under\b/i,
+  /\bmoneyline\b/i,
+  /\bvs\.\s/i,                        // "Lakers vs. Pacers"
+  /\b\w+ vs \w+(?!.*(?:final|title|championship|winner))/i, // "X vs Y" unless it's about a final
+  /[+-]\d+\.5/,                        // point spreads like "-17.5" or "+3.5"
+  /o\/u \d+/i,                         // "O/U 238.5"
+];
 
 const WORKER_QUESTION_RELEVANCE: Record<string, QuestionRelevanceRule> = {
   "will-there-be-a-ceasefire": {
-    // Must mention Gaza/Hamas/hostage (anchor), optionally "ceasefire"
-    // Rejects anything mentioning "iran" -- that is a different conflict
     anchors: ["gaza", "hamas", "hostage", "palestinian"],
     context: ["ceasefire", "war end", "peace", "truce"],
     reject: ["iran", "tehran", "persian gulf"],
@@ -637,6 +650,37 @@ const WORKER_QUESTION_RELEVANCE: Record<string, QuestionRelevanceRule> = {
     anchors: ["s&p", "sp500", "stock market", "equity", "dow", "nasdaq", "s&p 500"],
     context: [],
     reject: ["gdp", "unemployment rate", "inflation rate", "cpi"],
+  },
+  // Sports competition pages: reject game-level bets, keep championship markets
+  "nba-season-2025-26": {
+    anchors: [],
+    context: [],
+    reject: [],
+    rejectPatterns: GAME_BET_PATTERNS,
+  },
+  "premier-league": {
+    anchors: [],
+    context: [],
+    reject: [],
+    rejectPatterns: GAME_BET_PATTERNS,
+  },
+  "champions-league": {
+    anchors: [],
+    context: [],
+    reject: [],
+    rejectPatterns: GAME_BET_PATTERNS,
+  },
+  "formula-1-2026": {
+    anchors: [],
+    context: [],
+    reject: [],
+    rejectPatterns: GAME_BET_PATTERNS,
+  },
+  "fifa-world-cup-2026": {
+    anchors: [],
+    context: [],
+    reject: [],
+    rejectPatterns: GAME_BET_PATTERNS,
   },
 };
 
@@ -667,6 +711,11 @@ export function filterSignalsWorkerSide<T extends WorkerSignalLike>(
     const questionText = String(s.metadata?.question ?? "").toLowerCase();
     if (!questionText) return true;
 
+    // Reject patterns: regex-based rejection (game bets, spreads, O/U)
+    if (rule.rejectPatterns && rule.rejectPatterns.some((p) => p.test(questionText))) {
+      return false;
+    }
+
     // Reject: if any reject keyword appears, drop the signal
     if (rule.reject.some((kw) => questionText.includes(kw))) {
       return false;
@@ -676,14 +725,9 @@ export function filterSignalsWorkerSide<T extends WorkerSignalLike>(
     if (rule.anchors.length > 0) {
       const hasAnchor = rule.anchors.some((kw) => questionText.includes(kw));
       if (!hasAnchor) {
-        // If there are context keywords, check those as fallback
-        // (allows "ceasefire" if no reject keywords matched -- but only
-        // for questions without strict anchor requirements)
         if (rule.context.length > 0) {
           const hasContext = rule.context.some((kw) => questionText.includes(kw));
-          // Context alone is NOT enough -- anchor is required
           if (!hasContext) return false;
-          // Has context but no anchor -- reject (AND logic)
           return false;
         }
         return false;

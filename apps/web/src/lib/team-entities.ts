@@ -44,15 +44,15 @@ const COMPETITION_ANSWERS: Record<string, CompetitionAnswer> = {
   },
   "nba-season-2025-26": {
     favorite: {
-      name: "Boston Celtics",
-      shortName: "BOS",
-      logoUrl: "https://a.espncdn.com/i/teamlogos/nba/500/bos.png",
-      bgColor: "bg-emerald-900/30",
+      name: "Oklahoma City Thunder",
+      shortName: "OKC",
+      logoUrl: "https://a.espncdn.com/i/teamlogos/nba/500/okc.png",
+      bgColor: "bg-blue-900/30",
     },
     contenders: [
-      { name: "OKC Thunder", shortName: "OKC", logoUrl: "https://a.espncdn.com/i/teamlogos/nba/500/okc.png", bgColor: "bg-blue-900/30" },
+      { name: "San Antonio Spurs", shortName: "SAS", logoUrl: "https://a.espncdn.com/i/teamlogos/nba/500/sa.png", bgColor: "bg-neutral-900/30" },
+      { name: "Boston Celtics", shortName: "BOS", logoUrl: "https://a.espncdn.com/i/teamlogos/nba/500/bos.png", bgColor: "bg-emerald-900/30" },
       { name: "Denver Nuggets", shortName: "DEN", logoUrl: "https://a.espncdn.com/i/teamlogos/nba/500/den.png", bgColor: "bg-yellow-900/30" },
-      { name: "New York Knicks", shortName: "NYK", logoUrl: "https://a.espncdn.com/i/teamlogos/nba/500/ny.png", bgColor: "bg-orange-900/30" },
     ],
   },
   "nfl-2026-season": {

@@ -143,19 +143,34 @@ function getCatPhoto(category: string | null, slug: string): string | null {
 /**
  * Get the competition display for a card.
  * Prefers LIVE leader data from card columns (populated by worker from signals).
- * Falls back to static CompetitionAnswer map only for logo lookup.
+ * Looks up logo by the LIVE leader name so logo always matches the displayed team.
  */
 function getCompetitionDisplay(q: QuestionWithCard): { comp: ReturnType<typeof getCompetitionAnswer>; label: string } {
-  // Live data from signals (populated by worker publish)
+  const comp = getCompetitionAnswer(q.topic_slug);
+  if (!comp) return { comp: null, label: q.competition_leader ?? "Race underway" };
+
+  // If live leader matches the static favorite, use as-is
   if (q.competition_leader) {
-    // Still use static map for logos, but leader name comes from live data
-    const comp = getCompetitionAnswer(q.topic_slug);
+    const leaderLower = q.competition_leader.toLowerCase();
+    // Check if live leader is one of the contenders -- if so, reorder so their logo shows
+    const matchedContender = comp.contenders.find(
+      (c) => leaderLower.includes(c.name.toLowerCase()) || c.name.toLowerCase().includes(leaderLower),
+    );
+    if (matchedContender) {
+      // Swap: put matched contender as favorite so logo renders correctly
+      return {
+        comp: {
+          favorite: matchedContender,
+          contenders: [comp.favorite, ...comp.contenders.filter((c) => c !== matchedContender)],
+        },
+        label: q.competition_leader,
+      };
+    }
+    // Live leader matches static favorite (or not found in contenders)
     return { comp, label: q.competition_leader };
   }
-  // Fallback to static map
-  const comp = getCompetitionAnswer(q.topic_slug);
-  if (comp) return { comp, label: comp.favorite.name };
-  return { comp: null, label: "Race underway" };
+
+  return { comp, label: comp.favorite.name };
 }
 
 export default async function LandingPage() {

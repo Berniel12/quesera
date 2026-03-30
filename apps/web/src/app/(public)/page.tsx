@@ -856,9 +856,6 @@ export default async function LandingPage() {
 
       {/* ── CTA ── */}
       <section className="py-12 text-center animate-fade-in">
-        <p className="text-muted-foreground mb-6">
-          QUESERA -- Que Sera, Sera
-        </p>
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <Link href="/onboarding" className="inline-flex h-12 items-center justify-center rounded-full bg-foreground dark:bg-primary px-8 text-sm font-medium text-background dark:text-[#00171B] hover-lift">
             Pick your questions

@@ -77,9 +77,10 @@ const CATEGORY_DEFAULT: Record<string, QuestionType> = {
 // When the category default is wrong for a specific topic
 
 const TOPIC_TYPE_OVERRIDE: Record<string, QuestionType> = {
-  "ai-industry": "competition",
   "netflix-streaming-wars": "competition",
   "spotify-vs-apple-music": "competition",
+  // ai-industry removed: prediction market data is company events (IPO, lawsuits, AGI)
+  // not "who wins" competition markets. SmartFriendTemplate fits better.
 };
 
 // Topics where political_official IS a primary family (explicit policy questions)

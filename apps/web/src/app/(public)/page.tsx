@@ -7,6 +7,8 @@ import { getTeamEntity, getCompetitionAnswer, getTopicLogo, findLogoByEntityName
 import { deriveQuestionType } from "@/lib/question-contracts";
 import type { QuestionType } from "@/lib/question-contracts";
 import Link from "next/link";
+import { BriefingStrip, buildBriefingItems } from "@/components/briefing-strip";
+import { SurpriseCard, findBiggestSplit } from "@/components/surprise-card";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function db(client: SupabaseClient<any>) { return client as SupabaseClient<any>; }
@@ -224,11 +226,12 @@ export default async function LandingPage() {
     synthesis_ready: boolean | null; expert_line: string | null; source_families: string[] | null;
     competition_leader: string | null; competition_leader_pct: number | null;
     competition_challenger: string | null; competition_gap: number | null;
+    synthesis_json: Record<string, unknown> | null;
   }>();
   try {
     const { data: synthData } = await supabase
       .from("public_topic_cards")
-      .select("topic_id, synthesis_ready, expert_line, source_families, competition_leader, competition_leader_pct, competition_challenger, competition_gap");
+      .select("topic_id, synthesis_ready, expert_line, source_families, competition_leader, competition_leader_pct, competition_challenger, competition_gap, synthesis_json");
     if (synthData) {
       synthMap = new Map((synthData as Array<Record<string, unknown>>).map((c) => [
         c.topic_id as string,
@@ -240,6 +243,7 @@ export default async function LandingPage() {
           competition_leader_pct: (c.competition_leader_pct as number | null) ?? null,
           competition_challenger: (c.competition_challenger as string | null) ?? null,
           competition_gap: (c.competition_gap as number | null) ?? null,
+          synthesis_json: (c.synthesis_json as Record<string, unknown> | null) ?? null,
         },
       ]));
     }
@@ -423,6 +427,27 @@ export default async function LandingPage() {
   const laneSlugs = new Set([...raceCards, ...countdownCards, ...tippingCards].map((q) => q.slug));
   const rest = laneSource.filter((q) => !laneSlugs.has(q.slug)).slice(0, 20);
 
+  // Briefing strip: what changed recently
+  const briefingItems = buildBriefingItems(
+    allQuestions.map((q) => ({
+      slug: q.slug,
+      question_text: q.question_text,
+      direction: q.direction,
+      expert_line: q.expert_line,
+      one_liner: q.one_liner,
+      snapshot_published_at: q.snapshot_published_at,
+    })),
+  );
+
+  // Surprise card: biggest market split
+  const surpriseData = findBiggestSplit(
+    allQuestions.map((q) => ({
+      slug: q.slug,
+      question_text: q.question_text,
+      synthesis_json: synthMap.get(q.topic_id)?.synthesis_json ?? null,
+    })),
+  );
+
   return (
     <div className="mx-auto max-w-6xl px-4 sm:px-6 dark:horizon-glow">
 
@@ -596,48 +621,11 @@ export default async function LandingPage() {
         </form>
       </div>
 
-      {/* ── WHAT MOVED ── */}
-      {movedQuestions.length > 0 && (
-        <section className="pb-6 animate-fade-in">
-          <h2 className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-3">What moved</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            {movedQuestions.map((q) => {
-              const ma = CAT_ACCENT[q.category ?? ""] ?? DEFAULT_ACCENT;
-              const mans = q.direction && q.confidence !== null
-                ? getAnswerState({ direction: q.direction, confidence: q.confidence, category: q.category, disagreement: 0, questionType: q.question_type }) : null;
-              const mWhyLine = getWhyLine({ questionType: q.question_type, direction: q.direction, confidence: q.confidence, freshness: q.freshness, snapshotPublishedAt: q.snapshot_published_at });
-              const isMovedComp = q.question_type === "competition";
-              const { label: movedCompLabel } = isMovedComp ? getCompetitionDisplay(q) : { label: "" };
-              const mTeam = getTeamEntity(q.question_text);
-              const mTopicLogo = getTopicLogo(q.topic_slug);
-              const mLogo = mTeam ? { logoUrl: mTeam.logoUrl } : mTopicLogo;
-              return (
-                <Link key={q.topic_id} href={q.href}>
-                  <div className={`rounded-2xl p-4 bg-card dark:bg-[#131B2E] border ${ma.border} hover-lift-sm transition-all group relative overflow-hidden`}>
-                    {mLogo && (
-                      <div className="absolute top-3 right-3 opacity-10 group-hover:opacity-20 transition-opacity">
-                        <img src={mLogo.logoUrl} alt="" className="h-10 w-10 object-contain" loading="lazy" />
-                      </div>
-                    )}
-                    <div className="flex items-center gap-2 mb-2 relative z-10">
-                      <span className={`h-1.5 w-1.5 rounded-full ${q.direction === "up" ? "bg-positive dark:bg-[#4EDEA3]" : "bg-destructive"}`} />
-                      <span className={`text-[9px] font-bold uppercase tracking-[0.2em] ${ma.text}`}>{ma.label}</span>
-                      {q.snapshot_published_at && <span className="text-[9px] text-muted-foreground/50 ml-auto">{timeAgo(q.snapshot_published_at)}</span>}
-                    </div>
-                    <p className="text-sm font-semibold text-foreground leading-snug mb-2 line-clamp-2">{q.question_text}</p>
-                    <div className="flex items-center justify-between">
-                      <span className={`text-xs font-bold ${mans?.colorClass ?? "text-foreground"}`}>
-                        {isMovedComp ? movedCompLabel : (mans?.cardVerdict ?? "Tracking")}
-                      </span>
-                      {mWhyLine && <span className="text-[10px] text-muted-foreground">{mWhyLine}</span>}
-                    </div>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-        </section>
-      )}
+      {/* ── SURPRISE CARD: biggest market split ── */}
+      <SurpriseCard data={surpriseData} />
+
+      {/* ── BRIEFING STRIP: what changed ── */}
+      <BriefingStrip items={briefingItems} />
 
       {/* ── LANES ── */}
 

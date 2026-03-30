@@ -89,7 +89,7 @@ const THRESHOLD_VERDICTS: VerdictTable = {
   strongDown:   "Moving away",
   moderateDown: "Off course",
   weakDown:     "Long way to go",
-  stable:       "Stalled",
+  stable:       "Holding firm",
   unknown:      "Waiting for data",
 };
 
@@ -100,7 +100,7 @@ const BINARY_VERDICTS: VerdictTable = {
   strongDown:   "Not happening",
   moderateDown: "Leaning no",
   weakDown:     "Don't rule it out",
-  stable:       "Quiet for now",
+  stable:       "Markets split",
   unknown:      "Waiting for signal",
 };
 

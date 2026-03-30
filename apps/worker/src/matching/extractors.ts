@@ -268,6 +268,10 @@ export function getSeedMapMatches(item: SourceItem): SeedMapEntry[] | null {
       "KXNEXTISRAELPM": [{ slug: "israel-palestine-conflict", confidence: 0.7 }],
       "KXTAIWANLVL4": [{ slug: "china-taiwan-relations", confidence: 0.8 }],
       "KXG7LEADEROUT": [{ slug: "european-union", confidence: 0.6 }],
+      // Russia-Ukraine
+      "KXZELENSKYPUTIN": [{ slug: "russia-ukraine-war", confidence: 0.9 }],
+      "KXPUTINZELENSKYYLOCATION": [{ slug: "russia-ukraine-war", confidence: 0.8 }],
+      "KXPUTINDJTLOCATION": [{ slug: "russia-ukraine-war", confidence: 0.7 }],
       // Tech / Companies
       "KXAGICO": [{ slug: "ai-industry", confidence: 0.9 }],
       "KXOAIANTH": [{ slug: "ai-industry", confidence: 0.9 }],
@@ -311,6 +315,7 @@ export function getSeedMapMatches(item: SourceItem): SeedMapEntry[] | null {
     if (title.includes("trade") && title.includes("china")) return [{ slug: "us-trade-policy", confidence: 0.7 }];
     if (title.includes("tariff")) return [{ slug: "us-trade-policy", confidence: 0.7 }];
     if (title.includes("israel") && (title.includes("prime minister") || title.includes("normalize"))) return [{ slug: "israel-palestine-conflict", confidence: 0.6 }];
+    if ((title.includes("ukraine") || title.includes("zelenskyy") || title.includes("zelensky")) && (title.includes("putin") || title.includes("russia") || title.includes("ceasefire"))) return [{ slug: "russia-ukraine-war", confidence: 0.8 }];
     if (title.includes("taiwan")) return [{ slug: "china-taiwan-relations", confidence: 0.7 }];
     if (title.includes("national debt")) return [{ slug: "us-debt-ceiling", confidence: 0.7 }];
   }

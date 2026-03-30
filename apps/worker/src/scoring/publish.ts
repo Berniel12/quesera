@@ -284,6 +284,7 @@ export async function publishSnapshot(
   const gateBatteryInput: GateBatteryInput = {
     topicSlug: topic.slug,
     questionSlug,
+    questionText: questionText || topic.canonical_name,
     questionType: questionType ?? "binary_event",
     category: topic.category,
     filteredSignals: relevanceFilteredSignals,

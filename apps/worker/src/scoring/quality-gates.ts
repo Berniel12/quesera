@@ -436,11 +436,118 @@ export function gateSignalFreshness(
   return { gate, pass: true, severity: "minor", reason: null };
 }
 
+// ── Gate 8: Signal Content Coherence ───────────────────────────────────
+// Samples actual signal text and checks if it matches the page's question.
+// This is the "did you actually look at the data" gate.
+// Catches contamination categories we haven't thought of yet.
+
+// Per-question-type: what words SHOULD appear in a championship-level signal?
+const COMPETITION_SIGNAL_ANCHORS = [
+  "win", "winner", "champion", "title", "finals", "trophy",
+  "league", "cup", "championship", "premier", "world series",
+];
+
+// Signals that are clearly about individual games, not championships
+const GAME_LEVEL_INDICATORS = [
+  /\bspread\b/i,
+  /\bo\/u\b/i,
+  /\bover\/under\b/i,
+  /\bmoneyline\b/i,
+  /[+-]\d+\.5/,              // point spreads
+  /\d+:\d+\s*(AM|PM)/i,      // time-specific markets
+  /\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/i, // day-specific
+  /\bgame \d/i,              // "Game 7"
+  /\bround \d/i,             // "Round 1"
+  /\bmatch\s*day\b/i,
+];
+
+export function gateSignalContentCoherence(
+  signals: ScoredSignal[],
+  questionType: QuestionType,
+  questionText: string,
+): GateResult {
+  const gate = "signal_content_coherence";
+
+  if (signals.length === 0) {
+    return { gate, pass: true, severity: "minor", reason: null };
+  }
+
+  // Only apply content check to prediction_market and forecasting signals
+  const marketSignals = signals.filter(
+    (s) => s.sourceFamily === "prediction_market" || s.sourceFamily === "forecasting",
+  );
+
+  if (marketSignals.length === 0) {
+    return { gate, pass: true, severity: "minor", reason: null };
+  }
+
+  // For competition pages: check if signals look like championship markets or game bets
+  if (questionType === "competition") {
+    let gameLevelCount = 0;
+    for (const s of marketSignals) {
+      const q = String(s.metadata?.question ?? "").toLowerCase();
+      if (!q) continue;
+      const isGameLevel = GAME_LEVEL_INDICATORS.some((p) => p.test(q));
+      const hasChampAnchor = COMPETITION_SIGNAL_ANCHORS.some((a) => q.includes(a));
+      if (isGameLevel && !hasChampAnchor) gameLevelCount++;
+    }
+
+    const gameLevelRate = gameLevelCount / marketSignals.length;
+    if (gameLevelRate > 0.5) {
+      return {
+        gate,
+        pass: false,
+        severity: "critical",
+        reason: `${Math.round(gameLevelRate * 100)}% of market signals appear to be game-level bets (spreads, O/U), not championship markets. ${gameLevelCount} of ${marketSignals.length} signals.`,
+      };
+    }
+    if (gameLevelRate > 0.2) {
+      return {
+        gate,
+        pass: false,
+        severity: "major",
+        reason: `${Math.round(gameLevelRate * 100)}% of market signals may be game-level bets. ${gameLevelCount} of ${marketSignals.length}.`,
+      };
+    }
+  }
+
+  // For all page types: sample the top 5 signals and check if any look
+  // completely unrelated to the question text
+  const questionWords = questionText.toLowerCase().split(/\s+/).filter((w) => w.length > 3);
+  const topicWords = questionWords.filter(
+    (w) => !["will", "does", "have", "this", "that", "what", "when", "year", "keep", "going"].includes(w),
+  );
+
+  if (topicWords.length === 0) {
+    return { gate, pass: true, severity: "minor", reason: null };
+  }
+
+  // Check if at least 30% of market signals mention at least one topic word
+  let relevantCount = 0;
+  for (const s of marketSignals) {
+    const q = String(s.metadata?.question ?? "").toLowerCase();
+    if (topicWords.some((w) => q.includes(w))) relevantCount++;
+  }
+
+  const relevanceRate = relevantCount / marketSignals.length;
+  if (relevanceRate < 0.1 && marketSignals.length >= 5) {
+    return {
+      gate,
+      pass: false,
+      severity: "critical",
+      reason: `Only ${Math.round(relevanceRate * 100)}% of signals mention any topic keyword. Signals may be about a different subject entirely.`,
+    };
+  }
+
+  return { gate, pass: true, severity: "minor", reason: null };
+}
+
 // ── Battery Runner ─────────────────────────────────────────────────────
 
 export interface GateBatteryInput {
   topicSlug: string;
   questionSlug: string;
+  questionText: string;
   questionType: QuestionType;
   category: string | null;
 
@@ -533,6 +640,15 @@ export function runQualityGates(input: GateBatteryInput): QualityReport {
   // Gate 7: Signal freshness
   gates.push(
     gateSignalFreshness(input.filteredSignals),
+  );
+
+  // Gate 8: Signal content coherence (did you actually look at the data?)
+  gates.push(
+    gateSignalContentCoherence(
+      input.filteredSignals,
+      input.questionType,
+      input.questionText,
+    ),
   );
 
   const criticalFailures = gates.filter((g) => !g.pass && g.severity === "critical").length;

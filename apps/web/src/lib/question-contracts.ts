@@ -235,13 +235,21 @@ export function filterSignalsByContract<T extends SignalLike>(
  * topic but "Will the Gaza war end?" question), filter signals whose market question
  * is about a different aspect of the topic.
  */
-const QUESTION_SIGNAL_KEYWORDS: Record<string, { require: string[]; reject: string[] }> = {
+/**
+ * Question-level signal relevance filter (defensive backup).
+ *
+ * NOTE: The worker-side filter in quality-gates.ts is the SOURCE OF TRUTH.
+ * This web-side filter is a defensive backup only. It uses the same AND
+ * logic: anchors must match, reject patterns block.
+ */
+const QUESTION_SIGNAL_KEYWORDS: Record<string, { anchors: string[]; reject: string[] }> = {
   "will-there-be-a-ceasefire": {
-    require: ["gaza", "ceasefire", "hamas", "hostage", "war end"],
-    reject: [],
+    // Must mention Gaza/Hamas/hostage (anchor). "ceasefire" alone is NOT enough.
+    anchors: ["gaza", "hamas", "hostage", "palestinian"],
+    reject: ["iran", "tehran", "persian gulf"],
   },
   "will-the-iran-us-conflict-escalate-further": {
-    require: ["iran", "tehran", "persian"],
+    anchors: ["iran", "tehran", "persian"],
     reject: [],
   },
 };
@@ -260,13 +268,12 @@ export function filterSignalsByQuestionRelevance<T extends SignalLike>(
     const question = String(s.metadata?.question ?? "").toLowerCase();
     if (!question) return true;
 
-    // Must contain at least one of the required keywords
-    const hasRequired = keywords.require.some((kw) => question.includes(kw));
-    if (!hasRequired) return false;
+    // Reject: if any reject keyword appears, drop the signal
+    if (keywords.reject.some((kw) => question.includes(kw))) return false;
 
-    // Must not contain any rejected keywords
-    const hasRejected = keywords.reject.some((kw) => question.includes(kw));
-    if (hasRejected) return false;
+    // Anchor: must contain at least one anchor keyword (AND logic)
+    const hasAnchor = keywords.anchors.some((kw) => question.includes(kw));
+    if (!hasAnchor) return false;
 
     return true;
   });

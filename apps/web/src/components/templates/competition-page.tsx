@@ -75,7 +75,7 @@ function extractEntityName(question: string): string | null {
  * Uses broadened entity extraction that works for non-sports too.
  */
 // Individual award / non-winner markets -- must be filtered from team competition rankings
-const AWARD_PATTERN = /\b(mvp|most valuable|scoring title|assists leader|rebounds|defensive player|rookie of the year|sixth man|all[- ]star|ballon d'or|golden boot|golden glove|driver of the day|pole position|fastest lap|top goal scorer|top scorer|top assist|most goals|most assists|relegated|relegat|finish in [0-9]|placed? [0-9])\b/i;
+const AWARD_PATTERN = /\b(mvp|most valuable|scoring title|assists leader|rebounds|defensive player|rookie of the year|sixth man|all[- ]star|ballon d'or|golden boot|golden glove|driver of the day|pole position|fastest lap|top goal scorer|top scorer|top assist|most goals|most assists|relegated|relegat|finish in \d|finish \d|placed? \d|[0-9]+(st|nd|rd|th) place)\b/i;
 
 // Entity alias maps -- must match worker's ENTITY_ALIASES
 const ENTITY_ALIASES: Record<string, Record<string, string>> = {
@@ -382,7 +382,7 @@ export function CompetitionTemplate({ props }: { props: TemplateProps }) {
       {signals.length > 0 && (
         <AnimateOnScroll>
           <section className="mb-10">
-            <EvidenceWall signals={signals} isCompetition={true} />
+            <EvidenceWall signals={signals} isCompetition={true} topicSlug={topic.slug} />
           </section>
         </AnimateOnScroll>
       )}

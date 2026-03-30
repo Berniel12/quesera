@@ -181,10 +181,32 @@ export async function loadTopicData(opts: {
     isFollowing = follow !== null;
   }
 
-  // One-liner from public_topic_cards
+  // One-liner + rendering mode from public_topic_cards
   const { data: publicCard } = await supabase.from("public_topic_cards")
-    .select("one_liner").eq("topic_id", topicId).maybeSingle();
-  const oneLiner = (publicCard as { one_liner: string | null } | null)?.one_liner ?? null;
+    .select("one_liner, rendering_mode").eq("topic_id", topicId).maybeSingle();
+  const cardData = publicCard as { one_liner: string | null; rendering_mode: string | null } | null;
+  const oneLiner = cardData?.one_liner ?? null;
+  const rawRenderingMode = cardData?.rendering_mode ?? "deterministic";
+  const renderingMode = (rawRenderingMode === "premium" || rawRenderingMode === "blocked")
+    ? rawRenderingMode
+    : "deterministic" as const;
+
+  // ── Rendering mode guard ──
+  // If rendering mode is not premium, strip phrased synthesis from snapshot.
+  // The frontend must never render phrased content the worker didn't approve.
+  if (renderingMode !== "premium" && snapshot) {
+    snapshot = { ...snapshot, synthesis_phrased: null };
+  }
+  // If rendering mode is blocked, also clear prose to avoid stale content
+  if (renderingMode === "blocked" && snapshot) {
+    snapshot = {
+      ...snapshot,
+      current_picture_text: null,
+      what_changed_text: null,
+      what_next_text: null,
+      synthesis_phrased: null,
+    };
+  }
 
   // Market platform provenance
   let marketPlatforms: string[] = [];
@@ -239,6 +261,7 @@ export async function loadTopicData(opts: {
       evidencePreview,
       relatedQuestions,
       marketPlatforms,
+      renderingMode,
       isAuthenticated: user !== null,
       isFollowing,
     },

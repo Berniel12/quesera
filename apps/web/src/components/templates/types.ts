@@ -112,6 +112,10 @@ export interface CategoryStyle {
   bg: string;
 }
 
+// ── Rendering mode (set by worker quality gates) ──
+
+export type RenderingMode = "premium" | "deterministic" | "blocked";
+
 // ── The full props every template receives ──
 
 export interface TemplateProps {
@@ -151,6 +155,9 @@ export interface TemplateProps {
   evidencePreview: EvidenceItem[];
   relatedQuestions: RelatedQuestion[];
   marketPlatforms: string[];
+
+  // Quality gate output
+  renderingMode: RenderingMode;
 
   // Auth state
   isAuthenticated: boolean;

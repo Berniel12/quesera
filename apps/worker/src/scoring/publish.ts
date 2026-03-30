@@ -5,6 +5,13 @@ import { resolvePack, checkSynthesisGate } from "../packs/resolve.js";
 import { FAMILY_DISPLAY, type QuestionType, type SourcePack } from "../packs/index.js";
 import { computeSourceComparison, expertLineFromComparison } from "./synthesis.js";
 import { phraseSynthesis, isLayerBEnabled } from "./synthesis-phrasing.js";
+import {
+  runQualityGates,
+  filterSignalsWorkerSide,
+  type RenderingMode,
+  type QualityReport,
+  type GateBatteryInput,
+} from "./quality-gates.js";
 import type { Logger } from "@signal-map/logger";
 
 interface TopicRow {
@@ -189,18 +196,23 @@ export async function publishSnapshot(
   const platformNames = [...new Set(signals.map((s) => s.sourceName))];
   const platformCount = platformNames.length;
 
-  // Resolve question type: prefer explicit from questions table, fall back to derived
+  // Resolve question type + slug: prefer explicit from questions table, fall back to derived
   let questionType: QuestionType | null = null;
+  let questionSlug = "";
+  let questionText = "";
   const { data: questionRow } = await supabase
     .from("questions")
-    .select("question_type")
+    .select("question_type, slug, question_text")
     .eq("primary_topic_id", topic.id)
     .eq("status", "published")
     .limit(1)
     .maybeSingle();
 
   if (questionRow) {
-    const qt = (questionRow as { question_type: string | null }).question_type;
+    const qr = questionRow as { question_type: string | null; slug: string; question_text: string };
+    questionSlug = qr.slug ?? "";
+    questionText = qr.question_text ?? topic.canonical_name;
+    const qt = qr.question_type;
     if (qt === "binary_event" || qt === "threshold" || qt === "competition") {
       questionType = qt;
     }
@@ -230,16 +242,21 @@ export async function publishSnapshot(
   const expertLine = comparisonExpertLine
     ?? (pack ? generateExpertLine(signals, pack, questionType, state.direction, state.confidence) : null);
 
+  // ── Worker-side question relevance filter (source of truth) ──
+  const relevanceResult = filterSignalsWorkerSide(signals, questionSlug, topic.slug);
+  const relevanceFilteredSignals = relevanceResult.filtered;
+
   // Extract competition leader/challenger from live signals
   let competitionLeader: string | null = null;
   let competitionLeaderPct: number | null = null;
   let competitionChallenger: string | null = null;
   let competitionGap: number | null = null;
+  let entityRanking: Array<{ name: string; pct: number }> = [];
 
   if (questionType === "competition") {
-    const ranking = extractCompetitionRanking(signals, topic.slug);
-    const leader = ranking[0] ?? null;
-    const challenger = ranking[1] ?? null;
+    entityRanking = extractCompetitionRanking(relevanceFilteredSignals, topic.slug);
+    const leader = entityRanking[0] ?? null;
+    const challenger = entityRanking[1] ?? null;
     if (leader) {
       competitionLeader = leader.name;
       competitionLeaderPct = leader.pct;
@@ -247,6 +264,69 @@ export async function publishSnapshot(
     if (leader && challenger) {
       competitionChallenger = challenger.name;
       competitionGap = leader.pct - challenger.pct;
+    }
+  }
+
+  // ── Quality Gate Battery ──
+  // Load consecutive_entity_passes from existing card for promotion tracking
+  let consecutiveEntityPasses = 0;
+  {
+    const { data: existingGateData } = await supabase
+      .from("public_topic_cards")
+      .select("consecutive_entity_passes")
+      .eq("topic_id", topic.id)
+      .maybeSingle();
+    if (existingGateData) {
+      consecutiveEntityPasses = (existingGateData as { consecutive_entity_passes: number }).consecutive_entity_passes ?? 0;
+    }
+  }
+
+  const gateBatteryInput: GateBatteryInput = {
+    topicSlug: topic.slug,
+    questionSlug,
+    questionType: questionType ?? "binary_event",
+    category: topic.category,
+    filteredSignals: relevanceFilteredSignals,
+    preRelevanceFilterCount: relevanceResult.preCount,
+    postRelevanceFilterCount: relevanceResult.postCount,
+    entityRanking,
+    sourceComparison,
+    pack,
+    synthesisReady,
+    prose: carryProse,
+    proseGeneratedAt: null, // TODO: load from previous snapshot when prose_generated_at is populated
+    phrasedSynthesis: null, // Layer B hasn't run yet; will be checked post-phrasing
+    phrasedGeneratedAt: null,
+    consecutiveEntityPasses,
+  };
+
+  const qualityReport = runQualityGates(gateBatteryInput);
+  const renderingMode: RenderingMode = qualityReport.renderingMode;
+
+  // Update consecutive entity passes tracker
+  if (questionType === "competition") {
+    const entityGate = qualityReport.gates.find((g) => g.gate === "entity_set_validity");
+    if (entityGate?.pass) {
+      consecutiveEntityPasses += 1;
+    } else {
+      consecutiveEntityPasses = 0;
+    }
+  }
+
+  // Log gate failures
+  if (logger) {
+    const failures = qualityReport.gates.filter((g) => !g.pass);
+    if (failures.length > 0) {
+      logger.warn(
+        {
+          topicSlug: topic.slug,
+          renderingMode,
+          failures: failures.map((f) => ({ gate: f.gate, severity: f.severity, reason: f.reason })),
+        },
+        `Quality gates: ${failures.length} failure(s), rendering_mode=${renderingMode}`,
+      );
+    } else {
+      logger.info({ topicSlug: topic.slug, renderingMode }, "Quality gates: all passed");
     }
   }
 
@@ -276,6 +356,10 @@ export async function publishSnapshot(
       competition_leader_pct: competitionLeaderPct,
       competition_challenger: competitionChallenger,
       competition_gap: competitionGap,
+      // Quality gate fields
+      rendering_mode: renderingMode,
+      quality_report: qualityReport,
+      consecutive_entity_passes: consecutiveEntityPasses,
     });
 
   if (cardError) {
@@ -290,16 +374,20 @@ export async function publishSnapshot(
       .eq("id", snapshotId);
   }
 
-  // Layer B: constrained LLM phrasing (whitelisted pages only)
-  if (sourceComparison && logger && isLayerBEnabled(topic.slug)) {
-    const questionRow = await supabase
-      .from("questions")
-      .select("question_text")
-      .eq("primary_topic_id", topic.id)
-      .eq("status", "published")
-      .limit(1)
-      .maybeSingle();
-    const qText = (questionRow.data as { question_text: string } | null)?.question_text ?? topic.canonical_name;
+  // Write rendering_mode to snapshot too (for historical tracking)
+  await supabase.from("topic_snapshots")
+    .update({ rendering_mode: renderingMode, quality_report: qualityReport })
+    .eq("id", snapshotId);
+
+  // Layer B: constrained LLM phrasing
+  // Only runs if: rendering mode could support premium + whitelisted + comparison exists
+  const layerBEligible = renderingMode !== "blocked"
+    && sourceComparison
+    && logger
+    && isLayerBEnabled(topic.slug);
+
+  if (layerBEligible) {
+    const qText = questionText || topic.canonical_name;
 
     const phrased = await phraseSynthesis(sourceComparison, qText, topic.slug, logger, questionType ?? undefined);
     if (phrased) {
@@ -311,10 +399,12 @@ export async function publishSnapshot(
         .update({
           synthesis_phrased: phrased,
           expert_line: phrased.bottom_line,
+          // Upgrade to premium if gates allow it
+          rendering_mode: renderingMode === "deterministic" ? "deterministic" : "premium",
         })
         .eq("topic_id", topic.id);
     } else {
-      // Validation failed or LLM errored -- clear stale phrased output
+      // Validation failed or LLM errored -- clear stale phrased output, stay deterministic
       await supabase.from("topic_snapshots")
         .update({ synthesis_phrased: null })
         .eq("id", snapshotId);
@@ -322,6 +412,11 @@ export async function publishSnapshot(
         .update({ synthesis_phrased: null })
         .eq("topic_id", topic.id);
     }
+  } else if (renderingMode === "blocked" || renderingMode === "deterministic") {
+    // Not Layer B eligible -- ensure no stale phrased content remains
+    await supabase.from("public_topic_cards")
+      .update({ synthesis_phrased: null })
+      .eq("topic_id", topic.id);
   }
 
   return { id: snapshotId, version };
@@ -566,7 +661,7 @@ function extractEntityName(question: string): string | null {
 }
 
 // Individual award keywords -- markets with these are about player awards, not team championships
-const INDIVIDUAL_AWARD_PATTERN = /\b(mvp|most valuable|scoring title|assists leader|rebounds|defensive player|rookie of the year|sixth man|all[- ]star|ballon d'or|golden boot|golden glove|driver of the day|pole position|fastest lap|top goal scorer|top scorer|top assist|most goals|most assists|relegated|relegat|finish in [0-9]|placed? [0-9])\b/i;
+const INDIVIDUAL_AWARD_PATTERN = /\b(mvp|most valuable|scoring title|assists leader|rebounds|defensive player|rookie of the year|sixth man|all[- ]star|ballon d'or|golden boot|golden glove|driver of the day|pole position|fastest lap|top goal scorer|top scorer|top assist|most goals|most assists|relegated|relegat|finish in \d|finish \d|placed? \d|[0-9]+(st|nd|rd|th) place)\b/i;
 
 // Scoped entity alias maps per competition domain
 const ENTITY_ALIASES: Record<string, Record<string, string>> = {

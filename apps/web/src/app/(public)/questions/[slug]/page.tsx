@@ -110,8 +110,8 @@ export default async function QuestionPage({ params }: QuestionPageProps) {
     questionCategory: question.category,
   });
 
-  // Publication gate: if not enough signals, show gathering state
-  if (!pagePublishable) {
+  // Publication gate: if not enough signals OR quality gates blocked, show gathering state
+  if (!pagePublishable || props.renderingMode === "blocked") {
     return (
       <div className="mx-auto max-w-3xl px-6 py-8">
         <section className="animate-slide-up text-center py-16">

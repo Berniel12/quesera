@@ -352,66 +352,156 @@ export function SignalGroup({ familyKey, signals }: SignalGroupProps) {
 
 // ── COMPETITION LEADERBOARD ──
 // For "who will win?" topics: ranked list instead of individual signal cards
+// Uses the SAME entity resolution as the hero section to prevent contradictions.
 
-/**
- * Extract a clean entity name from a prediction market question.
- * Handles sports ("Will X win"), tech ("Will X have the best"), and other patterns.
- * Returns null if the question doesn't match any competition pattern.
- */
 /** Strip leading articles ("the", "a", "an") from entity names */
 function stripArticle(name: string): string {
   return name.replace(/^(the|a|an)\s+/i, "");
 }
 
 function extractCompetitionEntity(question: string): string | null {
-  // "Will X win..."
-  const winMatch = question.match(/^Will (.+?) win\b/i);
-  if (winMatch) return stripArticle(winMatch[1].trim());
-
-  // "Will X have the best..."
-  const bestMatch = question.match(/^Will (.+?) have the best\b/i);
-  if (bestMatch) return stripArticle(bestMatch[1].trim());
-
-  // "Will X lead..." / "Will X be the..."
-  const leadMatch = question.match(/^Will (.+?) (?:lead|be the|dominate|finish)\b/i);
-  if (leadMatch) return stripArticle(leadMatch[1].trim());
-
-  // "X to win..." (odds-style)
-  const toWinMatch = question.match(/^(.+?) to win\b/i);
-  if (toWinMatch) return stripArticle(toWinMatch[1].trim());
-
-  // Generic "Will [subject] [verb]"
-  const genericWill = question.match(/^Will (.+?) (?:beat|reach|hit|score|qualify|advance|place|rank)\b/i);
-  if (genericWill) return stripArticle(genericWill[1].trim());
-
+  const patterns = [
+    /^Will (.+?) win\b/i,
+    /^Will (.+?) have the best\b/i,
+    /^Will (.+?) (?:lead|be the|dominate|finish)\b/i,
+    /^(.+?) to win\b/i,
+    /^Will (.+?) (?:beat|reach|hit|score|qualify|advance|place|rank)\b/i,
+  ];
+  for (const pattern of patterns) {
+    const match = question.match(pattern);
+    const captured = match?.[1];
+    if (captured) return stripArticle(captured.trim());
+  }
   return null;
 }
 
-function CompetitionLeaderboard({ signals }: { signals: SignalData[] }) {
+// Individual award keywords -- markets about player awards, not team championships
+const INDIVIDUAL_AWARD_PATTERN = /\b(mvp|most valuable|scoring title|assists leader|rebounds|defensive player|rookie of the year|sixth man|all[- ]star|ballon d'or|golden boot|golden glove|driver of the day|pole position|fastest lap|top goal scorer|top scorer|top assist|most goals|most assists|relegated|relegat|finish in \d|finish \d|placed? \d|[0-9]+(st|nd|rd|th) place)\b/i;
+
+// Scoped entity alias maps (must match publish.ts ENTITY_ALIASES)
+const ENTITY_ALIASES: Record<string, Record<string, string>> = {
+  "nba-season-2025-26": {
+    "boston": "Boston Celtics", "celtics": "Boston Celtics",
+    "okc": "Oklahoma City Thunder", "thunder": "Oklahoma City Thunder", "oklahoma city": "Oklahoma City Thunder",
+    "lakers": "Los Angeles Lakers", "la lakers": "Los Angeles Lakers",
+    "knicks": "New York Knicks", "new york": "New York Knicks",
+    "nuggets": "Denver Nuggets", "denver": "Denver Nuggets",
+    "spurs": "San Antonio Spurs", "san antonio": "San Antonio Spurs",
+    "cavaliers": "Cleveland Cavaliers", "cavs": "Cleveland Cavaliers", "cleveland": "Cleveland Cavaliers",
+    "pistons": "Detroit Pistons", "detroit": "Detroit Pistons",
+    "rockets": "Houston Rockets", "houston": "Houston Rockets",
+    "clippers": "Los Angeles Clippers", "la clippers": "Los Angeles Clippers",
+  },
+  "premier-league": {
+    "arsenal": "Arsenal", "man city": "Manchester City", "manchester city": "Manchester City",
+    "city": "Manchester City", "liverpool": "Liverpool", "chelsea": "Chelsea",
+  },
+  "formula-1-2026": {
+    "verstappen": "Max Verstappen", "hamilton": "Lewis Hamilton", "leclerc": "Charles Leclerc",
+    "antonelli": "Andrea Kimi Antonelli", "kimi antonelli": "Andrea Kimi Antonelli",
+    "russell": "George Russell", "norris": "Lando Norris", "piastri": "Oscar Piastri",
+    "mclaren": "McLaren", "red bull racing": "Red Bull Racing", "red bull": "Red Bull Racing",
+  },
+  "champions-league": {
+    "real": "Real Madrid", "real madrid": "Real Madrid",
+    "barca": "Barcelona", "barcelona": "Barcelona",
+    "bayern": "Bayern Munich", "bayern munich": "Bayern Munich",
+    "arsenal": "Arsenal", "psg": "Paris Saint-Germain",
+  },
+  "fifa-world-cup-2026": {
+    "usa": "United States", "us": "United States",
+    "england": "England", "spain": "Spain", "france": "France",
+    "argentina": "Argentina", "brazil": "Brazil", "germany": "Germany",
+  },
+  "ai-industry": {
+    "openai": "OpenAI", "open ai": "OpenAI",
+    "anthropic": "Anthropic", "google deepmind": "Google DeepMind",
+    "deepmind": "Google DeepMind", "meta ai": "Meta AI",
+  },
+};
+
+// Cross-competition filter: reject signals mentioning a different competition
+const COMPETITION_NAMES: Record<string, string[]> = {
+  "premier-league": ["premier league", "epl"],
+  "champions-league": ["champions league", "ucl"],
+  "la-liga": ["la liga", "primera division"],
+  "nba-season-2025-26": ["nba"],
+  "formula-1-2026": ["f1", "formula 1", "formula one"],
+  "fifa-world-cup-2026": ["world cup", "fifa"],
+};
+
+function resolveEntity(name: string, topicSlug: string): string {
+  const aliases = ENTITY_ALIASES[topicSlug];
+  if (!aliases) return name;
+  return aliases[name.toLowerCase()] ?? name;
+}
+
+function CompetitionLeaderboard({ signals, topicSlug }: { signals: SignalData[]; topicSlug?: string }) {
+  const thisCompNames = topicSlug ? COMPETITION_NAMES[topicSlug] : undefined;
+
   // Extract contenders from market signals, ranked by probability
   const contenders = signals
-    .filter((s) => s.source_family === "prediction_market" || s.source_family === "forecasting")
+    .filter((s) => s.source_family === "prediction_market" || s.source_family === "forecasting" || s.source_family === "sports_odds")
     .map((s) => {
       const q = String((s.metadata as Record<string, unknown>)?.question ?? "");
-      const name = extractCompetitionEntity(q);
-      // Skip signals where we can't extract a clean entity name
+
+      // Filter out individual award markets
+      if (INDIVIDUAL_AWARD_PATTERN.test(q)) return null;
+
+      // Cross-competition filter: reject signals about a different competition
+      if (topicSlug && thisCompNames) {
+        const ql = q.toLowerCase();
+        for (const [otherSlug, otherNames] of Object.entries(COMPETITION_NAMES)) {
+          if (otherSlug === topicSlug) continue;
+          if (otherNames.some((n) => ql.includes(n))) return null;
+        }
+      }
+
+      let name = extractCompetitionEntity(q);
       if (!name) return null;
+
+      // Resolve aliases to canonical form
+      if (topicSlug) name = resolveEntity(name, topicSlug);
+
       const pct = Math.round(s.current_value * 100);
       return { name, pct, question: q };
     })
     .filter((c): c is { name: string; pct: number; question: string } => c !== null && c.pct > 0)
     .sort((a, b) => b.pct - a.pct);
 
-  // Deduplicate by name (in case multiple markets for same contender)
+  // Deduplicate by name (after alias resolution)
   const seen = new Set<string>();
-  const unique = contenders.filter((c) => {
+  const deduped = contenders.filter((c) => {
     const key = c.name.toLowerCase();
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
   });
 
-  if (unique.length === 0) return null;
+  // Substring containment fallback: merge entities where one name contains another
+  for (let i = 0; i < deduped.length; i++) {
+    for (let j = i + 1; j < deduped.length; j++) {
+      const a = deduped[i];
+      const b = deduped[j];
+      if (!a || !b) continue;
+      const al = a.name.toLowerCase();
+      const bl = b.name.toLowerCase();
+      if (al.includes(bl) || bl.includes(al)) {
+        if (a.name.length >= b.name.length) {
+          a.pct = Math.max(a.pct, b.pct);
+          deduped.splice(j, 1);
+        } else {
+          b.pct = Math.max(a.pct, b.pct);
+          deduped.splice(i, 1);
+          i--;
+        }
+        break;
+      }
+    }
+  }
+
+  if (deduped.length === 0) return null;
+  const unique = deduped;
 
   return (
     <div className="mb-6">
@@ -454,9 +544,10 @@ function CompetitionLeaderboard({ signals }: { signals: SignalData[] }) {
 interface EvidenceWallProps {
   signals: SignalData[];
   isCompetition?: boolean;
+  topicSlug?: string;
 }
 
-export function EvidenceWall({ signals, isCompetition }: EvidenceWallProps) {
+export function EvidenceWall({ signals, isCompetition, topicSlug }: EvidenceWallProps) {
   // Group by source family
   const byFamily = new Map<string, SignalData[]>();
   for (const s of signals) {
@@ -493,7 +584,7 @@ export function EvidenceWall({ signals, isCompetition }: EvidenceWallProps) {
       </div>
       {isCompetition ? (
         <>
-          <CompetitionLeaderboard signals={signals} />
+          <CompetitionLeaderboard signals={signals} topicSlug={topicSlug} />
           {nonMarketFamilies.map(([familyKey, familySignals]) => (
             <SignalGroup key={familyKey} familyKey={familyKey} signals={familySignals} />
           ))}
